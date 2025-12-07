@@ -1,0 +1,202 @@
+{
+  "productos": [
+    {
+      "id": 1,
+      "nombre": "PARCHITA CREMOSA",
+      "grupo": "Cremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/parchitacremosa_400.webp"
+    },
+    {
+      "id": 2,
+      "nombre": "PINA CREMOSA",
+      "grupo": "Cremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/pinacremosa_400.webp"
+    },
+    {
+      "id": 3,
+      "nombre": "DURAZNO CREMOSO",
+      "grupo": "Cremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/duraznocremoso_400.webp"
+    },
+    {
+      "id": 4,
+      "nombre": "FRESA",
+      "grupo": "Cremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/fresa_400.webp"
+    },
+    {
+      "id": 5,
+      "nombre": "GUANA-GUANA",
+      "grupo": "FullCremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/guanaguana_400.webp"
+    },
+    {
+      "id": 6,
+      "nombre": "OREO CREMITA",
+      "grupo": "FullCremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/oreocremita_400.webp"
+    },
+    {
+      "id": 7,
+      "nombre": "PIE PARCHITA",
+      "grupo": "FullCremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/pieparchita_400.webp"
+    },
+    {
+      "id": 8,
+      "nombre": "PIE NARANJA",
+      "grupo": "FullCremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/pienaranja_400.webp"
+    },
+    {
+      "id": 9,
+      "nombre": "CHOCO OREO",
+      "grupo": "Premium",
+      "stock": 0,
+      "imagen": "/outputs/small/_chocooreo_400.webp"
+    },
+    {
+      "id": 10,
+      "nombre": "DALMATA",
+      "grupo": "Premium",
+      "stock": 0,
+      "imagen": "/outputs/small/_dalmata_400.webp"
+    },
+    {
+      "id": 11,
+      "nombre": "VAINILLA",
+      "grupo": "Premium",
+      "stock": 0,
+      "imagen": "/outputs/small/_vainilla_400.webp"
+    },
+    {
+      "id": 12,
+      "nombre": "COCO",
+      "grupo": "FullCremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/coco_400.webp"
+    },
+    {
+      "id": 13,
+      "nombre": "PIE LIMON",
+      "grupo": "FullCremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/pielimon_400.webp"
+    },
+    {
+      "id": 14,
+      "nombre": "CHOKO MILK",
+      "grupo": "FullCremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/chokomilk_400.webp"
+    },
+    {
+      "id": 15,
+      "nombre": "AGUACATE",
+      "grupo": "Cremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/aguacate_400.webp"
+    },
+    {
+      "id": 16,
+      "nombre": "MANI CREMOSO",
+      "grupo": "Cremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/manicremoso_400.webp"
+    },
+    {
+      "id": 17,
+      "nombre": "FRESA BLANCO",
+      "grupo": "Premium",
+      "stock": 0,
+      "imagen": "/outputs/small/fresablanco_400.webp"
+    },
+    {
+      "id": 18,
+      "nombre": "TAMARINDO",
+      "grupo": "Ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/tamarindo_400.webp"
+    },
+    {
+      "id": 19,
+      "nombre": "RON CON PASAS",
+      "grupo": "Ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/ronconpasas_400.webp"
+    },
+    {
+      "id": 20,
+      "nombre": "NATUGOMITAS",
+      "grupo": "Ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/natugomitas_400.webp"
+    },
+    {
+      "id": 21,
+      "nombre": "MORA CREMOSA",
+      "grupo": "Ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/moracremosa_400.webp"
+    },
+    {
+      "id": 22,
+      "nombre": "CAFE LATTE",
+      "grupo": "Ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/cafelatte_400.webp"
+    },
+    {
+      "id": 23,
+      "nombre": "CHOCO LIGHT",
+      "grupo": "Ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/chocolight_400.webp"
+    },
+    {
+      "id": 24,
+      "nombre": "TAMARINDO CITRICO",
+      "grupo": "Ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/tamarindocitrico_400.webp"
+    },
+    {
+      "id": 25,
+      "nombre": "COCOSETTE",
+      "grupo": "Ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/cocosette_400.webp"
+    },
+    {
+      "id": 26,
+      "nombre": "CHOCO SUSSY",
+      "grupo": "Ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/chocosussy_400.webp"
+    },
+        {
+      "id": 27,
+      "nombre": "Pastelados1",
+      "grupo": "Premium",
+      "stock": 1,
+      "imagen": "/outputs/small/pastelados_400.webp"
+    },
+    {
+      "id": 28,
+      "nombre": "Pastelados2",
+      "grupo": "Premium",
+      "stock": 0,
+      "imagen": "/outputs/small/pastela2_400.webp"
+    }
+  ]
+}
+
+

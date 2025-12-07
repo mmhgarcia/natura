@@ -1,30 +1,24 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import Lista from "./pages/Lista";
+import About from "./pages/About";
+import NotFound from "./pages/NotFound";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
     <>
-     <Header />
-      <div>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          Alberto Garcia count is {count}
-        </button>
-      </div>
-      
+      <Header />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/lista" element={<Lista />} />
+        <Route path="/about" element={<About />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
       <Footer />
     </>
-  )
+  );
 }
 
-export default App
+export default App;

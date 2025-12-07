@@ -1,0 +1,64 @@
+.title{
+    text-align: center;
+    font-size: 28px;
+    color: #00BFFF;
+}
+
+/* Contenedor general de la grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px;
+  justify-content: center; /* centra el grid completo */
+  padding: 0 12px; /* margen lateral */
+}
+
+/* Card individual */
+.card {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  transition: transform 0.2s, box-shadow 0.2s;
+  width: 100%;      /* ocupa todo el ancho de la celda */
+  max-width: 220px; /* opcional: controla que no se estire demasiado */
+  margin: 0 auto;   /* centra la card individual */
+}
+
+/* Imagen dentro de la card */
+.card img {
+  width: 100%;
+  height: auto;        /* mantiene proporción */
+  object-fit: contain; /* evita recorte */
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+/* Nombre del producto */
+.card p {
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0;
+  color: #333;
+}
+
+/* Hover effect */
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive adicional para móviles */
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr; /* una card por fila */
+    gap: 16px;
+  }
+  .card {
+    max-width: 90%; /* ocupa casi todo el ancho de pantalla */
+  }
+}
