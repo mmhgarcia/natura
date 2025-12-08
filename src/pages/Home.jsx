@@ -7,7 +7,7 @@ import styles from "./Home.module.css";
 export default function Home() {
   const [productos, setProductos] = useLocalStorage("productos", []);
   const [grupos, setGrupos] = useLocalStorage("grupos", []);
-
+ 
   useEffect(() => {
     if (productos.length === 0) {
       setProductos(data.productos);
