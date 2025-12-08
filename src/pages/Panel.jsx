@@ -8,26 +8,28 @@ export default function Panel() {
     <div className={styles.container}>
       <h2 className={styles.title}>PANEL</h2>
 
-      <button
-        className={styles.button}
-        onClick={() => navigate("/admin")}
-      >
-        Producción
-      </button>
+      <div className={styles.buttons}>
+        <button
+          className={styles.button}
+          onClick={() => navigate("/admin")}
+        >
+          Producción
+        </button>
 
-      <button
-        className={styles.button}
-        onClick={() => navigate("/admin-grupos")}
-      >
-        Grupos
-      </button>
+        <button
+          className={styles.button}
+          onClick={() => navigate("/admin-grupos")}
+        >
+          Grupos
+        </button>
 
-      <button
-        className={`${styles.button} ${styles.back}`}
-        onClick={() => navigate("/")}
-      >
-        Regresar
-      </button>
+        <button
+          className={`${styles.button} ${styles.back}`}
+          onClick={() => navigate("/")}
+        >
+          Regresar
+        </button>
+      </div>
     </div>
   );
 }
