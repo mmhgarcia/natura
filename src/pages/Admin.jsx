@@ -1,119 +1,125 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import styles from "./Admin.module.css";
 
 export default function Admin() {
   const [productos, setProductos] = useLocalStorage("productos", []);
-  const [grupos, setGrupos] = useLocalStorage("grupos", []);
-  const [nuevoProducto, setNuevoProducto] = useState({ id: "", nombre: "", grupo: "" });
-  const [nuevoGrupo, setNuevoGrupo] = useState({ nombre: "", precio: "" });
+  const [editing, setEditing] = useState(null); // producto en edición
+  const [form, setForm] = useState({
+    id: "",
+    nombre: "",
+    imagen: ""
+  });
 
-  // Inicializar arrays si vienen vacíos o no son arrays
-  useEffect(() => {
-    if (!Array.isArray(productos)) setProductos([]);
-    if (!Array.isArray(grupos)) setGrupos([]);
-  }, []);
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
-  // --- PRODUCTOS ---
-  const handleAddProducto = () => {
-    if (!nuevoProducto.id || !nuevoProducto.nombre || !nuevoProducto.grupo) {
-      alert("Completa todos los campos del producto");
+  const startEdit = (p) => {
+    setEditing(p.id);
+    setForm({
+      id: p.id,
+      nombre: p.nombre,
+      imagen: p.imagen
+    });
+  };
+
+  const resetForm = () => {
+    setEditing(null);
+    setForm({ id: "", nombre: "", imagen: "" });
+  };
+
+  const saveProduct = () => {
+    if (!form.id || !form.nombre) {
+      alert("ID y Nombre son obligatorios");
       return;
     }
-    setProductos([...productos, { ...nuevoProducto }]);
-    setNuevoProducto({ id: "", nombre: "", grupo: "" });
-  };
 
-  const handleDeleteProducto = (id) => {
-    setProductos(productos.filter((p) => p.id !== id));
-  };
-
-  // --- GRUPOS ---
-  const handleAddGrupo = () => {
-    if (!nuevoGrupo.nombre || !nuevoGrupo.precio) {
-      alert("Completa todos los campos del grupo");
-      return;
+    if (editing) {
+      // actualizar
+      setProductos(
+        productos.map((p) =>
+          p.id === editing ? { ...p, ...form } : p
+        )
+      );
+    } else {
+      // crear nuevo
+      setProductos([...productos, { ...form }]);
     }
-    setGrupos([...grupos, { ...nuevoGrupo, precio: parseFloat(nuevoGrupo.precio) }]);
-    setNuevoGrupo({ nombre: "", precio: "" });
+
+    resetForm();
   };
 
-  const handleDeleteGrupo = (nombre) => {
-    setGrupos(grupos.filter((g) => g.nombre !== nombre));
+  const deleteProduct = (id) => {
+    if (confirm("¿Eliminar producto?")) {
+      setProductos(productos.filter((p) => p.id !== id));
+    }
   };
 
   return (
-    <div className={styles.container}>
-      <h2 className={styles.title}>Panel Admin - Productos y Grupos</h2>
+    <div className={styles.adminContainer}>
+      <h2>Panel de Administración</h2>
 
-      {/* --- Sección Productos --- */}
-      <section className={styles.section}>
-        <h3>Productos</h3>
-        <div className={styles.form}>
-          <input
-            placeholder="ID"
-            value={nuevoProducto.id}
-            onChange={(e) => setNuevoProducto({ ...nuevoProducto, id: e.target.value })}
-          />
-          <input
-            placeholder="Nombre"
-            value={nuevoProducto.nombre}
-            onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })}
-          />
-          <select
-            value={nuevoProducto.grupo}
-            onChange={(e) => setNuevoProducto({ ...nuevoProducto, grupo: e.target.value })}
-          >
-            <option value="">Selecciona grupo</option>
-            {Array.isArray(grupos) &&
-              grupos.map((g) => (
-                <option key={g.nombre} value={g.nombre}>
-                  {g.nombre}
-                </option>
-              ))}
-          </select>
-          <button onClick={handleAddProducto}>Agregar Producto</button>
-        </div>
+      {/* FORMULARIO */}
+      <div className={styles.formBox}>
+        <h3>{editing ? "Editar Producto" : "Nuevo Producto"}</h3>
 
-        <ul className={styles.list}>
-          {Array.isArray(productos) &&
-            productos.map((p) => (
-              <li key={p.id}>
-                {p.id} - {p.nombre} ({p.grupo}){" "}
-                <button onClick={() => handleDeleteProducto(p.id)}>Eliminar</button>
-              </li>
-            ))}
-        </ul>
-      </section>
+        <label>ID:</label>
+        <input
+          name="id"
+          type="text"
+          value={form.id}
+          onChange={handleChange}
+          disabled={editing} // no se edita ID
+        />
 
-      {/* --- Sección Grupos --- */}
-      <section className={styles.section}>
-        <h3>Grupos</h3>
-        <div className={styles.form}>
-          <input
-            placeholder="Nombre grupo"
-            value={nuevoGrupo.nombre}
-            onChange={(e) => setNuevoGrupo({ ...nuevoGrupo, nombre: e.target.value })}
-          />
-          <input
-            placeholder="Precio"
-            type="number"
-            value={nuevoGrupo.precio}
-            onChange={(e) => setNuevoGrupo({ ...nuevoGrupo, precio: e.target.value })}
-          />
-          <button onClick={handleAddGrupo}>Agregar Grupo</button>
-        </div>
+        <label>Nombre:</label>
+        <input
+          name="nombre"
+          type="text"
+          value={form.nombre}
+          onChange={handleChange}
+        />
 
-        <ul className={styles.list}>
-          {Array.isArray(grupos) &&
-            grupos.map((g) => (
-              <li key={g.nombre}>
-                {g.nombre} - ${g.precio.toFixed(2)}{" "}
-                <button onClick={() => handleDeleteGrupo(g.nombre)}>Eliminar</button>
-              </li>
-            ))}
-        </ul>
-      </section>
+        <label>URL Imagen:</label>
+        <input
+          name="imagen"
+          type="text"
+          value={form.imagen}
+          onChange={handleChange}
+        />
+
+        <button className={styles.saveBtn} onClick={saveProduct}>
+          {editing ? "Guardar Cambios" : "Agregar Producto"}
+        </button>
+
+        {editing && (
+          <button className={styles.cancelBtn} onClick={resetForm}>
+            Cancelar
+          </button>
+        )}
+      </div>
+
+      {/* LISTADO */}
+      <h3>Productos Registrados</h3>
+
+      <div className={styles.list}>
+        {productos.map((p) => (
+          <div key={p.id} className={styles.item}>
+            <img src={p.imagen} alt="" />
+
+            <div className={styles.info}>
+              <p><strong>{p.id}</strong></p>
+              <p>{p.nombre}</p>
+            </div>
+
+            <div className={styles.actions}>
+              <button onClick={() => startEdit(p)}>Editar</button>
+              <button onClick={() => deleteProduct(p.id)}>Eliminar</button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
