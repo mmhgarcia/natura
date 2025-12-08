@@ -45,10 +45,10 @@ export default function Home() {
 
       {adminMode && (
         <button
-          onClick={() => navigate("/admin")}
+          onClick={() => setAdminMode((prev) => !prev)}
           className={styles.adminButton}
         >
-          Entrar al Panel Admin
+          {adminMode ? "Salir del modo Admin" : "Entrar al modo Admin"}
         </button>
       )}
 
