@@ -1,14 +1,20 @@
 import { useEffect } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import data from "../data/data.json";
+import json_grupos from "../data/grupos.json";
 import styles from "./Home.module.css";
 
 export default function Home() {
   const [productos, setProductos] = useLocalStorage("productos", []);
+  const [grupos, setGrupos] = useLocalStorage("grupos", []);
 
   useEffect(() => {
     if (productos.length === 0) {
       setProductos(data.productos);
+    }
+
+    if (grupos.length === 0) {
+      setGrupos(json_grupos);
     }
   }, []);
 
@@ -24,7 +30,7 @@ export default function Home() {
               alt={p.nombre}
               className={styles.image}
             />
-            <p className={styles.name}>{p.id}</p>
+            <p>{p.id}</p>
           </div>
         ))}
       </div>
