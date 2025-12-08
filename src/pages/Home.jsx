@@ -9,6 +9,8 @@ export default function Home() {
   const [productos, setProductos] = useLocalStorage("productos", []);
   const [adminMode, setAdminMode] = useLocalStorage("adminMode", false);
   const [adminPassword, setAdminPassword] = useState("");
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
 
   useEffect(() => {
     if (productos.length === 0) {
@@ -16,9 +18,23 @@ export default function Home() {
     }
   }, []);
 
+  // Maneja clicks en el título para abrir modal
+  const handleTitleClick = () => {
+    setClickCount(prev => prev + 1);
+
+    // Reinicia contador si no se hace triple click rápido
+    setTimeout(() => setClickCount(0), 500);
+
+    if (clickCount + 1 === 3) {
+      setShowAdminModal(true);
+      setClickCount(0);
+    }
+  };
+
   const handleAdminLogin = () => {
     if (adminPassword === "1234") { // clave correcta
       setAdminMode(true);
+      setShowAdminModal(false);
       navigate("/admin"); // redirige automáticamente
     } else {
       alert("Clave incorrecta");
@@ -32,21 +48,47 @@ export default function Home() {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>Natura Ice</h2>
+      <h2 className={styles.title} onClick={handleTitleClick}>
+        Natura Ice
+      </h2>
 
-      {/* Input de clave para activar Admin */}
-      {!adminMode && (
-        <div style={{ textAlign: "center", marginBottom: "16px" }}>
-          <input
-            type="password"
-            placeholder="Clave Admin"
-            value={adminPassword}
-            onChange={(e) => setAdminPassword(e.target.value)}
-            style={{ padding: "6px 10px", fontSize: "1rem", marginRight: "8px" }}
-          />
-          <button onClick={handleAdminLogin} style={{ padding: "6px 12px" }}>
-            Entrar Admin
-          </button>
+      {/* Modal Admin */}
+      {showAdminModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              padding: "20px",
+              borderRadius: "12px",
+              textAlign: "center",
+              minWidth: "300px"
+            }}
+          >
+            <h3>Login Admin</h3>
+            <input
+              type="password"
+              placeholder="Clave Admin"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              style={{ padding: "6px 10px", fontSize: "1rem", marginRight: "8px" }}
+            />
+            <button onClick={handleAdminLogin} style={{ padding: "6px 12px" }}>
+              Entrar
+            </button>
+            <div style={{ marginTop: "12px" }}>
+              <button onClick={() => setShowAdminModal(false)}>Cerrar</button>
+            </div>
+          </div>
         </div>
       )}
 
