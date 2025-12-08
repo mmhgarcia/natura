@@ -1,125 +1,172 @@
-import { useState } from "react";
+// src/pages/Admin.jsx
+import { useEffect, useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import dataProductos from "../data/data.json";
+import dataGrupos from "../data/grupos.json";
 import styles from "./Admin.module.css";
 
 export default function Admin() {
+  // Productos
   const [productos, setProductos] = useLocalStorage("productos", []);
-  const [editing, setEditing] = useState(null); // producto en edición
-  const [form, setForm] = useState({
-    id: "",
-    nombre: "",
-    imagen: ""
-  });
+  const [nuevoProducto, setNuevoProducto] = useState({ nombre: "", imagen: "", grupo: "" });
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // Grupos
+  const [grupos, setGrupos] = useLocalStorage("grupos", []);
+  const [nuevoGrupo, setNuevoGrupo] = useState({ nombre: "", precio: "" });
+
+  // Inicialización
+  useEffect(() => {
+    if (productos.length === 0) setProductos(dataProductos.productos);
+    if (grupos.length === 0) setGrupos(dataGrupos);
+  }, []);
+
+  // ------------------ PRODUCTOS ------------------
+  const agregarProducto = () => {
+    if (!nuevoProducto.nombre || !nuevoProducto.imagen || !nuevoProducto.grupo) return;
+    const id = Date.now(); // id único
+    setProductos([...productos, { id, ...nuevoProducto }]);
+    setNuevoProducto({ nombre: "", imagen: "", grupo: "" });
   };
 
-  const startEdit = (p) => {
-    setEditing(p.id);
-    setForm({
-      id: p.id,
-      nombre: p.nombre,
-      imagen: p.imagen
-    });
-  };
-
-  const resetForm = () => {
-    setEditing(null);
-    setForm({ id: "", nombre: "", imagen: "" });
-  };
-
-  const saveProduct = () => {
-    if (!form.id || !form.nombre) {
-      alert("ID y Nombre son obligatorios");
-      return;
+  const editarProducto = (index) => {
+    const producto = productos[index];
+    const nombre = prompt("Nombre:", producto.nombre);
+    const imagen = prompt("URL Imagen:", producto.imagen);
+    const grupo = prompt("Grupo:", producto.grupo);
+    if (nombre !== null && imagen !== null && grupo !== null) {
+      const productosActualizados = [...productos];
+      productosActualizados[index] = { ...productosActualizados[index], nombre, imagen, grupo };
+      setProductos(productosActualizados);
     }
-
-    if (editing) {
-      // actualizar
-      setProductos(
-        productos.map((p) =>
-          p.id === editing ? { ...p, ...form } : p
-        )
-      );
-    } else {
-      // crear nuevo
-      setProductos([...productos, { ...form }]);
-    }
-
-    resetForm();
   };
 
-  const deleteProduct = (id) => {
-    if (confirm("¿Eliminar producto?")) {
-      setProductos(productos.filter((p) => p.id !== id));
+  const eliminarProducto = (index) => {
+    if (confirm("¿Eliminar este producto?")) {
+      const productosActualizados = productos.filter((_, i) => i !== index);
+      setProductos(productosActualizados);
+    }
+  };
+
+  // ------------------ GRUPOS ------------------
+  const agregarGrupo = () => {
+    if (!nuevoGrupo.nombre || !nuevoGrupo.precio) return;
+    setGrupos([...grupos, { nombre: nuevoGrupo.nombre, precio: parseFloat(nuevoGrupo.precio) }]);
+    setNuevoGrupo({ nombre: "", precio: "" });
+  };
+
+  const editarGrupo = (index) => {
+    const grupo = grupos[index];
+    const nombre = prompt("Nombre:", grupo.nombre);
+    const precio = prompt("Precio:", grupo.precio);
+    if (nombre !== null && precio !== null) {
+      const gruposActualizados = [...grupos];
+      gruposActualizados[index] = { nombre, precio: parseFloat(precio) };
+      setGrupos(gruposActualizados);
+    }
+  };
+
+  const eliminarGrupo = (index) => {
+    if (confirm("¿Eliminar este grupo?")) {
+      const gruposActualizados = grupos.filter((_, i) => i !== index);
+      setGrupos(gruposActualizados);
     }
   };
 
   return (
-    <div className={styles.adminContainer}>
-      <h2>Panel de Administración</h2>
+    <div className={styles.container}>
+      <h2 className={styles.title}>Panel Admin - Productos y Grupos</h2>
 
-      {/* FORMULARIO */}
-      <div className={styles.formBox}>
-        <h3>{editing ? "Editar Producto" : "Nuevo Producto"}</h3>
+      {/* ------------------ PRODUCTOS ------------------ */}
+      <section className={styles.section}>
+        <h3>Productos</h3>
+        <div className={styles.form}>
+          <input
+            placeholder="Nombre"
+            value={nuevoProducto.nombre}
+            onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })}
+          />
+          <input
+            placeholder="URL Imagen"
+            value={nuevoProducto.imagen}
+            onChange={(e) => setNuevoProducto({ ...nuevoProducto, imagen: e.target.value })}
+          />
+          <select
+            value={nuevoProducto.grupo}
+            onChange={(e) => setNuevoProducto({ ...nuevoProducto, grupo: e.target.value })}
+          >
+            <option value="">Selecciona grupo</option>
+            {grupos.map((g, i) => (
+              <option key={i} value={g.nombre}>{g.nombre}</option>
+            ))}
+          </select>
+          <button onClick={agregarProducto}>Agregar Producto</button>
+        </div>
 
-        <label>ID:</label>
-        <input
-          name="id"
-          type="text"
-          value={form.id}
-          onChange={handleChange}
-          disabled={editing} // no se edita ID
-        />
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Imagen</th>
+              <th>Grupo</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {productos.map((p, index) => (
+              <tr key={p.id}>
+                <td>{p.nombre}</td>
+                <td><img src={p.imagen} alt={p.nombre} className={styles.imgMini} /></td>
+                <td>{p.grupo}</td>
+                <td>
+                  <button onClick={() => editarProducto(index)}>Editar</button>
+                  <button onClick={() => eliminarProducto(index)}>Eliminar</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
 
-        <label>Nombre:</label>
-        <input
-          name="nombre"
-          type="text"
-          value={form.nombre}
-          onChange={handleChange}
-        />
+      {/* ------------------ GRUPOS ------------------ */}
+      <section className={styles.section}>
+        <h3>Grupos</h3>
+        <div className={styles.form}>
+          <input
+            placeholder="Nombre"
+            value={nuevoGrupo.nombre}
+            onChange={(e) => setNuevoGrupo({ ...nuevoGrupo, nombre: e.target.value })}
+          />
+          <input
+            placeholder="Precio"
+            type="number"
+            value={nuevoGrupo.precio}
+            onChange={(e) => setNuevoGrupo({ ...nuevoGrupo, precio: e.target.value })}
+          />
+          <button onClick={agregarGrupo}>Agregar Grupo</button>
+        </div>
 
-        <label>URL Imagen:</label>
-        <input
-          name="imagen"
-          type="text"
-          value={form.imagen}
-          onChange={handleChange}
-        />
-
-        <button className={styles.saveBtn} onClick={saveProduct}>
-          {editing ? "Guardar Cambios" : "Agregar Producto"}
-        </button>
-
-        {editing && (
-          <button className={styles.cancelBtn} onClick={resetForm}>
-            Cancelar
-          </button>
-        )}
-      </div>
-
-      {/* LISTADO */}
-      <h3>Productos Registrados</h3>
-
-      <div className={styles.list}>
-        {productos.map((p) => (
-          <div key={p.id} className={styles.item}>
-            <img src={p.imagen} alt="" />
-
-            <div className={styles.info}>
-              <p><strong>{p.id}</strong></p>
-              <p>{p.nombre}</p>
-            </div>
-
-            <div className={styles.actions}>
-              <button onClick={() => startEdit(p)}>Editar</button>
-              <button onClick={() => deleteProduct(p.id)}>Eliminar</button>
-            </div>
-          </div>
-        ))}
-      </div>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Precio</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {grupos.map((g, index) => (
+              <tr key={index}>
+                <td>{g.nombre}</td>
+                <td>{g.precio}</td>
+                <td>
+                  <button onClick={() => editarGrupo(index)}>Editar</button>
+                  <button onClick={() => eliminarGrupo(index)}>Eliminar</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
     </div>
   );
 }
