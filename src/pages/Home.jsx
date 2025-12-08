@@ -1,65 +1,68 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { useNavigate } from "react-router-dom";
 import data from "../data/data.json";
-import json_grupos from "../data/grupos.json";
 import styles from "./Home.module.css";
 
 export default function Home() {
+  const navigate = useNavigate();
   const [productos, setProductos] = useLocalStorage("productos", []);
-  const [grupos, setGrupos] = useLocalStorage("grupos", []);
   const [adminMode, setAdminMode] = useLocalStorage("adminMode", false);
-  const clickCounter = useRef(0);
+  const [adminPassword, setAdminPassword] = useState("");
 
-  const handleSecretClick = () => {
-    clickCounter.current += 1;
-
-    if (clickCounter.current >= 3) {
-      const pass = prompt("Ingrese contraseña de administrador:");
-
-      if (pass === "natura2025") {
-        setAdminMode(true);
-        alert("Modo administrador activado");
-      }
-
-      clickCounter.current = 0;
-    }
-  };
-
- 
   useEffect(() => {
     if (productos.length === 0) {
       setProductos(data.productos);
     }
-
-    if (grupos.length === 0) {
-      setGrupos(json_grupos);
-    }
   }, []);
+
+  const handleAdminLogin = () => {
+    if (adminPassword === "1234") { // clave correcta
+      setAdminMode(true);
+      navigate("/admin"); // redirige automáticamente
+    } else {
+      alert("Clave incorrecta");
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setAdminMode(false);
+    setAdminPassword("");
+  };
 
   return (
     <div className={styles.container}>
-      
-      <h2 className={styles.title} onClick={handleSecretClick}>
-        Natura Ice
-      </h2>
+      <h2 className={styles.title}>Natura Ice</h2>
 
+      {/* Input de clave para activar Admin */}
+      {!adminMode && (
+        <div style={{ textAlign: "center", marginBottom: "16px" }}>
+          <input
+            type="password"
+            placeholder="Clave Admin"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+            style={{ padding: "6px 10px", fontSize: "1rem", marginRight: "8px" }}
+          />
+          <button onClick={handleAdminLogin} style={{ padding: "6px 12px" }}>
+            Entrar Admin
+          </button>
+        </div>
+      )}
+
+      {/* Botón de salir de admin */}
       {adminMode && (
-        <button
-          onClick={() => setAdminMode((prev) => !prev)}
-          className={styles.adminButton}
-        >
-          {adminMode ? "Salir del modo Admin" : "Entrar al modo Admin"}
-        </button>
+        <div style={{ textAlign: "center", marginBottom: "16px" }}>
+          <button onClick={handleAdminLogout} style={{ padding: "6px 12px" }}>
+            Salir de Admin
+          </button>
+        </div>
       )}
 
       <div className={styles.grid}>
         {productos.map((p) => (
           <div key={p.id} className={styles.card}>
-            <img
-              src={p.imagen}
-              alt={p.nombre}
-              className={styles.image}
-            />
+            <img src={p.imagen} alt={p.nombre} className={styles.image} />
             <p>{p.id}</p>
           </div>
         ))}
