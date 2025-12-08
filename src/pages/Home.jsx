@@ -35,7 +35,7 @@ export default function Home() {
     if (adminPassword === "1234") { // clave correcta
       setAdminMode(true);
       setShowAdminModal(false);
-      navigate("/admin"); // redirige automáticamente
+      navigate("/panel"); // redirige automáticamente
     } else {
       alert("Clave incorrecta");
     }

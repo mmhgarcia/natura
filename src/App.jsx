@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import Lista from "./pages/Lista";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
+import Panel from "./pages/Panel";
 import Admin from "./pages/Admin";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -15,6 +16,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/lista" element={<Lista />} />
         <Route path="/about" element={<About />} />
+        <Route path="/panel" element={<Panel />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

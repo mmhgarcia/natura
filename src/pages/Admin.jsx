@@ -114,8 +114,8 @@ export default function Admin() {
             </div>
 
             <div className={styles.actions}>
-              <button onClick={() => startEdit(p)}>Editar</button>
-              <button onClick={() => deleteProduct(p.id)}>Eliminar</button>
+              <button onClick={() => startEdit(p)}>Edit</button>
+              <button onClick={() => deleteProduct(p.id)}>Del</button>
             </div>
           </div>
         ))}
