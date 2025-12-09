@@ -10,7 +10,7 @@ import styles from "./Home.module.css";
 export default function Home() {
   const navigate = useNavigate();
   const [productos, setProductos] = useLocalStorage("productos", []);
-  const [grupos, setGrupos] = useLocalStorage("grupos", []);
+  const [grupos, setGrupos] = useLocalStorage("grupos", ogrupos);
   
   const [adminMode, setAdminMode] = useLocalStorage("adminMode", false);
   const [adminPassword, setAdminPassword] = useState("");
