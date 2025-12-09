@@ -4,146 +4,135 @@ import styles from "./Admin.module.css";
 
 export default function AdminProductos() {
   const [productos, setProductos] = useLocalStorage("productos", []);
-  const [editing, setEditing] = useState(null); // producto en edición
+  const [isEditing, setIsEditing] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  // FORM STATE
   const [form, setForm] = useState({
     id: "",
     nombre: "",
-    imagen: "",
     grupo: "",
-    stock: "",
+    imagen: "",
+    stock: ""
   });
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const startEdit = (p) => {
-    setEditing(p.id);
-    setForm({
-      id: p.id,
-      nombre: p.nombre,
-      imagen: p.imagen,
-      grupo: p.grupo,
-      stock: p.stock,
-    });
+  const openNewProduct = () => {
+    setForm({ id: "", nombre: "", grupo: "", imagen: "", stock: "" });
+    setIsEditing(false);
+    setShowModal(true);
   };
 
-  const resetForm = () => {
-    setEditing(null);
-    setForm({ id: "", nombre: "", imagen: "", grupo: "", stock: 0 });
+  const startEdit = (p) => {
+    setForm(p);
+    setIsEditing(true);
+    setShowModal(true);
   };
 
   const saveProduct = () => {
-    if (!form.id || !form.nombre) {
-      alert("ID y Nombre son obligatorios");
-      return;
-    }
+    if (!form.nombre || !form.imagen) return alert("Faltan datos");
 
-    if (editing) {
-      // actualizar
-      setProductos(
-        productos.map((p) =>
-          p.id === editing ? { ...p, ...form } : p
-        )
+    if (isEditing) {
+      const updated = productos.map((p) =>
+        p.id === form.id ? form : p
       );
+      setProductos(updated);
     } else {
-      // crear nuevo
-      setProductos([...productos, { ...form }]);
+      setProductos([...productos, { ...form, id: crypto.randomUUID() }]);
     }
 
-    resetForm();
+    setShowModal(false);
   };
 
   const deleteProduct = (id) => {
-    if (confirm("¿Eliminar producto?")) {
-      setProductos(productos.filter((p) => p.id !== id));
-    }
+    if (!confirm("¿Eliminar producto?")) return;
+    setProductos(productos.filter((p) => p.id !== id));
   };
 
   return (
     <div className={styles.adminContainer}>
-      <h2>Panel de Administración</h2>
+      <h2>PANEL DE PRODUCTOS</h2>
 
-      {/* FORMULARIO */}
-      <div className={styles.formBox}>
-        <h3>{editing ? "Editar Producto" : "Nuevo Producto"}</h3>
-
-        <label>ID:</label>
-        <input
-          name="id"
-          type="text"
-          value={form.id}
-          onChange={handleChange}
-          disabled={editing} // no se edita ID
-        />
-
-        <label>Nombre:</label>
-        <input
-          name="nombre"
-          type="text"
-          value={form.nombre}
-          onChange={handleChange}
-        />
-
-        <label>URL Imagen:</label>
-        <input
-          name="imagen"
-          type="text"
-          value={form.imagen}
-          onChange={handleChange}
-        />
-
-        <label>Grupo:</label>
-        <input
-          name="grupo"
-          type="text"
-          value={form.grupo}
-          onChange={handleChange}
-        />
-
-        <label>Stock:</label>
-        <input
-          name="stock"
-          type="text"
-          value={form.stock}
-          onChange={handleChange}
-        />
-
-        <button className={styles.saveBtn} onClick={saveProduct}>
-          {editing ? "Guardar Cambios" : "Agregar Producto"}
+      {/* BOTÓN NUEVO */}
+      <div style={{ textAlign: "center", marginBottom: "20px" }}>
+        <button className={styles.saveBtn} onClick={openNewProduct}>
+          Nuevo Producto
         </button>
-
-        {editing && (
-          <button className={styles.cancelBtn} onClick={resetForm}>
-            Cancelar
-          </button>
-        )}
       </div>
 
-      {/* LISTADO */}
-      <h3>Productos con Stock Disponible</h3>
+      {/* LISTA */}
+      <h3>Productos Registrados</h3>
 
-    <div className={styles.list}>
-      {productos           
-        .map((p) => (
-          <div key={p.id} className={styles.item}>
-            <img src={p.imagen} alt="" />
+      <div className={styles.list}>
+        {productos
+          .filter((p) => p.stock > 0)
+          .map((p) => (
+            <div key={p.id} className={styles.item}>
+              <img src={p.imagen} alt="" />
 
-            <div className={styles.info}>
-              <p><strong>{p.id}</strong></p>
-              <p>{p.nombre}</p>
-              <p>{p.grupo}</p>
-              <p>{p.stock}</p>
+              <div className={styles.info}>
+                <p><strong>{p.id}</strong></p>
+                <p>{p.nombre}</p>
+                <p>{p.grupo}</p>
+                <p>{p.stock}</p>
+              </div>
+
+              <div className={styles.actions}>
+                <button onClick={() => startEdit(p)}>Edit</button>
+                <button onClick={() => deleteProduct(p.id)}>Del</button>
+              </div>
+            </div>
+          ))}
+      </div>
+
+      {/* MODAL */}
+      {showModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+
+            <h3>{isEditing ? "Editar Producto" : "Nuevo Producto"}</h3>
+
+            <div className={styles.formBox}>
+              <input
+                name="nombre"
+                value={form.nombre}
+                onChange={handleChange}
+                placeholder="Nombre"
+              />
+              <input
+                name="grupo"
+                value={form.grupo}
+                onChange={handleChange}
+                placeholder="Grupo"
+              />
+              <input
+                name="imagen"
+                value={form.imagen}
+                onChange={handleChange}
+                placeholder="URL Imagen"
+              />
+              <input
+                name="stock"
+                value={form.stock}
+                onChange={handleChange}
+                placeholder="Stock"
+              />
+
+              <button className={styles.saveBtn} onClick={saveProduct}>
+                Guardar
+              </button>
+
+              <button className={styles.cancelBtn} onClick={() => setShowModal(false)}>
+                Cancelar
+              </button>
             </div>
 
-            <div className={styles.actions}>
-              <button onClick={() => startEdit(p)}>Edit</button>
-              <button onClick={() => deleteProduct(p.id)}>Del</button>
-            </div>
           </div>
-        ))}
-    </div>
-
+        </div>
+      )}
     </div>
   );
 }
