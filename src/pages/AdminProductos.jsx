@@ -124,8 +124,7 @@ export default function AdminProductos() {
       <h3>Productos con Stock Disponible</h3>
 
     <div className={styles.list}>
-      {productos
-        .filter((p) => p.stock > 0)   
+      {productos           
         .map((p) => (
           <div key={p.id} className={styles.item}>
             <img src={p.imagen} alt="" />
