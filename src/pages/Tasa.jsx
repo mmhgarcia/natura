@@ -1,9 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Tasa() {
   const navigate = useNavigate();
   const [tasa, setTasa] = useState("");
+
+  // 🔹 Cargar la tasa desde localStorage al entrar
+  useEffect(() => {
+    const stored = localStorage.getItem("tasa");
+    if (stored) {
+      setTasa(stored);
+    }
+  }, []);
 
   const handleSave = () => {
     if (!tasa || isNaN(tasa)) {
@@ -16,35 +24,42 @@ export default function Tasa() {
   };
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Tasa BCV</h2>
+    <div style={styles.wrapper}>
+      <div style={styles.container}>
+        <h2 style={styles.title}>Tasa BCV</h2>
 
-      <input
-        type="text"
-        value={tasa}
-        onChange={(e) => setTasa(e.target.value)}
-        placeholder="Ingrese la tasa"
-        style={styles.input}
-      />
+        <input
+          type="text"
+          value={tasa}
+          onChange={(e) => setTasa(e.target.value)}
+          placeholder="Ingrese la tasa"
+          style={styles.input}
+        />
 
-      <div style={styles.buttonRow}>
-        <button onClick={handleSave} style={styles.button}>
-          Grabar
-        </button>
-        <button onClick={() => navigate("/panel")} style={styles.button}>
-          Regresar
-        </button>
+        <div style={styles.buttonRow}>
+          <button onClick={handleSave} style={styles.button}>
+            Grabar
+          </button>
+          <button onClick={() => navigate("/panel")} style={styles.button}>
+            Regresar
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
 const styles = {
+  wrapper: {
+    width: "100vw",
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   container: {
     width: "100%",
     maxWidth: "400px",
-    margin: "0 auto",
-    marginTop: "80px",
     textAlign: "center",
   },
   title: {
