@@ -118,8 +118,8 @@ export default function Home() {
           .map((p) => (
             <div key={p.id} className={styles.card}>
               <img src={p.imagen} alt={p.nombre} className={styles.image} />
-              <p>Unidades: {p.stock}</p>
-              <p>{p.id}</p>
+              <p>Und: {p.stock}</p>
+              <p># {p.id}</p>
             </div>
           ))}
       </div>
