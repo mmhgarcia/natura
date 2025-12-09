@@ -97,6 +97,12 @@ export default function AdminProductos() {
 
             <div className={styles.formBox}>
               <input
+                name="id"
+                value={form.id}
+                onChange={handleChange}
+                placeholder="ID"
+              />
+              <input
                 name="nombre"
                 value={form.nombre}
                 onChange={handleChange}
