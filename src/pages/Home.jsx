@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useNavigate } from "react-router-dom";
+
 import data from "../data/data.json";
 import ogrupos from "../data/grupos.json";
+
 import styles from "./Home.module.css";
 
 export default function Home() {
