@@ -11,9 +11,16 @@ export default function Panel() {
       <div className={styles.buttons}>
         <button
           className={styles.button}
-          onClick={() => navigate("/admin")}
+          onClick={() => navigate("/")}
         >
-          Producción
+          Tasa BCV
+        </button>
+
+        <button
+          className={styles.button}
+          onClick={() => navigate("/adminproductos")}
+        >
+          Productos
         </button>
 
         <button

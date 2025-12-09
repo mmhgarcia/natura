@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import styles from "./Admin.module.css";
 
-export default function Admin() {
+export default function AdminProductos() {
   const [productos, setProductos] = useLocalStorage("productos", []);
   const [editing, setEditing] = useState(null); // producto en edición
   const [form, setForm] = useState({
