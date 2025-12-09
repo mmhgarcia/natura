@@ -5,6 +5,7 @@ import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import Panel from "./pages/Panel";
 import AdminProductos from "./pages/AdminProductos";
+import AdminGrupos from "./pages/AdminGrupos";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 
@@ -18,6 +19,7 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/panel" element={<Panel />} />
         <Route path="/adminproductos" element={<AdminProductos />} />
+        <Route path="/admingrupos" element={<AdminGrupos />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />

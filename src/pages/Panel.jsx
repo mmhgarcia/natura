@@ -25,7 +25,7 @@ export default function Panel() {
 
         <button
           className={styles.button}
-          onClick={() => navigate("/admin-grupos")}
+          onClick={() => navigate("/admingrupos")}
         >
           Grupos
         </button>

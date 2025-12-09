@@ -2,20 +2,29 @@ import { useEffect, useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useNavigate } from "react-router-dom";
 import data from "../data/data.json";
+import ogrupos from "../data/grupos.json";
 import styles from "./Home.module.css";
 
 export default function Home() {
   const navigate = useNavigate();
   const [productos, setProductos] = useLocalStorage("productos", []);
+  const [grupos, setGrupos] = useLocalStorage("grupos", []);
+  
   const [adminMode, setAdminMode] = useLocalStorage("adminMode", false);
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [clickCount, setClickCount] = useState(0);
 
   useEffect(() => {
+    
     if (productos.length === 0) {
       setProductos(data.productos);
     }
+
+    if (ogrupos.length === 0) {
+      setGrupos(ogrupos);
+    }
+
   }, []);
 
   // Maneja clicks en el título para abrir modal
