@@ -1,306 +1,197 @@
 // src/pages/GestionGrupos.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 
-// Valores por defecto si no hay nada en localStorage
-const GRUPOS_FALLBACK = [
-  {
-    Cremoso: 0.5,
-    FullCremoso: 0.7,
-    Premium: 1.0,
-    Ninguno: 0.0
-  }
-];
-
-// Leer de localStorage
-const getGruposFromStorage = () => {
-  if (typeof window === "undefined") return GRUPOS_FALLBACK;
-  
-  try {
-    const stored = localStorage.getItem("grupos");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    }
-    return GRUPOS_FALLBACK;
-  } catch {
-    return GRUPOS_FALLBACK;
-  }
+// Valores por defecto
+const FACTORES_DEFAULT = {
+  Cremoso: 0.5,
+  FullCremoso: 0.7,
+  Premium: 1.0,
+  Ninguno: 0.0
 };
 
-const GRUPOS_DEFAULT = getGruposFromStorage();
+export default function GestionGrupos() {
+  // El hook devuelve un array, tomamos el primer objeto
+  const [grupos, setGrupos] = useLocalStorage("grupos", [FACTORES_DEFAULT]);
+  
+  // Estado para los valores editados
+  const [valores, setValores] = useState(FACTORES_DEFAULT);
 
-export default function AdminGrupos() {
-  const [grupos, setGrupos] = useLocalStorage("grupos", GRUPOS_DEFAULT);
-  const [editing, setEditing] = useState(false);
-  const [currentFactor, setCurrentFactor] = useState({ nombre: "", valor: 0 });
-  const [editingName, setEditingName] = useState("");
-
-  const factores = grupos[0] || {};
-
-  // Agregar factor
-  const agregarFactor = () => {
-    if (!currentFactor.nombre.trim()) {
-      alert("Nombre vacío");
-      return;
+  // Cuando grupos cambia, actualizar los valores
+  useEffect(() => {
+    if (grupos.length > 0 && grupos[0]) {
+      setValores(grupos[0]);
     }
-    if (factores[currentFactor.nombre] !== undefined) {
-      alert("Ya existe");
-      return;
-    }
+  }, [grupos]);
 
-    setGrupos([{
-      ...factores,
-      [currentFactor.nombre]: parseFloat(currentFactor.valor) || 0
-    }]);
-    setCurrentFactor({ nombre: "", valor: 0 });
-    setEditing(false);
+  // Manejar cambio en un textbox
+  const handleChange = (factor, valor) => {
+    setValores(prev => ({
+      ...prev,
+      [factor]: parseFloat(valor) || 0
+    }));
   };
 
-  // Actualizar factor
-  const actualizarFactor = () => {
-    if (!editingName || !currentFactor.nombre.trim()) return;
-
-    const nuevosFactores = { ...factores };
-    if (editingName !== currentFactor.nombre) {
-      delete nuevosFactores[editingName];
-    }
-    nuevosFactores[currentFactor.nombre] = parseFloat(currentFactor.valor) || 0;
-    
-    setGrupos([nuevosFactores]);
-    setCurrentFactor({ nombre: "", valor: 0 });
-    setEditingName("");
-    setEditing(false);
+  // Grabar cambios
+  const grabar = () => {
+    setGrupos([valores]);
+    alert("Factores guardados");
   };
 
-  // Eliminar factor
-  const eliminarFactor = (nombre) => {
-    if (nombre === "Ninguno") {
-      alert("No se puede eliminar 'Ninguno'");
-      return;
-    }
-    if (!confirm(`¿Eliminar ${nombre}?`)) return;
-    
-    const nuevosFactores = { ...factores };
-    delete nuevosFactores[nombre];
-    setGrupos([nuevosFactores]);
-  };
-
-  // Editar factor
-  const editarFactor = (nombre) => {
-    if (nombre === "Ninguno") {
-      alert("No editable");
-      return;
-    }
-    setEditing(true);
-    setEditingName(nombre);
-    setCurrentFactor({ nombre, valor: factores[nombre] });
-  };
-
-  // Reset
-  const resetFactores = () => {
-    if (confirm("¿Resetear a valores por defecto?")) {
-      setGrupos(GRUPOS_FALLBACK);
-      setEditing(false);
-      setCurrentFactor({ nombre: "", valor: 0 });
-      setEditingName("");
+  // Eliminar (resetear a valores por defecto)
+  const eliminar = () => {
+    if (confirm("¿Restablecer valores por defecto?")) {
+      setValores(FACTORES_DEFAULT);
+      setGrupos([FACTORES_DEFAULT]);
     }
   };
-
-  const totalFactores = Object.keys(factores).length;
 
   // Estilos minimalistas
   const styles = {
-    container: { padding: "20px", maxWidth: "800px", margin: "0 auto" },
-    header: { marginBottom: "20px" },
-    stats: { 
-      background: "#f5f5f5", 
-      padding: "10px", 
-      marginBottom: "20px",
-      borderRadius: "4px" 
+    container: {
+      padding: "20px",
+      maxWidth: "400px",
+      margin: "0 auto"
     },
-    formContainer: { 
-      border: "1px solid #ddd", 
-      padding: "15px", 
-      marginBottom: "20px",
-      borderRadius: "4px" 
+    header: {
+      marginBottom: "30px",
+      textAlign: "center"
     },
-    inputGroup: { 
-      display: "flex", 
-      gap: "10px", 
-      marginBottom: "10px" 
+    bloque: {
+      marginBottom: "20px"
     },
-    input: { 
-      padding: "8px", 
-      border: "1px solid #ccc", 
-      borderRadius: "4px",
-      flex: 1 
+    label: {
+      display: "block",
+      marginBottom: "5px",
+      fontWeight: "bold"
     },
-    button: { 
-      padding: "8px 16px", 
-      border: "none", 
-      borderRadius: "4px",
-      cursor: "pointer" 
-    },
-    buttonPrimary: { background: "#007bff", color: "white" },
-    buttonSuccess: { background: "#28a745", color: "white" },
-    buttonDanger: { background: "#dc3545", color: "white" },
-    buttonSecondary: { background: "#6c757d", color: "white" },
-    buttonWarning: { background: "#ffc107", color: "black" },
-    factorsGrid: { 
-      display: "grid", 
-      gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-      gap: "10px",
-      marginBottom: "20px" 
-    },
-    factorCard: { 
-      border: "1px solid #ddd", 
+    input: {
+      width: "100%",
       padding: "10px",
-      borderRadius: "4px" 
-    },
-    factorHeader: { 
-      display: "flex", 
-      justifyContent: "space-between",
-      marginBottom: "5px" 
-    },
-    factorName: { fontWeight: "bold" },
-    factorValue: { 
-      background: "#e9ecef", 
-      padding: "2px 6px",
-      borderRadius: "3px" 
-    },
-    slider: { width: "100%", margin: "5px 0" },
-    cardButtons: { 
-      display: "flex", 
-      gap: "5px", 
-      marginTop: "8px" 
-    },
-    smallButton: { 
-      padding: "4px 8px", 
-      fontSize: "12px",
-      flex: 1 
-    },
-    jsonView: { 
-      background: "#f8f9fa", 
-      padding: "10px", 
-      fontSize: "12px",
+      border: "1px solid #ccc",
       borderRadius: "4px",
-      overflow: "auto" 
+      fontSize: "16px"
+    },
+    botones: {
+      display: "flex",
+      gap: "10px",
+      marginTop: "30px"
+    },
+    button: {
+      padding: "10px 20px",
+      border: "none",
+      borderRadius: "4px",
+      cursor: "pointer",
+      fontSize: "16px",
+      flex: 1
+    },
+    grabar: {
+      background: "#4CAF50",
+      color: "white"
+    },
+    eliminar: {
+      background: "#f44336",
+      color: "white"
+    },
+    currentValue: {
+      fontSize: "12px",
+      color: "#666",
+      marginTop: "3px"
     }
   };
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.header}>Gestión de Factores</h1>
+      <h1 style={styles.header}>Editar Factores</h1>
       
-      <div style={styles.stats}>
-        Factores: {totalFactores}
-      </div>
-
-      {/* Formulario */}
-      <div style={styles.formContainer}>
-        <h3>{editing ? "Editar Factor" : "Nuevo Factor"}</h3>
-        <div style={styles.inputGroup}>
-          <input
-            type="text"
-            placeholder="Nombre"
-            value={currentFactor.nombre}
-            onChange={(e) => setCurrentFactor(prev => ({ ...prev, nombre: e.target.value }))}
-            style={styles.input}
-          />
-          <input
-            type="number"
-            placeholder="Valor"
-            value={currentFactor.valor}
-            onChange={(e) => setCurrentFactor(prev => ({ ...prev, valor: e.target.value }))}
-            step="0.1"
-            style={styles.input}
-          />
-        </div>
-        <div style={{ display: "flex", gap: "10px" }}>
-          {editing ? (
-            <>
-              <button 
-                onClick={actualizarFactor}
-                style={{ ...styles.button, ...styles.buttonSuccess }}
-              >
-                Guardar
-              </button>
-              <button 
-                onClick={() => { setEditing(false); setCurrentFactor({ nombre: "", valor: 0 }); }}
-                style={{ ...styles.button, ...styles.buttonSecondary }}
-              >
-                Cancelar
-              </button>
-            </>
-          ) : (
-            <button 
-              onClick={agregarFactor}
-              style={{ ...styles.button, ...styles.buttonPrimary }}
-            >
-              Agregar
-            </button>
-          )}
+      {/* Bloque 1: Cremoso */}
+      <div style={styles.bloque}>
+        <label style={styles.label}>Cremoso</label>
+        <input
+          type="number"
+          step="0.1"
+          value={valores.Cremoso}
+          onChange={(e) => handleChange("Cremoso", e.target.value)}
+          style={styles.input}
+        />
+        <div style={styles.currentValue}>
+          Valor actual: {grupos[0]?.Cremoso || 0}
         </div>
       </div>
 
-      {/* Botón Reset */}
-      <div style={{ marginBottom: "15px" }}>
+      {/* Bloque 2: Full Cremoso */}
+      <div style={styles.bloque}>
+        <label style={styles.label}>Full Cremoso</label>
+        <input
+          type="number"
+          step="0.1"
+          value={valores.FullCremoso}
+          onChange={(e) => handleChange("FullCremoso", e.target.value)}
+          style={styles.input}
+        />
+        <div style={styles.currentValue}>
+          Valor actual: {grupos[0]?.FullCremoso || 0}
+        </div>
+      </div>
+
+      {/* Bloque 3: Premium */}
+      <div style={styles.bloque}>
+        <label style={styles.label}>Premium</label>
+        <input
+          type="number"
+          step="0.1"
+          value={valores.Premium}
+          onChange={(e) => handleChange("Premium", e.target.value)}
+          style={styles.input}
+        />
+        <div style={styles.currentValue}>
+          Valor actual: {grupos[0]?.Premium || 0}
+        </div>
+      </div>
+
+      {/* Bloque 4: Ninguno */}
+      <div style={styles.bloque}>
+        <label style={styles.label}>Ninguno</label>
+        <input
+          type="number"
+          step="0.1"
+          value={valores.Ninguno}
+          onChange={(e) => handleChange("Ninguno", e.target.value)}
+          style={styles.input}
+        />
+        <div style={styles.currentValue}>
+          Valor actual: {grupos[0]?.Ninguno || 0}
+        </div>
+      </div>
+
+      {/* Bloque 5: Botones */}
+      <div style={styles.botones}>
         <button 
-          onClick={resetFactores}
-          style={{ ...styles.button, ...styles.buttonWarning }}
+          onClick={grabar}
+          style={{ ...styles.button, ...styles.grabar }}
         >
-          Resetear
+          Grabar
+        </button>
+        <button 
+          onClick={eliminar}
+          style={{ ...styles.button, ...styles.eliminar }}
+        >
+          Eliminar
         </button>
       </div>
 
-      {/* Lista de Factores */}
-      <div style={styles.factorsGrid}>
-        {Object.entries(factores).map(([nombre, valor]) => (
-          <div key={nombre} style={styles.factorCard}>
-            <div style={styles.factorHeader}>
-              <div style={styles.factorName}>{nombre}</div>
-              <div style={styles.factorValue}>{valor.toFixed(1)}</div>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="3"
-              step="0.1"
-              value={valor}
-              onChange={(e) => {
-                const nuevosFactores = { ...factores };
-                nuevosFactores[nombre] = parseFloat(e.target.value);
-                setGrupos([nuevosFactores]);
-              }}
-              style={styles.slider}
-            />
-            <div style={styles.cardButtons}>
-              <button 
-                onClick={() => editarFactor(nombre)}
-                style={{ ...styles.button, ...styles.smallButton, background: "#e9ecef" }}
-                disabled={nombre === "Ninguno"}
-              >
-                Editar
-              </button>
-              <button 
-                onClick={() => eliminarFactor(nombre)}
-                style={{ ...styles.button, ...styles.smallButton, ...styles.buttonDanger }}
-                disabled={nombre === "Ninguno"}
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Vista JSON */}
-      <details>
-        <summary>Ver JSON</summary>
-        <pre style={styles.jsonView}>
+      {/* Vista JSON (opcional) */}
+      <details style={{ marginTop: "30px" }}>
+        <summary style={{ cursor: "pointer", color: "#666" }}>
+          Ver datos almacenados
+        </summary>
+        <pre style={{
+          background: "#f5f5f5",
+          padding: "10px",
+          borderRadius: "4px",
+          fontSize: "12px",
+          overflow: "auto"
+        }}>
           {JSON.stringify(grupos, null, 2)}
         </pre>
       </details>
