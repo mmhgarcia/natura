@@ -8,7 +8,9 @@ export default function AdminProductos() {
   const [form, setForm] = useState({
     id: "",
     nombre: "",
-    imagen: ""
+    imagen: "",
+    grupo: "",
+    stock: "",
   });
 
   const handleChange = (e) => {
@@ -20,13 +22,15 @@ export default function AdminProductos() {
     setForm({
       id: p.id,
       nombre: p.nombre,
-      imagen: p.imagen
+      imagen: p.imagen,
+      grupo: p.grupo,
+      stock: p.stock,
     });
   };
 
   const resetForm = () => {
     setEditing(null);
-    setForm({ id: "", nombre: "", imagen: "" });
+    setForm({ id: "", nombre: "", imagen: "", grupo: "", stock: 0 });
   };
 
   const saveProduct = () => {
@@ -89,6 +93,22 @@ export default function AdminProductos() {
           onChange={handleChange}
         />
 
+        <label>Grupo:</label>
+        <input
+          name="grupo"
+          type="text"
+          value={form.grupo}
+          onChange={handleChange}
+        />
+
+        <label>Stock:</label>
+        <input
+          name="stock"
+          type="text"
+          value={form.stock}
+          onChange={handleChange}
+        />
+
         <button className={styles.saveBtn} onClick={saveProduct}>
           {editing ? "Guardar Cambios" : "Agregar Producto"}
         </button>
@@ -111,6 +131,8 @@ export default function AdminProductos() {
             <div className={styles.info}>
               <p><strong>{p.id}</strong></p>
               <p>{p.nombre}</p>
+              <p>{p.grupo}</p>
+              <p>{p.stock}</p>
             </div>
 
             <div className={styles.actions}>
