@@ -121,10 +121,12 @@ export default function AdminProductos() {
       </div>
 
       {/* LISTADO */}
-      <h3>Productos Registrados</h3>
+      <h3>Productos con Stock Disponible</h3>
 
-      <div className={styles.list}>
-        {productos.map((p) => (
+    <div className={styles.list}>
+      {productos
+        .filter((p) => p.stock > 0)   
+        .map((p) => (
           <div key={p.id} className={styles.item}>
             <img src={p.imagen} alt="" />
 
@@ -141,7 +143,8 @@ export default function AdminProductos() {
             </div>
           </div>
         ))}
-      </div>
+    </div>
+
     </div>
   );
 }
