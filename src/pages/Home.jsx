@@ -113,13 +113,16 @@ export default function Home() {
       )}
 
       <div className={styles.grid}>
-        {productos.map((p) => (
-          <div key={p.id} className={styles.card}>
-            <img src={p.imagen} alt={p.nombre} className={styles.image} />
-            <p>{p.id}</p>
-          </div>
-        ))}
+        {productos
+          .filter((p) => p.stock > 0)   // ⬅️ Filtrar solo stock > 0
+          .map((p) => (
+            <div key={p.id} className={styles.card}>
+              <img src={p.imagen} alt={p.nombre} className={styles.image} />
+              <p>{p.id}</p>
+            </div>
+          ))}
       </div>
+
     </div>
   );
 }
