@@ -89,26 +89,8 @@ export default function Home() {
 
       {/* Modal Admin */}
       {showAdminModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 1000
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#fff",
-              padding: "20px",
-              borderRadius: "12px",
-              textAlign: "center",
-              minWidth: "300px"
-            }}
-          >
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
             <h3>Login Admin</h3>
             <input
               type="password"
@@ -154,11 +136,11 @@ export default function Home() {
       </div>
 
       {/* Contenedor de seleccionados */}
-      <div className={styles.seleccionadosContainer}>
-        <div className={styles.seleccionadosHeader}>
+      <div className={styles.selectedContainer}>
+        <div className={styles.selectedHeader}>
           SELECCIONADOS ({seleccionados.length})
         </div>
-        <div className={styles.seleccionadosList}>
+        <div className={styles.selectedList}>
           {seleccionados.map((item, index) => (
             <div key={index} className={styles.selectedItem}>
               <p>{item.id} - {item.nombre}</p>
