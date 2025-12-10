@@ -1,10 +1,10 @@
-.title {
-  text-align: center;
-  font-size: 28px;
-  color: #00BFFF;
+.title{
+    text-align: center;
+    font-size: 28px;
+    color: #00BFFF;
 }
 
-/* Grid productos */
+/* Contenedor general de la grid */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -27,107 +27,91 @@
   width: 100%;
   max-width: 220px;
   margin: 0 auto;
-  cursor: pointer;
 }
 
+/* Imagen dentro de la card */
 .card img {
   width: 100%;
   height: auto;
   object-fit: contain;
   border-radius: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
+/* Nombre del producto */
 .card p {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   margin: 0;
-  color: #000; /* texto negro */
+  color: red;
 }
 
+/* Hover effect */
 .card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
-/* Seleccionados */
-.seleccionadosContainer {
+/* Selected container */
+.selectedContainer {
   position: fixed;
-  bottom: 20px;
-  left: 20px;
-  right: 20px;
+  bottom: 10px;
+  left: 12px;
+  right: 12px;
   background-color: #f0f0f0;
   border-radius: 12px;
-  padding: 12px;
-  max-height: 240px; /* aprox 3 items + total */
+  padding: 8px;
+  max-height: 240px; /* 3 items aprox + total */
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  z-index: 500;
+  gap: 4px;
 }
 
-.seleccionadosHeader {
+/* Header selected */
+.selectedHeader {
   font-weight: bold;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   color: #000;
 }
 
-.seleccionadosList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  overflow-y: auto;
+/* Lista de items */
+.selectedList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
+/* Item seleccionado */
 .selectedItem {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 8px;
-  margin-bottom: 4px;
   background: #fff;
+  padding: 6px 8px;
   border-radius: 8px;
-  font-size: 0.9rem;
   color: #000;
+  font-size: 0.95rem;
 }
 
-.selectedTotal {
-  font-weight: bold;
-  text-align: right;
-  padding: 4px 8px;
-  margin-top: 4px;
-  background: #dcdcdc;
-  border-radius: 8px;
-}
-
-.removeBtn {
-  background-color: #ff5757;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 2px 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
+/* Botón Vaciar */
 .vaciarBtn {
-  margin-top: 8px;
-  background-color: #00bfff;
-  color: #fff;
+  margin-top: 6px;
+  padding: 6px 12px;
   border: none;
   border-radius: 8px;
-  padding: 8px;
+  background: #FF5757;
+  color: #fff;
   cursor: pointer;
-  font-weight: bold;
-  width: 100%;
 }
 
-/* Modal Admin */
+/* Modal overlay y content */
 .modalOverlay {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0,0,0,0.5);
   display: flex;
   justify-content: center;
@@ -140,31 +124,4 @@
   padding: 20px;
   border-radius: 12px;
   min-width: 300px;
-  text-align: center;
-}
-
-.adminInput {
-  padding: 6px 10px;
-  font-size: 1rem;
-  margin-right: 8px;
-}
-
-.adminBtn {
-  padding: 6px 12px;
-  margin-top: 8px;
-  background: #00bfff;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.adminCloseBtn {
-  padding: 6px 12px;
-  margin-top: 8px;
-  background: #ccc;
-  color: #000;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
 }

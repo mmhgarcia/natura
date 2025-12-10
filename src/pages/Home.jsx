@@ -19,20 +19,15 @@ export default function Home() {
 
   const [seleccionados, setSeleccionados] = useState([]);
 
-  const [tasa, setTasa] = useState(0);
-
   useEffect(() => {
     if (productos.length === 0) setProductos(data.productos);
     if (ogrupos.length === 0) setGrupos(ogrupos);
-
-    const tasaLS = localStorage.getItem("tasa");
-    if (tasaLS) setTasa(parseFloat(tasaLS));
   }, []);
 
-  // Maneja clicks en el título para abrir modal admin
   const handleTitleClick = () => {
-    setClickCount((prev) => prev + 1);
+    setClickCount(prev => prev + 1);
     setTimeout(() => setClickCount(0), 500);
+
     if (clickCount + 1 === 3) {
       setShowAdminModal(true);
       setClickCount(0);
@@ -54,21 +49,30 @@ export default function Home() {
     setAdminPassword("");
   };
 
-  // Añadir producto seleccionado
-  const addSeleccionado = (p) => {
+  const handleSelectProducto = (p) => {
     setSeleccionados([...seleccionados, p]);
   };
 
-  // Eliminar item de la lista
-  const removeSeleccionado = (index) => {
+  const handleRemoveProducto = (index) => {
     setSeleccionados(seleccionados.filter((_, i) => i !== index));
   };
 
-  // Vaciar lista
-  const vaciarSeleccionados = () => setSeleccionados([]);
+  const handleVaciar = () => setSeleccionados([]);
 
   // Calcular total
-  const totalBs = (seleccionados.length * tasa).toFixed(2);
+  const calcularTotal = () => {
+    const tasa = parseFloat(localStorage.getItem("tasa")) || 1;
+    if (seleccionados.length === 0) return 0;
+
+    let suma = 0;
+    const listaSinTotal = seleccionados; // total siempre se recalcula
+    listaSinTotal.forEach(item => {
+      const grupo = item.grupo;
+      const costoUnitario = grupos[0][grupo] || 0;
+      suma += costoUnitario; // cantidad = 1
+    });
+    return (suma * tasa).toFixed(2);
+  };
 
   return (
     <div className={styles.container}>
@@ -86,72 +90,56 @@ export default function Home() {
               placeholder="Clave Admin"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
-              className={styles.adminInput}
+              style={{ padding: "6px 10px", fontSize: "1rem", marginRight: "8px" }}
             />
-            <button onClick={handleAdminLogin} className={styles.adminBtn}>
-              Entrar
-            </button>
-            <button
-              onClick={() => setShowAdminModal(false)}
-              className={styles.adminCloseBtn}
-            >
-              Cerrar
-            </button>
+            <button onClick={handleAdminLogin} style={{ padding: "6px 12px" }}>Entrar</button>
+            <div style={{ marginTop: "12px" }}>
+              <button onClick={() => setShowAdminModal(false)}>Cerrar</button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Botón salir admin */}
+      {/* Botón de salir de admin */}
       {adminMode && (
         <div style={{ textAlign: "center", marginBottom: "16px" }}>
-          <button onClick={handleAdminLogout} className={styles.adminBtn}>
-            Salir de Admin
-          </button>
+          <button onClick={handleAdminLogout} style={{ padding: "6px 12px" }}>Salir de Admin</button>
         </div>
       )}
 
-      {/* Grid productos */}
+      {/* Grid de productos */}
       <div className={styles.grid}>
         {productos
           .filter((p) => p.stock > 0)
           .map((p) => (
-            <div
-              key={p.id}
-              className={styles.card}
-              onClick={() => addSeleccionado(p)}
-            >
+            <div key={p.id} className={styles.card} onClick={() => handleSelectProducto(p)}>
               <img src={p.imagen} alt={p.nombre} className={styles.image} />
-              <p>{p.nombre}</p>
               <p>Und: {p.stock}</p>
               <p># {p.id}</p>
             </div>
           ))}
       </div>
 
-      {/* Contenedor seleccionados */}
-      <div className={styles.seleccionadosContainer}>
-        <div className={styles.seleccionadosHeader}>
-          SELECCIONADOS ({seleccionados.length})
+      {/* Contenedor productos seleccionados */}
+      <div className={styles.selectedContainer}>
+        <div className={styles.selectedHeader}>
+          🎯 SELECCIONADOS ({seleccionados.length})
         </div>
-        <ul className={styles.seleccionadosList}>
+        <div className={styles.selectedList}>
           {seleccionados.map((item, index) => (
-            <li key={index} className={styles.selectedItem}>
-              <span>
-                {item.id} - {item.nombre}
-              </span>
-              <button
-                className={styles.removeBtn}
-                onClick={() => removeSeleccionado(index)}
-              >
-                Eliminar
-              </button>
-            </li>
+            <div key={index} className={styles.selectedItem}>
+              <p>{item.id} - {item.nombre}</p>
+              <button onClick={() => handleRemoveProducto(index)}>Eliminar</button>
+            </div>
           ))}
-          <li className={styles.selectedTotal}>TOTAL BS: {totalBs}</li>
-        </ul>
-        <button className={styles.vaciarBtn} onClick={vaciarSeleccionados}>
-          Vaciar
-        </button>
+          {/* Total */}
+          {seleccionados.length > 0 && (
+            <div className={styles.selectedItem}>
+              <p><strong>TOTAL BS: {calcularTotal()}</strong></p>
+            </div>
+          )}
+        </div>
+        <button className={styles.vaciarBtn} onClick={handleVaciar}>Vaciar</button>
       </div>
     </div>
   );
