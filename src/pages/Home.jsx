@@ -29,6 +29,11 @@ export default function Home() {
     if (productos.length === 0) setProductos(data.productos);
     if (ogrupos.length === 0) setGrupos(ogrupos);
     //localStorage.set('tasa',0);
+
+    alert(tasa)
+    alert(JSON.stringify(ogrupos))
+    alert(JSON.stringify(data.productos))
+    
   }, []);
 
   // -------------------------------
