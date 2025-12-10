@@ -12,7 +12,7 @@ export default function Home() {
   const [productos, setProductos] = useLocalStorage("productos", []);
   const [grupos, setGrupos] = useLocalStorage("grupos", ogrupos);
   const [adminMode, setAdminMode] = useLocalStorage("adminMode", false);
-  const [adminPassword, setAdminPassword] = useState("");
+  const [adminPassword, setAdminPassword] = useState("1234");
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [clickCount, setClickCount] = useState(0);
 
@@ -76,7 +76,7 @@ export default function Home() {
       const costoUnit = gruposObj[item.grupo] ?? 0;
       suma += costoUnit;
     });
-    return suma * (tasa || 1);
+    return {totaldolar: suma, totalbs: (suma * (tasa || 1)) };
   };
 
   return (
@@ -139,18 +139,21 @@ export default function Home() {
           🎯 SELECCIONADOS ({seleccionados.length})
         </div>
         <div className={styles.selectedList}>
-          {seleccionados.map((item, index) => (
+          {seleccionados.map((item, index) => (            
             <div key={index} className={styles.selectedItem}>
               <p>{item.id} - {item.nombre}</p>
               <button onClick={() => handleEliminar(index)}>Eliminar</button>
             </div>
           ))}
+
           {/* Total como último item de la lista */}
+          
           <div className={styles.selectedItem}>
             <p>
-              TOTAL $: {total().toFixed(2)} / TOTAL BS: {(total() * tasa).toFixed(2)}
+              TOTAL $: {total().totaldolar.toFixed(2)} / TOTAL BS: {(total().totalbs * tasa).toFixed(2)}
             </p>
           </div>
+
         </div>
         <button className={styles.vaciarBtn} onClick={handleVaciar}>
           Vaciar
