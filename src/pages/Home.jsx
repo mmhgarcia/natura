@@ -20,7 +20,7 @@ export default function Home() {
   const [seleccionados, setSeleccionados] = useState([]);
 
   // Tasa del BCV
-  const [tasa, setTasa] = useState(0);
+  const [tasa, setTasa] = useLocalStorage("tasa", localStorage.getItem('tasa')  || 0  );
 
   // -------------------------------
   // INIT
