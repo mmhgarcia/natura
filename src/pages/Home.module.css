@@ -9,8 +9,8 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 20px;
-  justify-content: center;
-  padding: 0 12px;
+  justify-content: center; /* centra el grid completo */
+  padding: 0 12px; /* margen lateral */
 }
 
 /* Card individual */
@@ -24,27 +24,26 @@
   flex-direction: column;
   justify-content: flex-start;
   transition: transform 0.2s, box-shadow 0.2s;
-  width: 100%;
-  max-width: 220px;
-  margin: 0 auto;
-  cursor: pointer;
+  width: 100%;      
+  max-width: 220px; 
+  margin: 0 auto;   
 }
 
 /* Imagen dentro de la card */
 .card img {
   width: 100%;
-  height: auto;
-  object-fit: contain;
+  height: auto;        
+  object-fit: contain; 
   border-radius: 12px;
   margin-bottom: 12px;
 }
 
-/* Texto en negro */
+/* Nombre del producto */
 .card p {
   font-size: 1.1rem;
   font-weight: 600;
   margin: 0;
-  color: #000;
+  color: red;
 }
 
 /* Hover effect */
@@ -56,88 +55,49 @@
 /* Responsive adicional para móviles */
 @media (max-width: 480px) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; 
     gap: 16px;
   }
   .card {
-    max-width: 90%;
+    max-width: 90%; 
   }
 }
 
-/* ------------------- */
-/* Modal Admin */
-.modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modalContent {
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  min-width: 300px;
-  text-align: center;
-}
-
-.input {
-  padding: 6px 10px;
-  font-size: 1rem;
-  margin-right: 8px;
-}
-
-.saveBtn {
-  padding: 6px 12px;
-  margin-top: 8px;
-  cursor: pointer;
-}
-
-.cancelBtn {
-  padding: 6px 12px;
-  margin-top: 4px;
-  cursor: pointer;
-}
-
-/* ------------------- */
-/* Contenedor seleccionados */
+/* --------------------------- */
+/* Contenedor de productos seleccionados */
 .selectedContainer {
   position: fixed;
   bottom: 0;
   left: 0;
-  right: 0;
-  background-color: #f0f0f0; /* gris claro */
-  padding: 8px 12px;
-  max-height: 150px;
+  width: 100%;
+  background-color: #f2f2f2; /* gris claro */
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+  max-height: 200px; /* altura máxima del contenedor */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+/* Header de seleccionados */
+.selectedHeader {
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: #000;
+}
+
+/* Lista de items */
+.selectedList {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #000;
-  z-index: 999;
 }
 
-.selectedContainer * {
-  color: #000 !important;
-}
-
-.selectedHeader {
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.selectedList {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
+/* Cada item */
 .selectedItem {
   display: flex;
   justify-content: space-between;
@@ -145,13 +105,21 @@
   background-color: #fff;
   padding: 6px 10px;
   border-radius: 8px;
+  font-size: 0.95rem;
+  color: #000; /* texto negro */
 }
 
 .selectedItem button {
-  background: #ff5757;
-  border: none;
+  background-color: #FF5757;
   color: #fff;
-  padding: 4px 8px;
+  border: none;
   border-radius: 6px;
+  padding: 4px 8px;
   cursor: pointer;
+  font-size: 0.85rem;
+}
+
+/* Limitar la lista visible a 3 items, luego scroll */
+.selectedList {
+  max-height: calc(3 * 36px + 12px); /* 3 items de aprox 36px + gaps */
 }
