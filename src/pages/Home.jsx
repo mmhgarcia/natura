@@ -11,7 +11,6 @@ export default function Home() {
   const navigate = useNavigate();
   const [productos, setProductos] = useLocalStorage("productos", []);
   const [grupos, setGrupos] = useLocalStorage("grupos", ogrupos);
-
   const [adminMode, setAdminMode] = useLocalStorage("adminMode", false);
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminModal, setShowAdminModal] = useState(false);
@@ -20,17 +19,17 @@ export default function Home() {
   // Lista de productos seleccionados
   const [seleccionados, setSeleccionados] = useState([]);
 
-  useEffect(() => {
-    if (productos.length === 0) {
-      setProductos(data.productos);
-    }
+  // Tasa BCV
+  const [tasa, setTasa] = useState(0);
 
-    if (ogrupos.length === 0) {
-      setGrupos(ogrupos);
-    }
+  useEffect(() => {
+    if (productos.length === 0) setProductos(data.productos);
+    if (ogrupos.length === 0) setGrupos(ogrupos);
+
+    const tasaLS = localStorage.getItem("tasa");
+    if (tasaLS) setTasa(parseFloat(tasaLS));
   }, []);
 
-  // Maneja clicks en el título para abrir modal
   const handleTitleClick = () => {
     setClickCount(prev => prev + 1);
     setTimeout(() => setClickCount(0), 500);
@@ -56,32 +55,30 @@ export default function Home() {
     setAdminPassword("");
   };
 
-  // Agrega producto a lista de seleccionados (permitir duplicados)
-  const agregarSeleccionado = (item) => {
-    setSeleccionados(prev => [...prev, item]);
+  const handleSelectProducto = (p) => {
+    setSeleccionados(prev => [...prev, p]);
   };
 
-  // Elimina producto de la lista de seleccionados
-  const eliminarSeleccionado = (index) => {
+  const handleEliminar = (index) => {
     setSeleccionados(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Vaciar lista de seleccionados
-  const vaciarSeleccionados = () => setSeleccionados([]);
+  const handleVaciar = () => {
+    setSeleccionados([]);
+  };
 
-  // Calcular total según grupo y tasa
-  const calcularTotal = () => {
-    const tasa = parseFloat(localStorage.getItem("tasa")) || 1;
-    if (seleccionados.length === 0) return "0.00";
-
+  // Cálculo del total según grupos y tasa
+  const total = () => {
+    if (seleccionados.length === 0) return 0;
     let suma = 0;
-    seleccionados.forEach(item => {
-      if (!item.grupo) return;
-      const costoUnitario = grupos?.grupos?.[0]?.[item.grupo] || 0;
-      suma += costoUnitario;
-    });
-
-    return (suma * tasa).toFixed(2);
+    const gruposObj = grupos[0]; // primer objeto
+    for (let i = 0; i < seleccionados.length; i++) {
+      const item = seleccionados[i];
+      const grupo = item.grupo;
+      const costoUnit = gruposObj[grupo] ?? 0;
+      suma += costoUnit;
+    }
+    return suma * tasa;
   };
 
   return (
@@ -142,12 +139,12 @@ export default function Home() {
       {/* Grid de productos */}
       <div className={styles.grid}>
         {productos
-          .filter(p => p.stock > 0)
-          .map(p => (
+          .filter((p) => p.stock > 0)
+          .map((p) => (
             <div
               key={p.id}
               className={styles.card}
-              onClick={() => agregarSeleccionado(p)}
+              onClick={() => handleSelectProducto(p)}
             >
               <img src={p.imagen} alt={p.nombre} className={styles.image} />
               <p>Und: {p.stock}</p>
@@ -156,29 +153,26 @@ export default function Home() {
           ))}
       </div>
 
-      {/* Lista seleccionados (fijo abajo) */}
-      <div className={styles.selectedContainer}>
-        <div className={styles.selectedHeader}>
-          🎯 SELECCIONADOS ({seleccionados.length})
+      {/* Contenedor de seleccionados */}
+      <div className={styles.seleccionadosContainer}>
+        <div className={styles.seleccionadosHeader}>
+          SELECCIONADOS ({seleccionados.length})
         </div>
-        <ul className={styles.selectedList}>
+        <div className={styles.seleccionadosList}>
           {seleccionados.map((item, index) => (
-            <li key={index} className={styles.selectedItem}>
+            <div key={index} className={styles.selectedItem}>
               <p>{item.id} - {item.nombre}</p>
-              <button onClick={() => eliminarSeleccionado(index)}>Eliminar</button>
-            </li>
+              <button onClick={() => handleEliminar(index)}>Eliminar</button>
+            </div>
           ))}
-          {seleccionados.length > 0 && (
-            <li className={styles.selectedItem}>
-              <p><strong>TOTAL BS: {calcularTotal()}</strong></p>
-            </li>
-          )}
-        </ul>
-        {seleccionados.length > 0 && (
-          <div style={{ textAlign: "center", marginTop: "8px" }}>
-            <button onClick={vaciarSeleccionados}>Vaciar</button>
+          {/* Total */}
+          <div className={styles.selectedItem}>
+            <p>TOTAL $: {total().toFixed(2)} / TOTAL BS: {(total() * tasa).toFixed(2)}</p>
           </div>
-        )}
+        </div>
+        <button className={styles.vaciarBtn} onClick={handleVaciar}>
+          Vaciar
+        </button>
       </div>
     </div>
   );
