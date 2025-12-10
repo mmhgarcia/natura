@@ -24,6 +24,7 @@ export default function Home() {
     if (ogrupos.length === 0) setGrupos(ogrupos);
   }, []);
 
+  // Maneja clicks en el título para abrir modal
   const handleTitleClick = () => {
     setClickCount(prev => prev + 1);
     setTimeout(() => setClickCount(0), 500);
@@ -49,28 +50,33 @@ export default function Home() {
     setAdminPassword("");
   };
 
+  // Agrega un producto a la lista seleccionados
   const handleSelectProducto = (p) => {
-    setSeleccionados([...seleccionados, p]);
+    setSeleccionados(prev => [...prev, p]);
   };
 
+  // Elimina producto de la lista seleccionados
   const handleRemoveProducto = (index) => {
-    setSeleccionados(seleccionados.filter((_, i) => i !== index));
+    setSeleccionados(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleVaciar = () => setSeleccionados([]);
+  // Vaciar lista
+  const handleVaciar = () => {
+    setSeleccionados([]);
+  };
 
-  // Calcular total
+  // Calcula total con validación de grupos
   const calcularTotal = () => {
     const tasa = parseFloat(localStorage.getItem("tasa")) || 1;
-    if (seleccionados.length === 0) return 0;
+    if (seleccionados.length === 0) return "0.00";
 
     let suma = 0;
-    const listaSinTotal = seleccionados; // total siempre se recalcula
-    listaSinTotal.forEach(item => {
-      const grupo = item.grupo;
-      const costoUnitario = grupos[0][grupo] || 0;
-      suma += costoUnitario; // cantidad = 1
+    seleccionados.forEach((item) => {
+      if (!item.grupo) return;
+      const costoUnitario = grupos?.[0]?.[item.grupo] || 0;
+      suma += costoUnitario;
     });
+
     return (suma * tasa).toFixed(2);
   };
 
@@ -82,8 +88,26 @@ export default function Home() {
 
       {/* Modal Admin */}
       {showAdminModal && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
+        <div
+          style={{
+            position: "fixed",
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              padding: "20px",
+              borderRadius: "12px",
+              textAlign: "center",
+              minWidth: "300px"
+            }}
+          >
             <h3>Login Admin</h3>
             <input
               type="password"
@@ -92,7 +116,9 @@ export default function Home() {
               onChange={(e) => setAdminPassword(e.target.value)}
               style={{ padding: "6px 10px", fontSize: "1rem", marginRight: "8px" }}
             />
-            <button onClick={handleAdminLogin} style={{ padding: "6px 12px" }}>Entrar</button>
+            <button onClick={handleAdminLogin} style={{ padding: "6px 12px" }}>
+              Entrar
+            </button>
             <div style={{ marginTop: "12px" }}>
               <button onClick={() => setShowAdminModal(false)}>Cerrar</button>
             </div>
@@ -103,16 +129,22 @@ export default function Home() {
       {/* Botón de salir de admin */}
       {adminMode && (
         <div style={{ textAlign: "center", marginBottom: "16px" }}>
-          <button onClick={handleAdminLogout} style={{ padding: "6px 12px" }}>Salir de Admin</button>
+          <button onClick={handleAdminLogout} style={{ padding: "6px 12px" }}>
+            Salir de Admin
+          </button>
         </div>
       )}
 
-      {/* Grid de productos */}
       <div className={styles.grid}>
         {productos
           .filter((p) => p.stock > 0)
           .map((p) => (
-            <div key={p.id} className={styles.card} onClick={() => handleSelectProducto(p)}>
+            <div
+              key={p.id}
+              className={styles.card}
+              onClick={() => handleSelectProducto(p)}
+              style={{ cursor: "pointer" }}
+            >
               <img src={p.imagen} alt={p.nombre} className={styles.image} />
               <p>Und: {p.stock}</p>
               <p># {p.id}</p>
@@ -120,11 +152,12 @@ export default function Home() {
           ))}
       </div>
 
-      {/* Contenedor productos seleccionados */}
+      {/* Lista de seleccionados fija abajo */}
       <div className={styles.selectedContainer}>
         <div className={styles.selectedHeader}>
-          🎯 SELECCIONADOS ({seleccionados.length})
+          SELECCIONADOS ({seleccionados.length})
         </div>
+
         <div className={styles.selectedList}>
           {seleccionados.map((item, index) => (
             <div key={index} className={styles.selectedItem}>
@@ -132,14 +165,14 @@ export default function Home() {
               <button onClick={() => handleRemoveProducto(index)}>Eliminar</button>
             </div>
           ))}
-          {/* Total */}
-          {seleccionados.length > 0 && (
-            <div className={styles.selectedItem}>
-              <p><strong>TOTAL BS: {calcularTotal()}</strong></p>
-            </div>
-          )}
+          <div className={styles.selectedItem}>
+            <p><strong>TOTAL BS: {calcularTotal()}</strong></p>
+          </div>
         </div>
-        <button className={styles.vaciarBtn} onClick={handleVaciar}>Vaciar</button>
+
+        <div style={{ textAlign: "center", marginTop: "8px" }}>
+          <button onClick={handleVaciar}>Vaciar</button>
+        </div>
       </div>
     </div>
   );
