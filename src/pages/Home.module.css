@@ -1,21 +1,16 @@
-/* ---------------------------- */
-/*          TITULO             */
-/* ---------------------------- */
 .title {
   text-align: center;
   font-size: 28px;
   color: #00BFFF;
 }
 
-/* ---------------------------- */
-/*          GRID PRODUCTOS      */
-/* ---------------------------- */
+/* Grid productos */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 20px;
-  justify-content: center; /* centra el grid completo */
-  padding: 0 12px; /* margen lateral */
+  justify-content: center;
+  padding: 0 12px;
 }
 
 /* Card individual */
@@ -29,88 +24,147 @@
   flex-direction: column;
   justify-content: flex-start;
   transition: transform 0.2s, box-shadow 0.2s;
-  width: 100%;      /* ocupa todo el ancho de la celda */
-  max-width: 220px; /* controla que no se estire demasiado */
-  margin: 0 auto;   /* centra la card individual */
+  width: 100%;
+  max-width: 220px;
+  margin: 0 auto;
+  cursor: pointer;
 }
 
-/* Imagen dentro de la card */
 .card img {
   width: 100%;
-  height: auto;        /* mantiene proporción */
-  object-fit: contain; /* evita recorte */
+  height: auto;
+  object-fit: contain;
   border-radius: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
-/* Nombre del producto */
 .card p {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   margin: 0;
-  color: red;
+  color: #000; /* texto negro */
 }
 
-/* Hover effect */
 .card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
-/* Responsive adicional para móviles */
-@media (max-width: 480px) {
-  .grid {
-    grid-template-columns: 1fr; /* una card por fila */
-    gap: 16px;
-  }
-  .card {
-    max-width: 90%; /* ocupa casi todo el ancho de pantalla */
-  }
-}
-
-/* ---------------------------- */
-/*  PRODUCTOS SELECCIONADOS     */
-/* ---------------------------- */
-.selectedContainer {
+/* Seleccionados */
+.seleccionadosContainer {
   position: fixed;
-  bottom: 12px;
-  left: 12px;
-  right: 12px;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
   background-color: #f0f0f0;
-  border-radius: 12px;          /* esquinas redondeadas */
-  padding: 8px;
-  max-height: calc(5 * 38px + 16px); /* 3 items * altura aprox item + padding */
-  overflow-y: auto;             /* scroll vertical si hay más de 3 items */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  z-index: 100;
+  border-radius: 12px;
+  padding: 12px;
+  max-height: 240px; /* aprox 3 items + total */
+  display: flex;
+  flex-direction: column;
+  z-index: 500;
 }
 
-.selectedHeader {
+.seleccionadosHeader {
   font-weight: bold;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: #000;
+}
+
+.seleccionadosList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
 }
 
 .selectedItem {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;           /* altura reducida */
-  border-bottom: 1px solid #ccc;
-  font-size: 0.95rem;
-}
-
-.selectedItem p {
-  margin: 0;
-  color: #000;                  /* texto negro */
-}
-
-.selectedItem button {
-  background-color: #FF5757;
-  border: none;
-  color: #fff;
   padding: 4px 8px;
+  margin-bottom: 4px;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #000;
+}
+
+.selectedTotal {
+  font-weight: bold;
+  text-align: right;
+  padding: 4px 8px;
+  margin-top: 4px;
+  background: #dcdcdc;
+  border-radius: 8px;
+}
+
+.removeBtn {
+  background-color: #ff5757;
+  color: #fff;
+  border: none;
   border-radius: 6px;
+  padding: 2px 6px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+}
+
+.vaciarBtn {
+  margin-top: 8px;
+  background-color: #00bfff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  width: 100%;
+}
+
+/* Modal Admin */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  min-width: 300px;
+  text-align: center;
+}
+
+.adminInput {
+  padding: 6px 10px;
+  font-size: 1rem;
+  margin-right: 8px;
+}
+
+.adminBtn {
+  padding: 6px 12px;
+  margin-top: 8px;
+  background: #00bfff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.adminCloseBtn {
+  padding: 6px 12px;
+  margin-top: 8px;
+  background: #ccc;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
 }
