@@ -20,14 +20,14 @@ export default function Home() {
   const [seleccionados, setSeleccionados] = useState([]);
 
   // Tasa BCV
-  const [tasa, setTasa] = useState(0);
+  const [tasa, setTasa] = useState(1); // fallback 1
 
   useEffect(() => {
     if (productos.length === 0) setProductos(data.productos);
     if (ogrupos.length === 0) setGrupos(ogrupos);
 
     const tasaLS = localStorage.getItem("tasa");
-    if (tasaLS) setTasa(parseFloat(tasaLS));
+    if (tasaLS && !isNaN(parseFloat(tasaLS))) setTasa(parseFloat(tasaLS));
   }, []);
 
   const handleTitleClick = () => {
@@ -69,16 +69,14 @@ export default function Home() {
 
   // Cálculo del total según grupos y tasa
   const total = () => {
-    if (seleccionados.length === 0) return 0;
+    if (!seleccionados.length) return 0;
     let suma = 0;
-    const gruposObj = grupos[0]; // primer objeto
-    for (let i = 0; i < seleccionados.length; i++) {
-      const item = seleccionados[i];
-      const grupo = item.grupo;
-      const costoUnit = gruposObj[grupo] ?? 0;
+    const gruposObj = grupos[0] || {};
+    seleccionados.forEach(item => {
+      const costoUnit = gruposObj[item.grupo] ?? 0;
       suma += costoUnit;
-    }
-    return suma * tasa;
+    });
+    return suma * (tasa || 1);
   };
 
   return (
@@ -138,7 +136,7 @@ export default function Home() {
       {/* Contenedor de seleccionados */}
       <div className={styles.selectedContainer}>
         <div className={styles.selectedHeader}>
-          SELECCIONADOS ({seleccionados.length})
+          🎯 SELECCIONADOS ({seleccionados.length})
         </div>
         <div className={styles.selectedList}>
           {seleccionados.map((item, index) => (
@@ -147,9 +145,11 @@ export default function Home() {
               <button onClick={() => handleEliminar(index)}>Eliminar</button>
             </div>
           ))}
-          {/* Total */}
+          {/* Total como último item de la lista */}
           <div className={styles.selectedItem}>
-            <p>TOTAL $: {total().toFixed(2)} / TOTAL BS: {(total() * tasa).toFixed(2)}</p>
+            <p>
+              TOTAL $: {total().toFixed(2)} / TOTAL BS: {(total() * tasa).toFixed(2)}
+            </p>
           </div>
         </div>
         <button className={styles.vaciarBtn} onClick={handleVaciar}>
