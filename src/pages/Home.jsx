@@ -20,14 +20,14 @@ export default function Home() {
   const [seleccionados, setSeleccionados] = useState([]);
 
   // Tasa BCV
-  const [tasa, setTasa] = useState(1); // fallback 1
+  const [tasa, setTasa] = useState(parseFloat("tasa") || 0);
 
   useEffect(() => {
     if (productos.length === 0) setProductos(data.productos);
     if (ogrupos.length === 0) setGrupos(ogrupos);
 
-    const tasaLS = localStorage.getItem("tasa");
-    if (tasaLS && !isNaN(parseFloat(tasaLS))) setTasa(parseFloat(tasaLS));
+    //const tasaLS = localStorage.getItem("tasa");
+    //if (tasaLS && !isNaN(parseFloat(tasaLS))) setTasa(parseFloat(tasaLS));
   }, []);
 
   const handleTitleClick = () => {
