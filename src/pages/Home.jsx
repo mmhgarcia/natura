@@ -17,11 +17,17 @@ export default function Home() {
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [clickCount, setClickCount] = useState(0);
 
+  // Lista de productos seleccionados
   const [seleccionados, setSeleccionados] = useState([]);
 
   useEffect(() => {
-    if (productos.length === 0) setProductos(data.productos);
-    if (ogrupos.length === 0) setGrupos(ogrupos);
+    if (productos.length === 0) {
+      setProductos(data.productos);
+    }
+
+    if (ogrupos.length === 0) {
+      setGrupos(ogrupos);
+    }
   }, []);
 
   // Maneja clicks en el título para abrir modal
@@ -50,30 +56,28 @@ export default function Home() {
     setAdminPassword("");
   };
 
-  // Agrega un producto a la lista seleccionados
-  const handleSelectProducto = (p) => {
-    setSeleccionados(prev => [...prev, p]);
+  // Agrega producto a lista de seleccionados (permitir duplicados)
+  const agregarSeleccionado = (item) => {
+    setSeleccionados(prev => [...prev, item]);
   };
 
-  // Elimina producto de la lista seleccionados
-  const handleRemoveProducto = (index) => {
+  // Elimina producto de la lista de seleccionados
+  const eliminarSeleccionado = (index) => {
     setSeleccionados(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Vaciar lista
-  const handleVaciar = () => {
-    setSeleccionados([]);
-  };
+  // Vaciar lista de seleccionados
+  const vaciarSeleccionados = () => setSeleccionados([]);
 
-  // Calcula total con validación de grupos
+  // Calcular total según grupo y tasa
   const calcularTotal = () => {
     const tasa = parseFloat(localStorage.getItem("tasa")) || 1;
     if (seleccionados.length === 0) return "0.00";
 
     let suma = 0;
-    seleccionados.forEach((item) => {
+    seleccionados.forEach(item => {
       if (!item.grupo) return;
-      const costoUnitario = grupos?.[0]?.[item.grupo] || 0;
+      const costoUnitario = grupos?.grupos?.[0]?.[item.grupo] || 0;
       suma += costoUnitario;
     });
 
@@ -135,15 +139,15 @@ export default function Home() {
         </div>
       )}
 
+      {/* Grid de productos */}
       <div className={styles.grid}>
         {productos
-          .filter((p) => p.stock > 0)
-          .map((p) => (
+          .filter(p => p.stock > 0)
+          .map(p => (
             <div
               key={p.id}
               className={styles.card}
-              onClick={() => handleSelectProducto(p)}
-              style={{ cursor: "pointer" }}
+              onClick={() => agregarSeleccionado(p)}
             >
               <img src={p.imagen} alt={p.nombre} className={styles.image} />
               <p>Und: {p.stock}</p>
@@ -152,27 +156,29 @@ export default function Home() {
           ))}
       </div>
 
-      {/* Lista de seleccionados fija abajo */}
+      {/* Lista seleccionados (fijo abajo) */}
       <div className={styles.selectedContainer}>
         <div className={styles.selectedHeader}>
-          SELECCIONADOS ({seleccionados.length})
+          🎯 SELECCIONADOS ({seleccionados.length})
         </div>
-
-        <div className={styles.selectedList}>
+        <ul className={styles.selectedList}>
           {seleccionados.map((item, index) => (
-            <div key={index} className={styles.selectedItem}>
+            <li key={index} className={styles.selectedItem}>
               <p>{item.id} - {item.nombre}</p>
-              <button onClick={() => handleRemoveProducto(index)}>Eliminar</button>
-            </div>
+              <button onClick={() => eliminarSeleccionado(index)}>Eliminar</button>
+            </li>
           ))}
-          <div className={styles.selectedItem}>
-            <p><strong>TOTAL BS: {calcularTotal()}</strong></p>
+          {seleccionados.length > 0 && (
+            <li className={styles.selectedItem}>
+              <p><strong>TOTAL BS: {calcularTotal()}</strong></p>
+            </li>
+          )}
+        </ul>
+        {seleccionados.length > 0 && (
+          <div style={{ textAlign: "center", marginTop: "8px" }}>
+            <button onClick={vaciarSeleccionados}>Vaciar</button>
           </div>
-        </div>
-
-        <div style={{ textAlign: "center", marginTop: "8px" }}>
-          <button onClick={handleVaciar}>Vaciar</button>
-        </div>
+        )}
       </div>
     </div>
   );
