@@ -10,7 +10,7 @@ import styles from "./Home.module.css";
 export default function Home() {
   const navigate = useNavigate();
   const [productos, setProductos] = useLocalStorage("productos", []);
-  const [grupos, setGrupos] = useLocalStorage("grupos", ogrupos);
+  const [grupos, setGrupos] = useLocalStorage("grupos", []);
   const [adminMode, setAdminMode] = useLocalStorage("adminMode", false);
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminModal, setShowAdminModal] = useState(false);
@@ -28,11 +28,7 @@ export default function Home() {
   useEffect(() => {
     if (productos.length === 0) setProductos(data.productos);
     if (ogrupos.length === 0) setGrupos(ogrupos);
-
-    const tasaLS = localStorage.getItem("tasa");
-    if (tasaLS && !isNaN(parseFloat(tasaLS))) {
-      setTasa(parseFloat(tasaLS));
-    }
+    //localStorage.set('tasa',0);
   }, []);
 
   // -------------------------------
