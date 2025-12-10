@@ -1,10 +1,10 @@
 {
   "grupos": [
     {
-      "Cremoso": 0.5,
-      "FullCremoso": 0.7,
-      "Premium": 1.0,
-      "Ninguno": 0.0
+      "cremoso": 0.5,
+      "fullcremoso": 0.7,
+      "premium": 1.0,
+      "ninguno": 0.0
     }
   ]
 }

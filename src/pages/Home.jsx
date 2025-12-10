@@ -12,24 +12,32 @@ export default function Home() {
   const [productos, setProductos] = useLocalStorage("productos", []);
   const [grupos, setGrupos] = useLocalStorage("grupos", ogrupos);
   const [adminMode, setAdminMode] = useLocalStorage("adminMode", false);
-  const [adminPassword, setAdminPassword] = useState("1234");
+  const [adminPassword, setAdminPassword] = useState("");
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [clickCount, setClickCount] = useState(0);
 
   // Lista de productos seleccionados
   const [seleccionados, setSeleccionados] = useState([]);
 
-  // Tasa BCV
-  const [tasa, setTasa] = useState(parseFloat("tasa") || 0);
+  // Tasa del BCV
+  const [tasa, setTasa] = useState(0);
 
+  // -------------------------------
+  // INIT
+  // -------------------------------
   useEffect(() => {
     if (productos.length === 0) setProductos(data.productos);
     if (ogrupos.length === 0) setGrupos(ogrupos);
 
-    //const tasaLS = localStorage.getItem("tasa");
-    //if (tasaLS && !isNaN(parseFloat(tasaLS))) setTasa(parseFloat(tasaLS));
+    const tasaLS = localStorage.getItem("tasa");
+    if (tasaLS && !isNaN(parseFloat(tasaLS))) {
+      setTasa(parseFloat(tasaLS));
+    }
   }, []);
 
+  // -------------------------------
+  // ADMIN SECRET CLICK
+  // -------------------------------
   const handleTitleClick = () => {
     setClickCount(prev => prev + 1);
     setTimeout(() => setClickCount(0), 500);
@@ -55,10 +63,13 @@ export default function Home() {
     setAdminPassword("");
   };
 
+  // -------------------------------
+  // SELECT PRODUCTO
+  // -------------------------------
   const handleSelectProducto = (p) => {
     setSeleccionados(prev => [...prev, p]);
   };
- 
+
   const handleEliminar = (index) => {
     setSeleccionados(prev => prev.filter((_, i) => i !== index));
   };
@@ -67,18 +78,20 @@ export default function Home() {
     setSeleccionados([]);
   };
 
-  // Cálculo del total según grupos y tasa
+  // -------------------------------
+  // TOTAL
+  // -------------------------------
   const total = () => {
-
     if (!seleccionados.length) {
       return { totaldolar: 0, totalbs: 0 };
     }
 
-    let suma = 0;
     const gruposObj = grupos[0] || {};
+    let suma = 0;
 
     seleccionados.forEach(item => {
-      const costoUnit = gruposObj[item.grupo] ?? 0;
+      const grupoName = (item.grupo || "").toLowerCase();
+      const costoUnit = gruposObj[grupoName] ?? 0;
       suma += costoUnit;
     });
 
@@ -88,7 +101,11 @@ export default function Home() {
     };
   };
 
+  const { totaldolar, totalbs } = total();
 
+  // -------------------------------
+  // RENDER
+  // -------------------------------
   return (
     <div className={styles.container}>
       <h2 className={styles.title} onClick={handleTitleClick}>
@@ -100,29 +117,24 @@ export default function Home() {
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
             <h3>Login Admin</h3>
+
             <input
               type="password"
               placeholder="Clave Admin"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
-              style={{ padding: "6px 10px", fontSize: "1rem", marginRight: "8px" }}
             />
-            <button onClick={handleAdminLogin} style={{ padding: "6px 12px" }}>
-              Entrar
-            </button>
-            <div style={{ marginTop: "12px" }}>
-              <button onClick={() => setShowAdminModal(false)}>Cerrar</button>
-            </div>
+
+            <button onClick={handleAdminLogin}>Entrar</button>
+            <button onClick={() => setShowAdminModal(false)}>Cerrar</button>
           </div>
         </div>
       )}
 
-      {/* Botón de salir de admin */}
+      {/* Botón salir admin */}
       {adminMode && (
         <div style={{ textAlign: "center", marginBottom: "16px" }}>
-          <button onClick={handleAdminLogout} style={{ padding: "6px 12px" }}>
-            Salir de Admin
-          </button>
+          <button onClick={handleAdminLogout}>Salir de Admin</button>
         </div>
       )}
 
@@ -143,28 +155,31 @@ export default function Home() {
           ))}
       </div>
 
-      {/* Contenedor de seleccionados */}
+      {/* Lista de seleccionados */}
       <div className={styles.selectedContainer}>
         <div className={styles.selectedHeader}>
           🎯 SELECCIONADOS ({seleccionados.length})
         </div>
+
         <div className={styles.selectedList}>
-          {seleccionados.map((item, index) => (            
+          {seleccionados.map((item, index) => (
             <div key={index} className={styles.selectedItem}>
               <p>{item.id} - {item.nombre}</p>
-              <button onClick={() => handleEliminar(index)}>Eliminar</button>
+              <button onClick={() => handleEliminar(index)}>
+                Eliminar
+              </button>
             </div>
           ))}
 
-          {/* Total como último item de la lista */}
-          
           <div className={styles.selectedItem}>
             <p>
-              TOTAL $: {total().totaldolar.toFixed(2)} / TOTAL BS: {(total().totalbs * tasa).toFixed(2)}
+              TOTAL $: {totaldolar.toFixed(2)}  
+              &nbsp;&nbsp;|&nbsp;&nbsp;  
+              TOTAL Bs: {totalbs.toFixed(2)}
             </p>
           </div>
-
         </div>
+
         <button className={styles.vaciarBtn} onClick={handleVaciar}>
           Vaciar
         </button>
