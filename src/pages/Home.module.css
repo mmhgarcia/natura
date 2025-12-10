@@ -4,6 +4,11 @@
     color: #00BFFF;
 }
 
+/* Contenedor principal deja espacio abajo para la lista fija */
+.container {
+  padding-bottom: 260px; /* suficiente para lista de seleccionados + total + margen */
+}
+
 /* Grid principal */
 .grid {
   display: grid;
@@ -23,10 +28,12 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  width: 100%;        /* ocupa todo el ancho de la celda */
-  max-width: 100%;    /* eliminar limitación de ancho */
-  margin: 0 auto;     /* centra la card */
-  min-height: 100px;  /* altura mínima para que no se vea muy chica */
+  width: 100%;        
+  max-width: 100%;    
+  margin: 0 auto;     
+  min-height: 100px;  
+  cursor: pointer; /* indica que es clickable */
+  margin-right: 8px; /* evita que quede pegada al borde derecho */
 }
 /* Imagen dentro de la card */
 .card img {
@@ -51,7 +58,7 @@
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
-/* Selected container */
+/* Contenedor fijo de seleccionados */
 .selectedContainer {
   position: fixed;
   bottom: 10px;
@@ -60,11 +67,11 @@
   background-color: #f0f0f0;
   border-radius: 12px;
   padding: 8px;
-  max-height: 240px; /* 3 items aprox + total */
-  overflow-y: auto;
+  max-height: 240px; /* hasta 3 items + total */
   display: flex;
   flex-direction: column;
   gap: 4px;
+  z-index: 999; /* encima de la grid */
 }
 
 /* Header selected */
@@ -74,11 +81,14 @@
   color: #000;
 }
 
-/* Lista de items */
+/* Lista de items con scroll */
 .selectedList {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  overflow-y: auto;
+  max-height: 180px; /* scroll para más de 3 items */
+  padding-right: 4px; /* margen interno para scroll */
 }
 
 /* Item seleccionado */
@@ -87,13 +97,23 @@
   justify-content: space-between;
   align-items: center;
   background: #fff;
-  padding: 6px 8px;
+  padding: 4px 8px; /* altura reducida */
   border-radius: 8px;
   color: #000;
   font-size: 0.95rem;
 }
 
-/* Botón Vaciar */
+/* Botón eliminar dentro de cada item */
+.selectedItem button {
+  background: #FF5757;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+/* Botón Vaciar fuera de la lista scrollable */
 .vaciarBtn {
   margin-top: 6px;
   padding: 6px 12px;
