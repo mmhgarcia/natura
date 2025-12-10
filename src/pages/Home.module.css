@@ -149,3 +149,8 @@
   border-radius: 6px;
   cursor: pointer;
 }
+
+.selectedItem p,
+.selectedHeader {
+  color: #000 !important;
+}
