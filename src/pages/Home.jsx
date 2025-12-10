@@ -11,14 +11,15 @@ export default function Home() {
   const navigate = useNavigate();
   const [productos, setProductos] = useLocalStorage("productos", []);
   const [grupos, setGrupos] = useLocalStorage("grupos", ogrupos);
-  
+
   const [adminMode, setAdminMode] = useLocalStorage("adminMode", false);
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [clickCount, setClickCount] = useState(0);
 
+  const [selected, setSelected] = useState([]); // ⬅️ Lista dinámica de seleccionados
+
   useEffect(() => {
-    
     if (productos.length === 0) {
       setProductos(data.productos);
     }
@@ -26,14 +27,12 @@ export default function Home() {
     if (ogrupos.length === 0) {
       setGrupos(ogrupos);
     }
-
   }, []);
 
-  // Maneja clicks en el título para abrir modal
+  // Triple click en el título
   const handleTitleClick = () => {
-    setClickCount(prev => prev + 1);
+    setClickCount((prev) => prev + 1);
 
-    // Reinicia contador si no se hace triple click rápido
     setTimeout(() => setClickCount(0), 500);
 
     if (clickCount + 1 === 3) {
@@ -43,10 +42,10 @@ export default function Home() {
   };
 
   const handleAdminLogin = () => {
-    if (adminPassword === "1234") { // clave correcta
+    if (adminPassword === "1234") {
       setAdminMode(true);
       setShowAdminModal(false);
-      navigate("/panel"); // redirige automáticamente
+      navigate("/panel");
     } else {
       alert("Clave incorrecta");
     }
@@ -57,6 +56,16 @@ export default function Home() {
     setAdminPassword("");
   };
 
+  // ⬅️ Al hacer click en una card, agregar a seleccionados (con duplicados)
+  const handleSelectProduct = (p) => {
+    setSelected([...selected, p]);
+  };
+
+  const handleRemoveSelected = (index) => {
+    const updated = selected.filter((_, i) => i !== index);
+    setSelected(updated);
+  };
+
   return (
     <div className={styles.container}>
       <h2 className={styles.title} onClick={handleTitleClick}>
@@ -65,58 +74,51 @@ export default function Home() {
 
       {/* Modal Admin */}
       {showAdminModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 1000
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#fff",
-              padding: "20px",
-              borderRadius: "12px",
-              textAlign: "center",
-              minWidth: "300px"
-            }}
-          >
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalBox}>
             <h3>Login Admin</h3>
+
             <input
               type="password"
               placeholder="Clave Admin"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
-              style={{ padding: "6px 10px", fontSize: "1rem", marginRight: "8px" }}
+              className={styles.modalInput}
             />
-            <button onClick={handleAdminLogin} style={{ padding: "6px 12px" }}>
+
+            <button onClick={handleAdminLogin} className={styles.modalBtn}>
               Entrar
             </button>
-            <div style={{ marginTop: "12px" }}>
-              <button onClick={() => setShowAdminModal(false)}>Cerrar</button>
-            </div>
+
+            <button
+              onClick={() => setShowAdminModal(false)}
+              className={styles.modalClose}
+            >
+              Cerrar
+            </button>
           </div>
         </div>
       )}
 
-      {/* Botón de salir de admin */}
+      {/* Botón salir admin */}
       {adminMode && (
         <div style={{ textAlign: "center", marginBottom: "16px" }}>
-          <button onClick={handleAdminLogout} style={{ padding: "6px 12px" }}>
+          <button onClick={handleAdminLogout} className={styles.modalBtn}>
             Salir de Admin
           </button>
         </div>
       )}
 
+      {/* GRID */}
       <div className={styles.grid}>
         {productos
-          .filter((p) => p.stock > 0)   // ⬅️ Filtrar solo stock > 0
+          .filter((p) => p.stock > 0)
           .map((p) => (
-            <div key={p.id} className={styles.card}>
+            <div
+              key={p.id}
+              className={styles.card}
+              onClick={() => handleSelectProduct(p)}
+            >
               <img src={p.imagen} alt={p.nombre} className={styles.image} />
               <p>Und: {p.stock}</p>
               <p># {p.id}</p>
@@ -124,6 +126,29 @@ export default function Home() {
           ))}
       </div>
 
+      {/* CONTENEDOR SELECCIONADOS */}
+      <div className={styles.selectedBox}>
+        <h4 className={styles.selectedTitle}>
+          🎯 SELECCIONADOS ({selected.length})
+        </h4>
+
+        <div className={styles.selectedList}>
+          {selected.map((p, index) => (
+            <div key={index} className={styles.selectedItem}>
+              <span>
+                #{p.id} — {p.nombre}
+              </span>
+
+              <button
+                className={styles.removeBtn}
+                onClick={() => handleRemoveSelected(index)}
+              >
+                X
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
