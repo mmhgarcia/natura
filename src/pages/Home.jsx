@@ -58,7 +58,7 @@ export default function Home() {
   const handleSelectProducto = (p) => {
     setSeleccionados(prev => [...prev, p]);
   };
-
+ 
   const handleEliminar = (index) => {
     setSeleccionados(prev => prev.filter((_, i) => i !== index));
   };
@@ -69,15 +69,25 @@ export default function Home() {
 
   // Cálculo del total según grupos y tasa
   const total = () => {
-    if (!seleccionados.length) return 0;
+
+    if (!seleccionados.length) {
+      return { totaldolar: 0, totalbs: 0 };
+    }
+
     let suma = 0;
     const gruposObj = grupos[0] || {};
+
     seleccionados.forEach(item => {
       const costoUnit = gruposObj[item.grupo] ?? 0;
       suma += costoUnit;
     });
-    return {totaldolar: suma, totalbs: (suma * (tasa || 1)) };
+
+    return {
+      totaldolar: suma,
+      totalbs: suma * (tasa || 1)
+    };
   };
+
 
   return (
     <div className={styles.container}>
