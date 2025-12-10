@@ -11,13 +11,14 @@ export default function Home() {
   const navigate = useNavigate();
   const [productos, setProductos] = useLocalStorage("productos", []);
   const [grupos, setGrupos] = useLocalStorage("grupos", ogrupos);
-
+  
   const [adminMode, setAdminMode] = useLocalStorage("adminMode", false);
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [clickCount, setClickCount] = useState(0);
 
-  const [selected, setSelected] = useState([]); // ⬅️ Lista dinámica de seleccionados
+  // Lista de productos seleccionados
+  const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
     if (productos.length === 0) {
@@ -27,14 +28,13 @@ export default function Home() {
     if (ogrupos.length === 0) {
       setGrupos(ogrupos);
     }
+
   }, []);
 
-  // Triple click en el título
+  // Maneja clicks en el título para abrir modal
   const handleTitleClick = () => {
-    setClickCount((prev) => prev + 1);
-
+    setClickCount(prev => prev + 1);
     setTimeout(() => setClickCount(0), 500);
-
     if (clickCount + 1 === 3) {
       setShowAdminModal(true);
       setClickCount(0);
@@ -42,10 +42,10 @@ export default function Home() {
   };
 
   const handleAdminLogin = () => {
-    if (adminPassword === "1234") {
+    if (adminPassword === "1234") { // clave correcta
       setAdminMode(true);
       setShowAdminModal(false);
-      navigate("/panel");
+      navigate("/panel"); // redirige automáticamente
     } else {
       alert("Clave incorrecta");
     }
@@ -56,14 +56,12 @@ export default function Home() {
     setAdminPassword("");
   };
 
-  // ⬅️ Al hacer click en una card, agregar a seleccionados (con duplicados)
-  const handleSelectProduct = (p) => {
-    setSelected([...selected, p]);
+  const handleSelectProduct = (producto) => {
+    setSelectedItems(prev => [...prev, producto]); // permite duplicados
   };
 
   const handleRemoveSelected = (index) => {
-    const updated = selected.filter((_, i) => i !== index);
-    setSelected(updated);
+    setSelectedItems(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -75,41 +73,36 @@ export default function Home() {
       {/* Modal Admin */}
       {showAdminModal && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modalBox}>
+          <div className={styles.modalContent}>
             <h3>Login Admin</h3>
-
             <input
               type="password"
               placeholder="Clave Admin"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
-              className={styles.modalInput}
+              className={styles.input}
             />
-
-            <button onClick={handleAdminLogin} className={styles.modalBtn}>
+            <button onClick={handleAdminLogin} className={styles.saveBtn}>
               Entrar
             </button>
-
-            <button
-              onClick={() => setShowAdminModal(false)}
-              className={styles.modalClose}
-            >
-              Cerrar
-            </button>
+            <div style={{ marginTop: "12px" }}>
+              <button onClick={() => setShowAdminModal(false)} className={styles.cancelBtn}>
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Botón salir admin */}
+      {/* Botón de salir de admin */}
       {adminMode && (
         <div style={{ textAlign: "center", marginBottom: "16px" }}>
-          <button onClick={handleAdminLogout} className={styles.modalBtn}>
+          <button onClick={handleAdminLogout} style={{ padding: "6px 12px" }}>
             Salir de Admin
           </button>
         </div>
       )}
 
-      {/* GRID */}
       <div className={styles.grid}>
         {productos
           .filter((p) => p.stock > 0)
@@ -126,25 +119,16 @@ export default function Home() {
           ))}
       </div>
 
-      {/* CONTENEDOR SELECCIONADOS */}
-      <div className={styles.selectedBox}>
-        <h4 className={styles.selectedTitle}>
-          🎯 SELECCIONADOS ({selected.length})
-        </h4>
-
+      {/* Contenedor de seleccionados */}
+      <div className={styles.selectedContainer}>
+        <div className={styles.selectedHeader}>
+          🎯 SELECCIONADOS ({selectedItems.length})
+        </div>
         <div className={styles.selectedList}>
-          {selected.map((p, index) => (
+          {selectedItems.map((item, index) => (
             <div key={index} className={styles.selectedItem}>
-              <span>
-                #{p.id} — {p.nombre}
-              </span>
-
-              <button
-                className={styles.removeBtn}
-                onClick={() => handleRemoveSelected(index)}
-              >
-                X
-              </button>
+              <p>{item.id} - {item.nombre}</p>
+              <button onClick={() => handleRemoveSelected(index)}>Eliminar</button>
             </div>
           ))}
         </div>
