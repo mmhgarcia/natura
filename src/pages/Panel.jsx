@@ -11,6 +11,12 @@ export default function Panel() {
       <div className={styles.buttons}>
         <button
           className={styles.button}
+          onClick={() => navigate("/tasaform")}
+        >
+          Tasa Form
+        </button>
+        <button
+          className={styles.button}
           onClick={() => navigate("/tasa")}
         >
           Tasa BCV
