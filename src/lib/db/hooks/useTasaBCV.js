@@ -6,6 +6,7 @@ import { TasaRepository } from "../repositories/TasaRepository";
 export function useTasaBCV() {
   const [tasa, setTasa] = useState("");
   const [loading, setLoading] = useState(true);
+  const [repository, setTasaRepository] = useState(TasaRepository);
 
   useEffect(() => {
     async function load() {
@@ -28,6 +29,7 @@ export function useTasaBCV() {
     setTasa,
     saveTasa,
     loading,
-    convertirABs
+    repository
   };
+  
 }

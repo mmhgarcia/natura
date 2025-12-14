@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage } from "../hooks/useLocalStorage";
-import { useTasaBCV } from "../hooks/useTasaBCV";
+import { useTasaBCV } from "../lib/db/hooks/useTasaBCV";
 
 import data from "../data/data.json";
 import ogrupos from "../data/grupos.json";
@@ -16,11 +16,11 @@ export default function Home() {
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [clickCount, setClickCount] = useState(0);
-  const { convertirABs } = useTasaBCV();
+  const { repository } = useTasaBCV();
   
 
   // Lista de productos seleccionados
-  const [seleccionados, setSeleccionados] = useState([]);
+  const [seleccioconvertirABsnados, setSeleccionados] = useState([]);
 
   // Tasa del BCV
   const [tasa, setTasa] = useLocalStorage("tasa", localStorage.getItem('tasa')  || 0  );
@@ -32,7 +32,7 @@ export default function Home() {
     if (productos.length === 0) setProductos(data.productos);
     if (ogrupos.length === 0) setGrupos(ogrupos);
     //localStorage.set('tasa',0);
-    alert(convertirABs(10))
+    alert(repository.convertirABs(10))
   }, []);
 
   // -------------------------------
