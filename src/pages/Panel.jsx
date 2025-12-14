@@ -9,6 +9,7 @@ export default function Panel() {
       <h2 className={styles.title}>PANEL</h2>
 
       <div className={styles.buttons}>
+        
         <button
           className={styles.button}
           onClick={() => navigate("/tasabcv")}
