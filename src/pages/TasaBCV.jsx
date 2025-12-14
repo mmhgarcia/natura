@@ -7,6 +7,7 @@ export default function TasaBCV() {
   function handleSubmit(e) {
     e.preventDefault();
     if (tasa === "") return;
+    alert("Tasa Grabada.")
     saveTasa(tasa);
   }
 

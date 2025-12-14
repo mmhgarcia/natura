@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useNavigate } from "react-router-dom";
+import { useLocalStorage } from "../hooks/useLocalStorage";
+import { useTasaBCV } from "../hooks/useTasaBCV";
 
 import data from "../data/data.json";
 import ogrupos from "../data/grupos.json";
@@ -15,6 +16,8 @@ export default function Home() {
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [clickCount, setClickCount] = useState(0);
+  const { convertirABs } = useTasaBCV();
+  
 
   // Lista de productos seleccionados
   const [seleccionados, setSeleccionados] = useState([]);
@@ -29,11 +32,7 @@ export default function Home() {
     if (productos.length === 0) setProductos(data.productos);
     if (ogrupos.length === 0) setGrupos(ogrupos);
     //localStorage.set('tasa',0);
-
-    alert(tasa)
-    alert(JSON.stringify(ogrupos))
-    alert(JSON.stringify(data.productos))
-    
+    alert(convertirABs(10))
   }, []);
 
   // -------------------------------

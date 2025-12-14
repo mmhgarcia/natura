@@ -27,6 +27,7 @@ export function useTasaBCV() {
     tasa,
     setTasa,
     saveTasa,
-    loading
+    loading,
+    convertirABs
   };
 }
