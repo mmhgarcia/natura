@@ -20,7 +20,7 @@ export default function Home() {
   
 
   // Lista de productos seleccionados
-  const [seleccioconvertirABsnados, setSeleccionados] = useState([]);
+  const [seleccionados, setSeleccionados] = useState([]);
 
   // Tasa del BCV
   const [tasa, setTasa] = useLocalStorage("tasa", localStorage.getItem('tasa')  || 0  );
@@ -32,7 +32,16 @@ export default function Home() {
     if (productos.length === 0) setProductos(data.productos);
     if (ogrupos.length === 0) setGrupos(ogrupos);
     //localStorage.set('tasa',0);
-    alert(repository.convertirABs(10))
+    
+    repository.convertirABs(10)
+    .then(result => {
+        alert(result);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error occurred: ' + error.message);
+    });
+    
   }, []);
 
   // -------------------------------
