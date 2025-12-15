@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useNavigate } from "react-router-dom";
+
 import productosIniciales from "../data/data.json";
 
 // Componente
@@ -65,6 +67,7 @@ function Home() {
   // Estados
   const [productos] = useState(productosIniciales.productos);
   const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
+  const navigate = useNavigate();
 
   // Evento 
   const seleccionarProducto = (producto) => {
@@ -97,6 +100,12 @@ function Home() {
         />
 
       </div>
+
+      <button className={`${styles.button} ${styles.back}`}
+        onClick={() => navigate("/Panel")}
+      >
+        Panel
+      </button>
 
     </div>
 
