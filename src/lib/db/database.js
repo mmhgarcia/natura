@@ -6,7 +6,9 @@ export const db = new Dexie("dbTasaBCV");
 
 db.version(1).stores({
 
-  tasa: "id"
+  tasa: 'id, nombre, valor',
+  
+  grupos: '++id, nombre, precio'
 
 });
 

@@ -1,0 +1,172 @@
+import db from './db'; // Tu instancia de Dexie
+
+class GruposRepository {
+
+    constructor() {
+        this.tabla = db.grupos;
+    }
+
+    // 1. Obtener todos los grupos
+    async obtenerTodos() {
+        try {
+        return await this.tabla.toArray();
+        } catch (error) {
+        console.error('Error al obtener todos los grupos:', error);
+        throw error;
+        }
+    }
+
+  // 2. Obtener grupo por ID
+  async obtenerPorId(id) {
+    try {
+      const grupo = await this.tabla.get(id);
+      if (!grupo) {
+        throw new Error(`Grupo con ID ${id} no encontrado`);
+      }
+      return grupo;
+    } catch (error) {
+      console.error(`Error al obtener grupo con ID ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // 3. Obtener grupo por nombre
+  async obtenerPorNombre(nombre) {
+    try {
+      const grupo = await this.tabla.where('nombre').equals(nombre).first();
+      if (!grupo) {
+        throw new Error(`Grupo "${nombre}" no encontrado`);
+      }
+      return grupo;
+    } catch (error) {
+      console.error(`Error al obtener grupo "${nombre}":`, error);
+      throw error;
+    }
+  }
+
+  // 4. Crear nuevo grupo
+  async crear(grupoData) {
+    try {
+      // Validar datos requeridos
+      if (!grupoData.nombre || grupoData.precio === undefined) {
+        throw new Error('Nombre y precio son requeridos');
+      }
+
+      // Verificar si ya existe un grupo con ese nombre
+      const existe = await this.tabla.where('nombre').equals(grupoData.nombre).first();
+      if (existe) {
+        throw new Error(`Ya existe un grupo con el nombre "${grupoData.nombre}"`);
+      }
+
+      const id = await this.tabla.add(grupoData);
+      return { id, ...grupoData };
+    } catch (error) {
+      console.error('Error al crear grupo:', error);
+      throw error;
+    }
+  }
+
+  // 5. Actualizar grupo
+  async actualizar(id, nuevosDatos) {
+    try {
+      const actualizado = await this.tabla.update(id, nuevosDatos);
+      if (!actualizado) {
+        throw new Error(`Grupo con ID ${id} no encontrado para actualizar`);
+      }
+      return await this.obtenerPorId(id);
+    } catch (error) {
+      console.error(`Error al actualizar grupo con ID ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // 6. Eliminar grupo
+  async eliminar(id) {
+    try {
+      const eliminado = await this.tabla.delete(id);
+      if (!eliminado) {
+        throw new Error(`Grupo con ID ${id} no encontrado para eliminar`);
+      }
+      return true;
+    } catch (error) {
+      console.error(`Error al eliminar grupo con ID ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // 7. Buscar grupos por rango de precio
+  async buscarPorPrecio(min, max) {
+    try {
+      return await this.tabla
+        .where('precio')
+        .between(min, max)
+        .toArray();
+    } catch (error) {
+      console.error('Error al buscar por precio:', error);
+      throw error;
+    }
+  }
+
+  // 8. Obtener precios como objeto (útil para tu caso original)
+  async obtenerPreciosComoObjeto() {
+    try {
+      const grupos = await this.obtenerTodos();
+      const precios = {};
+      
+      grupos.forEach(grupo => {
+        precios[grupo.nombre] = grupo.precio;
+      });
+      
+      return precios;
+    } catch (error) {
+      console.error('Error al obtener precios como objeto:', error);
+      throw error;
+    }
+  }
+
+  // 9. Inicializar con datos por defecto
+  async inicializarDatosPorDefecto() {
+    try {
+      const count = await this.tabla.count();
+      
+      if (count === 0) {
+        const datosIniciales = [
+          { nombre: 'cremoso', precio: 0.5 },
+          { nombre: 'fullcremoso', precio: 0.7 },
+          { nombre: 'premium', precio: 1.0 },
+          { nombre: 'ninguno', precio: 0.0 }
+        ];
+
+        await this.tabla.bulkAdd(datosIniciales);
+        console.log('Datos iniciales de grupos insertados');
+        return datosIniciales;
+      }
+      
+      return await this.obtenerTodos();
+    } catch (error) {
+      console.error('Error al inicializar datos por defecto:', error);
+      throw error;
+    }
+  } 
+
+  // 10. Actualizar múltiples grupos
+  async actualizarMultiples(gruposActualizados) {
+    try {
+      await db.transaction('rw', this.tabla, async () => {
+        for (const grupo of gruposActualizados) {
+          if (grupo.id) {
+            await this.tabla.update(grupo.id, grupo);
+          }
+        }
+      });
+      return true;
+    } catch (error) {
+      console.error('Error al actualizar múltiples grupos:', error);
+      throw error;
+    }
+  }
+}
+
+// Patrón Singleton para una única instancia
+const gruposRepository = new GruposRepository();
+export default gruposRepository;

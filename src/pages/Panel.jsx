@@ -4,6 +4,10 @@ import styles from "./Panel.module.css";
 export default function Panel() {
   const navigate = useNavigate();
 
+  const loadData = () =>{
+    alert("LOAD");
+  }
+
   return (
     <div className={styles.container}>
       <h2 className={styles.title}>PANEL</h2>
@@ -29,6 +33,13 @@ export default function Panel() {
           onClick={() => navigate("/admingrupos")}
         >
           Grupos
+        </button>
+        
+        <button
+          className={styles.button}
+          onClick={() => loadData()}
+        >
+          Carga Inicial de Datos
         </button>
 
         <button

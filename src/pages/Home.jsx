@@ -1,18 +1,11 @@
 import { useState } from 'react';
 import productosIniciales from "../data/data.json";
 
-const productosIniciales0 = [
-  { id: 1, nombre: 'Producto A', precio: 100 },
-  { id: 2, nombre: 'Producto B', precio: 200 },
-  { id: 3, nombre: 'Producto C', precio: 150 },
-  { id: 4, nombre: 'Producto D', precio: 300 },
-  { id: 5, nombre: 'Producto E', precio: 250 },
-];
-
+// Componente
 function ListaDeProductos({ productos, seleccionarProducto }) {
   return (
     <div>
-      <h3>Lista de Productos (Componente A)</h3>
+      <h3>Lista de Productos</h3>
       <ul>
         {productos.map((producto) => (
           <li key={producto.id} onClick={() => seleccionarProducto(producto)}>
@@ -24,14 +17,17 @@ function ListaDeProductos({ productos, seleccionarProducto }) {
   );
 }
 
+// Componente
 function ListaDeSeleccionados({ listaDeSeleccionados, eliminarProducto }) {
+  
+  // Totalizar Seleccionados
   const calcularTotal = () => {
     return listaDeSeleccionados.reduce((total, producto) => total + producto.precio, 0);
   };
 
   return (
     <div>
-      <h3>Productos Seleccionados (Componente B)</h3>
+      <h3>Productos Seleccionados</h3>
       
       {listaDeSeleccionados.length === 0 ? (
         <p>No hay productos seleccionados</p>
@@ -72,9 +68,9 @@ function Home() {
 
   // Evento 
   const seleccionarProducto = (producto) => {
-    if (!listaDeSeleccionados.some(item => item.id === producto.id)) {
+    // if (!listaDeSeleccionados.some(item => item.id === producto.id)) {
       setListaDeSeleccionados([...listaDeSeleccionados, producto]);
-    }
+    // }
   };
 
   // Evento
