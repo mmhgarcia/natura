@@ -7,7 +7,7 @@
 //import GruposRepository from "../repositories/GruposRepository.js";
 // import ProductosRepository from "../repositories/ProductosRepository.js";
 
-import db from '../database.js';
+import {db} from '../database.js';
 
 const Importer = {
  
