@@ -101,9 +101,7 @@ function Home() {
 
       </div>
 
-      <button className={`${styles.button} ${styles.back}`}
-        onClick={() => navigate("/Panel")}
-      >
+      <button onClick={() => navigate("/Panel")}>
         Panel
       </button>
 
