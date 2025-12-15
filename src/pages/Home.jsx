@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import productosIniciales from "../data/data.json";
 
-const productosIniciales = [
+const productosIniciales0 = [
   { id: 1, nombre: 'Producto A', precio: 100 },
   { id: 2, nombre: 'Producto B', precio: 200 },
   { id: 3, nombre: 'Producto C', precio: 150 },
@@ -15,7 +16,7 @@ function ListaDeProductos({ productos, seleccionarProducto }) {
       <ul>
         {productos.map((producto) => (
           <li key={producto.id} onClick={() => seleccionarProducto(producto)}>
-            {producto.nombre} - ${producto.precio}
+            {producto.nombre} - ${producto.stock}
           </li>
         ))}
       </ul>
@@ -65,35 +66,46 @@ function ListaDeSeleccionados({ listaDeSeleccionados, eliminarProducto }) {
 
 function Home() {
 
+  // Estados
   const [productos] = useState(productosIniciales);
   const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
 
+  // Evento 
   const seleccionarProducto = (producto) => {
     if (!listaDeSeleccionados.some(item => item.id === producto.id)) {
       setListaDeSeleccionados([...listaDeSeleccionados, producto]);
     }
   };
 
+  // Evento
   const eliminarProducto = (id) => {
     setListaDeSeleccionados(listaDeSeleccionados.filter(producto => producto.id !== id));
   };
 
   return (
+
     <div>
-      <h1>Sistema de Selección de Productos</h1>
+
+      <h1>Selección de Productos</h1>
       
       <div>
+        
         <ListaDeProductos 
           productos={productos} 
           seleccionarProducto={seleccionarProducto}
         />
+
         <ListaDeSeleccionados
           listaDeSeleccionados={listaDeSeleccionados}
           eliminarProducto={eliminarProducto}
         />
+
       </div>
+
     </div>
+
   );
+
 }
 
 export default Home;
