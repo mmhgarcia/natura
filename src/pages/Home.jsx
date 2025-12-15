@@ -1,192 +1,98 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useLocalStorage } from "../hooks/useLocalStorage";
-import { useTasaBCV } from "../lib/db/hooks/useTasaBCV";
+import { useState } from 'react';
 
-import data from "../data/data.json";
-import ogrupos from "../data/grupos.json";
+const productosIniciales = [
+  { id: 1, nombre: 'Producto A', precio: 100 },
+  { id: 2, nombre: 'Producto B', precio: 200 },
+  { id: 3, nombre: 'Producto C', precio: 150 },
+  { id: 4, nombre: 'Producto D', precio: 300 },
+  { id: 5, nombre: 'Producto E', precio: 250 },
+];
 
-import styles from "./Home.module.css";
-
-export default function Home() {
-  const navigate = useNavigate();
-  const [productos, setProductos] = useLocalStorage("productos", []);
-  const [grupos, setGrupos] = useLocalStorage("grupos", []);
-  const [adminMode, setAdminMode] = useLocalStorage("adminMode", false);
-  const [adminPassword, setAdminPassword] = useState("");
-  const [showAdminModal, setShowAdminModal] = useState(false);
-  const [clickCount, setClickCount] = useState(0);
-  const { TasaRepository } = useTasaBCV();
-  
-  // Lista de productos seleccionados
-  const [seleccionados, setSeleccionados] = useState([]);
-
-  // -------------------------------
-  // INIT
-  // -------------------------------
-
-  useEffect(() => {
-
-    const fetchData = async () => {
-      if (productos.length === 0) setProductos(data.productos);
-      if (ogrupos.length === 0) setGrupos(ogrupos);
-    };
-
-    fetchData();
-
-  }, []);
-
-
-  // -------------------------------
-  // ADMIN SECRET CLICK
-  // -------------------------------
-  const handleTitleClick = () => {
-    setClickCount(prev => prev + 1);
-    setTimeout(() => setClickCount(0), 500);
-
-    if (clickCount + 1 === 3) {
-      setShowAdminModal(true);
-      setClickCount(0);
-    }
-  };
-
-  const handleAdminLogin = () => {
-    if (adminPassword === "1234") {
-      setAdminMode(true);
-      setShowAdminModal(false);
-      navigate("/panel");
-    } else {
-      alert("Clave incorrecta");
-    }
-  };
-
-  const handleAdminLogout = () => {
-    setAdminMode(false);
-    setAdminPassword("");
-  };
-
-  // -------------------------------
-  // SELECT PRODUCTO
-  // -------------------------------
-  const handleSelectProducto = (p) => {
-    setSeleccionados(prev => [...prev, p]);
-  };
-
-  const handleEliminar = (index) => {
-    setSeleccionados(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleVaciar = () => {
-    setSeleccionados([]);
-  };
-
-  // -------------------------------
-  // TOTAL
-  // -------------------------------
-  const total = () => {
-    if (!seleccionados.length) {
-      return { totaldolar: 0, totalbs: 0 };
-    }
-
-    const gruposObj = grupos[0] || {};
-    let suma = 0;
-
-    seleccionados.forEach(item => {
-      const grupoName = (item.grupo || "").toLowerCase();
-      const costoUnit = gruposObj[grupoName] ?? 0;
-      suma += costoUnit;
-    });
-
-    return {
-      totaldolar: suma,
-      totalbs: suma * (tasa || 1)
-    };
-  };
-
-  const { totaldolar, totalbs } = total();
-
-  // -------------------------------
-  // RENDER
-  // -------------------------------
+function ComponenteA({ productos, seleccionarProducto }) {
   return (
-    <div className={styles.container}>
-      <h2 className={styles.title} onClick={handleTitleClick}>
-        Natura Ice
-      </h2>
-
-      {/* Modal Admin */}
-      {showAdminModal && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <h3>Login Admin</h3>
-
-            <input
-              type="password"
-              placeholder="Clave Admin"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-            />
-
-            <button onClick={handleAdminLogin}>Entrar</button>
-            <button onClick={() => setShowAdminModal(false)}>Cerrar</button>
-          </div>
-        </div>
-      )}
-
-      {/* Botón salir admin */}
-      {adminMode && (
-        <div style={{ textAlign: "center", marginBottom: "16px" }}>
-          <button onClick={handleAdminLogout}>Salir de Admin</button>
-        </div>
-      )}
-
-      {/* Grid de productos */}
-      <div className={styles.grid}>
-        {productos
-          .filter((p) => p.stock > 0)
-          .map((p) => (
-            <div
-              key={p.id}
-              className={styles.card}
-              onClick={() => handleSelectProducto(p)}
-            >
-              <img src={p.imagen} alt={p.nombre} className={styles.image} />
-              <p>Und: {p.stock}</p>
-              <p># {p.id}</p>
-            </div>
-          ))}
-      </div>
-
-      {/* Lista de seleccionados */}
-      <div className={styles.selectedContainer}>
-        <div className={styles.selectedHeader}>
-          🎯 SELECCIONADOS ({seleccionados.length})
-        </div>
-
-        <div className={styles.selectedList}>
-          {seleccionados.map((item, index) => (
-            <div key={index} className={styles.selectedItem}>
-              <p>{item.id} - {item.nombre}</p>
-              <button onClick={() => handleEliminar(index)}>
-                Eliminar
-              </button>
-            </div>
-          ))}
-
-          <div className={styles.selectedItem}>
-            <p>
-              TOTAL $: {totaldolar.toFixed(2)}  
-              &nbsp;&nbsp;|&nbsp;&nbsp;  
-              TOTAL Bs: {totalbs.toFixed(2)}
-            </p>
-          </div>
-        </div>
-
-        <button className={styles.vaciarBtn} onClick={handleVaciar}>
-          Vaciar
-        </button>
-      </div>
-      
+    <div>
+      <h3>Lista de Productos (Componente A)</h3>
+      <ul>
+        {productos.map((producto) => (
+          <li key={producto.id} onClick={() => seleccionarProducto(producto)}>
+            {producto.nombre} - ${producto.precio}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
+
+function ComponenteB({ listaDeSeleccionados, eliminarProducto }) {
+  const calcularTotal = () => {
+    return listaDeSeleccionados.reduce((total, producto) => total + producto.precio, 0);
+  };
+
+  return (
+    <div>
+      <h3>Productos Seleccionados (Componente B)</h3>
+      
+      {listaDeSeleccionados.length === 0 ? (
+        <p>No hay productos seleccionados</p>
+      ) : (
+        <>
+          <ul>
+            {listaDeSeleccionados.map((producto) => (
+              <li key={`selected-${producto.id}`}>
+                {producto.nombre} - ${producto.precio}
+                <button onClick={() => eliminarProducto(producto.id)}>
+                  Eliminar
+                </button>
+              </li>
+            ))}
+          </ul>
+          
+          <div>
+            <div>
+              <strong>Total de productos:</strong>
+              <span>{listaDeSeleccionados.length}</span>
+            </div>
+            <div>
+              <strong>Total a pagar:</strong>
+              <span>${calcularTotal()}</span>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Home() {
+  const [productos] = useState(productosIniciales);
+  const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
+
+  const seleccionarProducto = (producto) => {
+    if (!listaDeSeleccionados.some(item => item.id === producto.id)) {
+      setListaDeSeleccionados([...listaDeSeleccionados, producto]);
+    }
+  };
+
+  const eliminarProducto = (id) => {
+    setListaDeSeleccionados(listaDeSeleccionados.filter(producto => producto.id !== id));
+  };
+
+  return (
+    <div>
+      <h1>Sistema de Selección de Productos</h1>
+      
+      <div>
+        <ComponenteA 
+          productos={productos} 
+          seleccionarProducto={seleccionarProducto}
+        />
+        <ComponenteB 
+          listaDeSeleccionados={listaDeSeleccionados}
+          eliminarProducto={eliminarProducto}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default Home;
