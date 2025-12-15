@@ -25,17 +25,21 @@ export default function Home() {
   // INIT
   // -------------------------------
   useEffect(() => {
-    if (productos.length === 0) setProductos(data.productos);
-    if (ogrupos.length === 0) setGrupos(ogrupos);
+    const fetchData = async () => {
+      if (productos.length === 0) setProductos(data.productos);
+      if (ogrupos.length === 0) setGrupos(ogrupos);
 
-    try {
-      const result = repository.convertirABs(10);
-      alert(result);
-      alert(tasa);
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Error occurred: " + error.message);
-    }
+      try {
+        const result = await repository.convertirABs(10);
+        alert(result);
+        alert(tasa);
+      } catch (error) {
+        console.error("Error:", error);
+        alert("Error occurred: " + error.message);
+      }
+    };
+
+    fetchData();
 
   }, []);
 
