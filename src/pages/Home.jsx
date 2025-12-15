@@ -67,7 +67,7 @@ function ListaDeSeleccionados({ listaDeSeleccionados, eliminarProducto }) {
 function Home() {
 
   // Estados
-  const [productos] = useState(productosIniciales);
+  const [productos] = useState(productosIniciales.productos);
   const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
 
   // Evento 
