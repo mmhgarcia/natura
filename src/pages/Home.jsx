@@ -16,7 +16,7 @@ export default function Home() {
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [clickCount, setClickCount] = useState(0);
-  const { tasa, repository } = useTasaBCV();
+  const { TasaRepository } = useTasaBCV();
   
   // Lista de productos seleccionados
   const [seleccionados, setSeleccionados] = useState([]);
@@ -24,13 +24,14 @@ export default function Home() {
   // -------------------------------
   // INIT
   // -------------------------------
+  
   useEffect(() => {
     const fetchData = async () => {
       if (productos.length === 0) setProductos(data.productos);
       if (ogrupos.length === 0) setGrupos(ogrupos);
 
       try {
-        const result = await repository.convertirABs(10);
+        const result = await TasaRepository.convertirABs(10);
         alert(result);
         alert(tasa);
       } catch (error) {

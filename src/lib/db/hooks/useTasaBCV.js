@@ -6,16 +6,22 @@ import { TasaRepository } from "../repositories/TasaRepository";
 export function useTasaBCV() {
   const [tasa, setTasa] = useState("");
   const [loading, setLoading] = useState(true);
-  const [repository, setTasaRepository] = useState(TasaRepository);
 
   useEffect(() => {
     async function load() {
-      const tasaKey = await TasaRepository.getTasa();
-      if (tasaKey) {
-        setTasa(tasaKey.valor);
+      try {
+        const tasaKey = await TasaRepository.getTasa();
+        if (tasaKey) {
+          setTasa(tasaKey);
+        }
+      } catch (error) {
+        console.error("Error al cargar la tasa:", error);
+        // Opcional: manejar el error (mostrar mensaje al usuario, etc.)
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
+    
     load();
   }, []);
 
@@ -24,12 +30,11 @@ export function useTasaBCV() {
     setTasa(valor);
   }
 
-  return {
-    tasa,
+  return {    
     setTasa,
     saveTasa,
     loading,
-    repository
+    TasaRepository
   };
 
 }
