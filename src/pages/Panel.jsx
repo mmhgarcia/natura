@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import styles from "./Panel.module.css";
 
+import grupos from '../data/grupos.json';
+
 import Importer from '../lib/db/utils/Importer.js';
 // y lo usarías asi: Importer.ImportGrupos(), Importer.ImportProductos()
 
@@ -23,12 +25,9 @@ export default function Panel() {
     }
 
     try {
+
       // Cargar datos desde un archivo JSON en el servidor
-      const response = await fetch('/data/grupos.json');
-      
-      if (!response.ok) throw new Error('No se pudo cargar el archivo');
-      
-      const jsonData = await response.json();
+      const jsonData = await grupos.json();
       const resultado = await Importer.ImportGrupos(jsonData);
       
       console.log('Resultado:', resultado);
@@ -36,7 +35,7 @@ export default function Panel() {
       
     } catch (error) {
       console.error('Error:', error);
-      alert("Error al Importar Grupos!")
+      alert(error)
     }
   };
 
