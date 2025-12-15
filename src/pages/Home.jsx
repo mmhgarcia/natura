@@ -16,14 +16,10 @@ export default function Home() {
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [clickCount, setClickCount] = useState(0);
-  const { repository } = useTasaBCV();
+  const { tasa, repository } = useTasaBCV();
   
-
   // Lista de productos seleccionados
   const [seleccionados, setSeleccionados] = useState([]);
-
-  // Tasa del BCV
-  const [tasa, setTasa] = useLocalStorage("tasa", localStorage.getItem('tasa')  || 0  );
 
   // -------------------------------
   // INIT
@@ -31,18 +27,18 @@ export default function Home() {
   useEffect(() => {
     if (productos.length === 0) setProductos(data.productos);
     if (ogrupos.length === 0) setGrupos(ogrupos);
-    //localStorage.set('tasa',0);
-    
-    repository.convertirABs(10)
-    .then(result => {
-        alert(result);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error occurred: ' + error.message);
-    });
-    
+
+    try {
+      const result = repository.convertirABs(10);
+      alert(result);
+      alert(tasa);
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error occurred: " + error.message);
+    }
+
   }, []);
+
 
   // -------------------------------
   // ADMIN SECRET CLICK

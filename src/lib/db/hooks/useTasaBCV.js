@@ -10,9 +10,9 @@ export function useTasaBCV() {
 
   useEffect(() => {
     async function load() {
-      const data = await TasaRepository.getTasa();
-      if (data) {
-        setTasa(data.valor);
+      const tasaKey = await TasaRepository.getTasa();
+      if (tasaKey) {
+        setTasa(tasaKey.valor);
       }
       setLoading(false);
     }
@@ -31,5 +31,5 @@ export function useTasaBCV() {
     loading,
     repository
   };
-  
+
 }
