@@ -8,7 +8,7 @@ const productosIniciales = [
   { id: 5, nombre: 'Producto E', precio: 250 },
 ];
 
-function ComponenteA({ productos, seleccionarProducto }) {
+function ListaDeProductos({ productos, seleccionarProducto }) {
   return (
     <div>
       <h3>Lista de Productos (Componente A)</h3>
@@ -23,7 +23,7 @@ function ComponenteA({ productos, seleccionarProducto }) {
   );
 }
 
-function ComponenteB({ listaDeSeleccionados, eliminarProducto }) {
+function ListaDeSeleccionados({ listaDeSeleccionados, eliminarProducto }) {
   const calcularTotal = () => {
     return listaDeSeleccionados.reduce((total, producto) => total + producto.precio, 0);
   };
@@ -64,6 +64,7 @@ function ComponenteB({ listaDeSeleccionados, eliminarProducto }) {
 }
 
 function Home() {
+
   const [productos] = useState(productosIniciales);
   const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
 
@@ -82,11 +83,11 @@ function Home() {
       <h1>Sistema de Selección de Productos</h1>
       
       <div>
-        <ComponenteA 
+        <ListaDeProductos 
           productos={productos} 
           seleccionarProducto={seleccionarProducto}
         />
-        <ComponenteB 
+        <ListaDeSeleccionados
           listaDeSeleccionados={listaDeSeleccionados}
           eliminarProducto={eliminarProducto}
         />
