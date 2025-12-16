@@ -39,6 +39,21 @@ export default function Panel() {
     }
   };
 
+  const verificarImportacion = async () => {
+    try {
+      const { db } = await import('../lib/db/database.js');
+      const grupos = await db.grupos.toArray();
+      
+      console.log('📊 Grupos en base de datos:');
+      console.table(grupos);
+      
+      alert(`✅ ${grupos.length} grupos encontrados\n\n` +
+            grupos.map(g => `${g.nombre}: ${g.precio}`).join('\n'));
+    } catch (error) {
+      alert(`❌ Error: ${error.message}`);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <h2 className={styles.title}>PANEL</h2>
@@ -71,6 +86,14 @@ export default function Panel() {
           onClick={loadData} // Sin arrow function innecesaria
         >
           Carga Inicial de Datos
+        </button>
+
+        <button
+          className={styles.button}
+          onClick={verificarImportacion}
+          style={{backgroundColor: '#28a745'}}
+        >
+          Verificar Importación
         </button>
 
         <button
