@@ -3,7 +3,7 @@ import Home from "./pages/Home";
 import Lista from "./pages/Lista";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
-import Panel from "./pages/Panel";
+import Panel from "./components/Panel/Panel";
 import AdminProductos from "./pages/AdminProductos";
 import AdminGrupos from "./pages/AdminGrupos";
 import TasaBCV from "./pages/TasaBCV";
