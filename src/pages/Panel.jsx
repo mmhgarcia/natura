@@ -1,17 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import styles from "./Panel.module.css";
 
-import grupos from '../data/grupos.json';
-
+import gruposData from '../data/grupos.json'; // Cambia el nombre para claridad
 import Importer from '../lib/db/utils/Importer.js';
-// y lo usarías asi: Importer.ImportGrupos(), Importer.ImportProductos()
 
 export default function Panel() {
-
   const navigate = useNavigate();
 
   const loadData = async () => {
-
     // 1. Mostrar confirmación
     const confirmar = window.confirm(
       '¿Estás seguro de realizar la carga inicial de datos?\n\n' +
@@ -25,17 +21,21 @@ export default function Panel() {
     }
 
     try {
-
-      // Cargar datos desde un archivo JSON en el servidor
-      const jsonData = await grupos.json();
-      const resultado = await Importer.ImportGrupos(jsonData);
+      // 3. Usar los datos importados directamente
+      const resultado = await Importer.ImportGrupos(gruposData);
       
       console.log('Resultado:', resultado);
-      alert("Grupos Importados!")
+      
+      // 4. Mostrar mensaje según resultado
+      if (resultado.success) {
+        alert(`✅ ${resultado.count} grupos importados exitosamente!`);
+      } else {
+        alert(`❌ Error: ${resultado.error}`);
+      }
       
     } catch (error) {
       console.error('Error:', error);
-      alert(error)
+      alert(`❌ Error inesperado: ${error.message}`);
     }
   };
 
@@ -44,7 +44,7 @@ export default function Panel() {
       <h2 className={styles.title}>PANEL</h2>
 
       <div className={styles.buttons}>
-        
+        {/* Tus botones de navegación */}
         <button
           className={styles.button}
           onClick={() => navigate("/tasabcv")}
@@ -68,7 +68,7 @@ export default function Panel() {
         
         <button
           className={styles.button}
-          onClick={() => loadData()}
+          onClick={loadData} // Sin arrow function innecesaria
         >
           Carga Inicial de Datos
         </button>
