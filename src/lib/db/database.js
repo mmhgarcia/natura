@@ -8,7 +8,9 @@ db.version(1).stores({
 
   tasa: 'id, nombre, valor',
   
-  grupos: '++id, nombre, precio'
+  grupos: '++id, nombre, precio',
+
+  productos: 'id, nombre, grupo, stock, imagen'
 
 });
 

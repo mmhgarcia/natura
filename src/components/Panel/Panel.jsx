@@ -1,10 +1,13 @@
 // src/components/Panel/Panel.js
 import { useNavigate } from "react-router-dom";
 import { useGrupos } from "./hooks/useGrupos";
+import { useProductos } from "./hooks/useProductos";
 import styles from "./Panel.module.css";
 
 export default function Panel() {
+  
   const navigate = useNavigate();
+  
   const { 
     importarGrupos, 
     verificarGrupos, 
@@ -12,7 +15,9 @@ export default function Panel() {
     error 
   } = useGrupos();
 
+  // Importacion de Grupos y Productos
   const handleImportar = async () => {
+    
     const resultado = await importarGrupos();
     
     if (resultado.cancelled) return;
