@@ -37,7 +37,17 @@ export default function Panel() {
 
   return (
     <div className={styles.container}>
+
       <h2 className={styles.title}>PANEL DE CONTROL</h2>
+
+      {/* Acción principal */}
+      <button 
+          className={`${styles.button} ${styles.primary}`}
+          onClick={handleImportarDatos}
+          disabled={loading}
+        >
+        {loading ? '⏳ Importando...' : '📥 Cargar Datos Iniciales'}
+      </button>
 
       <div className={styles.buttons}>
         {/* Navegación */}
@@ -51,15 +61,6 @@ export default function Panel() {
         
         <button className={styles.button} onClick={() => navigate("/admingrupos")}>
           Grupos
-        </button>
-
-        {/* Acción principal */}
-        <button 
-          className={`${styles.button} ${styles.primary}`}
-          onClick={handleImportarDatos}
-          disabled={loading}
-        >
-          {loading ? '⏳ Importando...' : '📥 Cargar Datos Iniciales'}
         </button>
 
         {/* Volver */}
