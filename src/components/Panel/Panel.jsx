@@ -8,43 +8,27 @@ export default function Panel() {
   
   const navigate = useNavigate();
   
-  const { 
-    importarGrupos, 
-    verificarGrupos, 
-    loading, 
-    error 
-  } = useGrupos();
+  const { importarGrupos } = useGrupos();
+  const { importarProductos } = useProductos();
 
-  // Importacion de Grupos y Productos
-  const handleImportar = async () => {
-    
-    const resultado = await importarGrupos();
-    
-    if (resultado.cancelled) return;
-    
-    if (resultado.success) {
-      alert(`✅ ${resultado.message}`);
-    } else {
-      alert(`❌ Error: ${resultado.error}`);
-    }
-  };
 
-  const handleVerificar = async () => {
-    const resultado = await verificarGrupos();
+  // Importar Grupos y Productos
+  async function ImportarDatos() {
+    try {
+
+      const resultadoGrupos = await importarGrupos();
+      
+      const resultadoProductos = await importarProductos();
+      
+      return { gruposMessage: resultadoGrupos, productosMessage: resultadoProductos };
     
-    if (resultado.success) {
-      console.log('📊 Grupos en BD:', resultado.data);
-      console.table(resultado.data);
-      
-      const lista = resultado.data
-        .map(g => `${g.nombre}: ${g.precio}`)
-        .join('\n');
-      
-      alert(`✅ ${resultado.message}:\n\n${lista}`);
-    } else {
-      alert(`❌ Error: ${resultado.error}`);
+    } catch (error) {
+         
+      return { errorMessage: error};
+    
     }
-  };
+
+  }
 
   return (
     <div className={styles.container}>
@@ -76,18 +60,10 @@ export default function Panel() {
         
         {/* Botones de acciones */}
         <ActionButton 
-          onClick={handleImportar} 
-          loading={loading}
+          onClick={ImportarDatos}          
           variant="primary"
         >
           Carga Inicial de Datos
-        </ActionButton>
-        
-        <ActionButton 
-          onClick={handleVerificar}
-          variant="success"
-        >
-          Verificar Importación
         </ActionButton>
         
         <NavButton 
