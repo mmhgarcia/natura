@@ -5,99 +5,71 @@ import { useProductos } from "./hooks/useProductos";
 import styles from "./Panel.module.css";
 
 export default function Panel() {
-  
   const navigate = useNavigate();
-  
   const { importarGrupos } = useGrupos();
-  const { importarProductos } = useProductos();
+  const { importarProductos, loading } = useProductos();
 
-
-  // Importar Grupos y Productos
-  async function ImportarDatos() {
+  // Función simple para importar datos
+  async function handleImportarDatos() {
     try {
-
+      // 1. Importar grupos
       const resultadoGrupos = await importarGrupos();
-      
-      const resultadoProductos = await importarProductos();
-      
-      return { gruposMessage: resultadoGrupos, productosMessage: resultadoProductos };
-    
-    } catch (error) {
-         
-      return { errorMessage: error};
-    
-    }
+      console.log('Grupos:', resultadoGrupos);
 
+      // 2. Importar productos
+      const resultadoProductos = await importarProductos();
+      console.log('Productos:', resultadoProductos);
+
+      // 3. Mostrar resultado
+      if (resultadoProductos.success) {
+        alert(`✅ Datos importados\n\n` +
+              `Productos: ${resultadoProductos.count}\n` +
+              `Mensaje: ${resultadoProductos.message}`);
+      } else {
+        alert(`❌ Error\n\n${resultadoProductos.error}`);
+      }
+
+    } catch (error) {
+      console.error('Error general:', error);
+      alert('❌ Error inesperado: ' + error.message);
+    }
   }
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>PANEL</h2>
+      <h2 className={styles.title}>PANEL DE CONTROL</h2>
 
       <div className={styles.buttons}>
-        {/* Botones de navegación */}
-        <NavButton onClick={() => navigate("/tasabcv")}>
+        {/* Navegación */}
+        <button className={styles.button} onClick={() => navigate("/tasabcv")}>
           Tasa BCV
-        </NavButton>
+        </button>
         
-        <NavButton onClick={() => navigate("/adminproductos")}>
+        <button className={styles.button} onClick={() => navigate("/adminproductos")}>
           Productos
-        </NavButton>
+        </button>
         
-        <NavButton onClick={() => navigate("/admingrupos")}>
+        <button className={styles.button} onClick={() => navigate("/admingrupos")}>
           Grupos
-        </NavButton>
-        
-        {/* Botones de acciones */}
-        <ActionButton 
-          onClick={ImportarDatos}          
-          variant="primary"
+        </button>
+
+        {/* Acción principal */}
+        <button 
+          className={`${styles.button} ${styles.primary}`}
+          onClick={handleImportarDatos}
+          disabled={loading}
         >
-          Carga Inicial de Datos
-        </ActionButton>
-        
-        <NavButton 
+          {loading ? '⏳ Importando...' : '📥 Cargar Datos Iniciales'}
+        </button>
+
+        {/* Volver */}
+        <button 
+          className={`${styles.button} ${styles.back}`}
           onClick={() => navigate("/")}
-          variant="back"
         >
-          Regresar
-        </NavButton>
+          ↩️ Regresar
+        </button>
       </div>
     </div>
-  );
-}
-
-// Componentes auxiliares (opcionales, para mayor organización)
-function NavButton({ onClick, children, variant = '' }) {
-  const className = variant === 'back' 
-    ? `${styles.button} ${styles.back}`
-    : styles.button;
-    
-  return (
-    <button className={className} onClick={onClick}>
-      {children}
-    </button>
-  );
-}
-
-function ActionButton({ onClick, children, loading = false, variant = '' }) {
-  let buttonClass = styles.button;
-  let style = {};
-  
-  if (variant === 'success') {
-    style.backgroundColor = '#28a745';
-  } else if (variant === 'primary') {
-    style.backgroundColor = loading ? '#6c757d' : '#007bff';
-  }
-  
-  return (
-    <button 
-      className={buttonClass} 
-      onClick={onClick}
-      disabled={loading}
-      style={style}
-    >
-      {loading ? '⏳ Procesando...' : children}
-    </button>
   );
 }

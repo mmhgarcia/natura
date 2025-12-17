@@ -2,7 +2,6 @@
 import { db } from '../database.js';
 
 const Importer = {
-
     async ImportGrupos(jsonData) {
         try {
             // 1. CONVERTIR {clave:valor} a [{nombre, precio}]
@@ -31,38 +30,52 @@ const Importer = {
             };
         }
     },
+
     async ImportProductos(jsonData) {
         try {
-            // 1. CONVERTIR {clave:valor} a [{nombre, precio, ...}]
-            const prodArray = Object.entries(jsonData).map(([id, nombre, grupo, stock, imagen]) => ({
-                id: id,
-                nombre: nombre,
-                grupo: grupo,
-                stock: Number(stock),
-                imagen: imagen
-            }));
+            // ¡CORRECCIÓN! - jsonData ya es el array de productos
+            // No necesitas Object.entries, ya viene como array
+            const productosArray = jsonData.productos || jsonData;
 
-            // 2. LIMPIAR TABLA
+            console.log('Productos a importar:', productosArray.length);
+            console.log('Primer producto:', productosArray[0]);
+
+            // 1. LIMPIAR TABLA
             await db.productos.clear();
 
-            // 3. INSERTAR NUEVOS DATOS
-            await db.productos.bulkAdd(prodArray);
+            // 2. INSERTAR NUEVOS DATOS UNO POR UNO
+            let importados = 0;
+            for (const producto of productosArray) {
+                try {
+                    await db.productos.add({
+                        id: producto.id,
+                        nombre: producto.nombre,
+                        grupo: producto.grupo,
+                        stock: Number(producto.stock),
+                        imagen: producto.imagen,
+                        createdAt: new Date() // Agregar timestamp
+                    });
+                    importados++;
+                } catch (error) {
+                    console.error(`Error insertando producto ${producto.id}:`, error);
+                }
+            }
 
             return {
                 success: true,
-                count: prodArray.length,
-                message: `${prodArray.length} items importados`
+                count: importados,
+                total: productosArray.length,
+                message: `${importados} de ${productosArray.length} productos importados`
             };
 
         } catch (error) {
-            console.error('Error en importación:', error);
+            console.error('Error en importación de productos:', error);
             return {
                 success: false,
                 error: error.message
             };
         }
     }
-    
 };
 
 export default Importer;
