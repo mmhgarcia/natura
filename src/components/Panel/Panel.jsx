@@ -34,16 +34,6 @@ export default function Panel() {
     <div className={styles.container}>
       <h2 className={styles.title}>PANEL</h2>
 
-      {/* Mostrar error si existe */}
-      {error && (
-        <div className={styles.errorAlert}>
-          ❌ {error}
-          <button onClick={() => {}} className={styles.closeError}>
-            ×
-          </button>
-        </div>
-      )}
-
       <div className={styles.buttons}>
         {/* Botones de navegación */}
         <NavButton onClick={() => navigate("/tasabcv")}>
