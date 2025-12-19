@@ -55,14 +55,14 @@ export default function Panel() {
           Tasa BCV
         </button>
         
-        <button className={styles.button} onClick={() => navigate("/adminproductos")}>
-          Productos
-        </button>
-        
         <button className={styles.button} onClick={() => navigate("/admingrupos")}>
           Grupos
         </button>
 
+        <button className={styles.button} onClick={() => navigate("/adminproductos")}>
+          Productos
+        </button>
+        
         {/* Volver */}
         <button 
           className={`${styles.button} ${styles.back}`}

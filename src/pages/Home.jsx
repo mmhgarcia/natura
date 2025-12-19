@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import productosIniciales from "../data/data.json";
+import { db } from '../lib/db/database.js';
+
+async function initApp() {    
+    await db.init();
+}
+
 
 // Componente
 function ListaDeProductos({ productos, seleccionarProducto }) {
@@ -67,6 +73,8 @@ function Home() {
   const [productos] = useState(productosIniciales.productos);
   const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
   const navigate = useNavigate();
+
+  initApp();
 
   // Evento 
   const seleccionarProducto = (producto) => {
