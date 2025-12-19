@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import styles from "./Admin.module.css";
 // En cualquier archivo de tu proyecto
-import { db } from ',./lib/db/database.js';
+import { db } from '../lib/db/database.js';
 
 export default function AdminProductos() {
   const [productos, setProductos] = useLocalStorage("productos", []);
