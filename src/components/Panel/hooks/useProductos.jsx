@@ -2,8 +2,9 @@
 import { useState } from 'react';
 import productosData from '../../../data/data.json';
 //import Importer from '../../../lib/db/utils/Importer.js';
+const { db } = await import('../../../lib/db/database.js');
 
-  export function useProductos() {
+export function useProductos() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -94,7 +95,6 @@ import productosData from '../../../data/data.json';
 
   const verificarProductos = async () => {
     try {
-      const { db } = await import('../../../lib/db/database.js');
       const productos = await db.TBPRODUCTOS.toArray();
       
       return {
