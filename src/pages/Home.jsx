@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import productosIniciales from "../data/data.json";
 import { db } from '../lib/db/database.js';
