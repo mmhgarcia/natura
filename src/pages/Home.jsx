@@ -10,6 +10,11 @@ async function initApp() {
 
 // Componente
 function ListaDeProductos({ productos, seleccionarProducto }) {
+
+  const data = async () => await db.getAll();
+
+  alert(JSON.stringify(data));
+
   return (
     <div>
       <h3>Lista de Productos</h3>

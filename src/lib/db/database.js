@@ -28,6 +28,7 @@ export class NaturaDBClass {
   // Abrir db
   async init() {
     await this.db.open();
+    console.log("db open.");
     return this;
   }
 
