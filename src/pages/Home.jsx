@@ -81,6 +81,20 @@ function Home() {
 
   initApp();
 
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        const data = await db.getAll();
+        alert(JSON.stringify(data));
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+      
+    cargarDatos();
+  
+  }, []); // El array vacío [] significa que se ejecuta solo al montar el componente
+
   // Evento 
   const seleccionarProducto = (producto) => {
     // if (!listaDeSeleccionados.some(item => item.id === producto.id)) {
