@@ -5,6 +5,7 @@ import { useProductos } from "./hooks/useProductos";
 import styles from "./Panel.module.css";
 
 export default function Panel() {
+  
   const navigate = useNavigate();
   const { importarGrupos } = useGrupos();
   const { importarProductos, loading } = useProductos();

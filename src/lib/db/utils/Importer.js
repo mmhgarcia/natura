@@ -41,7 +41,7 @@ const Importer = {
             console.log('Primer producto:', productosArray[0]);
 
             // 1. LIMPIAR TABLA
-            await db.productos.clear();
+            await db.TBPRODUCTOS.clear();
 
             // 2. INSERTAR NUEVOS DATOS UNO POR UNO
             let importados = 0;
