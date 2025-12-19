@@ -11,7 +11,7 @@ async function initApp() {
 // Componente
 function ListaDeProductos({ productos, seleccionarProducto }) {
 
-  const data = async () => await db.getAll();
+  const data = async () => await db.getAll('productos');
 
   alert(JSON.stringify(data));
 
