@@ -19,6 +19,10 @@ export class NaturaDBClass {
       grupos: '++id, nombre, precio'
     });
 
+    this.productos = db.productos;
+    this.grupos = db.grupos;
+    this.config = db.config;
+
   }
 
   // Abrir db
