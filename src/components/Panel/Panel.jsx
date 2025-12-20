@@ -21,13 +21,13 @@ export default function Panel() {
 
       // 2. Importar productos
       //const resultadoProductos = await importarProductos();
-      console.log('Productos:', resultadoProductos);
+      console.log('Productos:', resultadoGrupos);
 
       // 3. Mostrar resultado
       if (resultadoGrupos.success) {
         alert(`✅ Datos importados\n\n`)
       } else {
-        alert(`❌ Error\n\n${resultadoProductos.error}`);
+        alert(`❌ Error\n\n${resultadoGrupos.error}`);
       }
 
     } catch (error) {
