@@ -1,35 +1,28 @@
-// src/components/Panel/hooks/useProductos.js
-import { useState } from 'react';
-import productosData from '../../../data/data.json';
-import { db } from '../../../lib/db/database.js'; // Import normal
-
-export function useProductos() {
-  const [error, setError] = useState(null);
-
 const importarProductos = async () => {
   try {
-    // 1. CONVERTIR {clave:valor} a [{nombre, precio}]
-    // Object.entries devuelve [id, objetoProducto]
-    const productosArray = Object.entries(productosData).map(([id, producto]) => ({
-      id: id,
-      nombre: producto.nombre,      // Acceder a las propiedades del objeto producto
-      grupo: producto.grupo,
-      stock: producto.stock,
-      imagen: producto.imagen,
-      createdAt: producto.createdAt
+    // 1. OBTENER EL ARRAY DE PRODUCTOS
+    // Accedemos a la propiedad "productos" del objeto
+    const productosArray = productosData.productos;
+    
+    // Si necesitas asegurar que cada producto tenga un campo createdAt
+    const productosConFecha = productosArray.map(producto => ({
+      ...producto,
+      createdAt: producto.createdAt || new Date().toISOString() // Fecha actual si no existe
     }));
 
     // 2. LIMPIAR TABLA
     await db.productos.clear();
 
     // 3. INSERTAR NUEVOS DATOS
-    await db.productos.bulkAdd(productosArray);
+    await db.productos.bulkAdd(productosConFecha);
+
+    console.log(`Importando ${productosConFecha.length} productos...`);
 
     return {
       success: true,
-      count: productosArray.length,
-      total: productosArray.length,
-      message: 'Productos importados correctamente.'
+      count: productosConFecha.length,
+      total: productosConFecha.length,
+      message: `${productosConFecha.length} productos importados exitosamente.`
     };
 
   } catch (error) {
@@ -40,13 +33,3 @@ const importarProductos = async () => {
     };
   }
 };
-
-  const verificarProductos = async () => {
-  };
-
-  return {
-    importarProductos,
-    verificarProductos,
-    error
-  };
-}
