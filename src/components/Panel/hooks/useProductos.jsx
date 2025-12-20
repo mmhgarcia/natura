@@ -9,26 +9,6 @@ export function useProductos() {
   const importarProductos = async () => {
     
     try {
-      
-      // INSERTAR NUEVOS DATOS
-      let importados = 0;
-      for (const producto of productosData) {
-        try {
-          // Usar el método 'add' de tu clase
-          await db.add('productos', {
-            id: producto.id,
-            nombre: producto.nombre,
-            grupo: producto.grupo,
-            stock: Number(producto.stock),
-            imagen: producto.imagen,
-            createdAt: new Date()
-          });
-          importados++;
-        } catch (error) {
-          console.error(`Error insertando producto ${producto.id}:`, error);
-        }
-      }
-
 
       // 1. CONVERTIR {clave:valor} a [{nombre, precio}]
       const productosArray = Object.entries(productosData).map(([id, nombre, grupo, stock, imagen, createdAt]) => ({
