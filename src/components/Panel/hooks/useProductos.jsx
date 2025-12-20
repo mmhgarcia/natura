@@ -1,3 +1,11 @@
+// src/components/Panel/hooks/useProductos.js
+import { useState } from 'react';
+import productosData from '../../../data/data.json';
+import { db } from '../../../lib/db/database.js'; // Import normal
+
+export function useProductos() {
+  const [error, setError] = useState(null);
+
 const importarProductos = async () => {
   try {
     // 1. OBTENER EL ARRAY DE PRODUCTOS
@@ -33,3 +41,13 @@ const importarProductos = async () => {
     };
   }
 };
+
+  const verificarProductos = async () => {
+  };
+
+  return {
+    importarProductos,
+    verificarProductos,
+    error
+  };
+}
