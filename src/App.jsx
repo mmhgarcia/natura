@@ -11,6 +11,7 @@ import TasaBCV from "./pages/TasaBCV";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import GruposPage from './pages/GruposPage';
+import ProductosPage from './pages/ProductosPage';
 
 function App() {
   return (
@@ -22,7 +23,7 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/panel" element={<Panel />} />
         <Route path="/tasabcv" element={<TasaBCV />} />
-        <Route path="/adminproductos" element={<AdminProductos />} />
+        <Route path="/adminproductos" element={<ProductosPage />} />        
         <Route path="/admingrupos" element={<GruposPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

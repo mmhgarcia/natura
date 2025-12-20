@@ -4,6 +4,7 @@ import { db } from '../../lib/db/database';
 
 const ModalGrupo = ({ grupo, onClose, onSave }) => {
   const [formData, setFormData] = useState({
+    id: '',
     nombre: '',
     precio: 0
   });
