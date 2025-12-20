@@ -1,59 +1,42 @@
 // src/components/Panel/hooks/useGrupos.js
 import { useState } from 'react';
 import gruposData from '../../../data/grupos.json';
-import Importer from '../../../lib/db/utils/Importer.js';
 
 export function useGrupos() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const importarGrupos = async () => {
-    
-    // 1. Confirmación
-    const confirmar = window.confirm(
-      '¿Estás seguro de realizar la carga inicial de datos?\n\n' +
-      'Esta acción borrará todos los grupos existentes y cargará los datos por defecto.'
-    );
-    
-    if (!confirmar) {
-      console.log('Carga de datos cancelada por el usuario');
-      return { cancelled: true };
-    }
-
-    setLoading(true);
-    setError(null);
-
+  const importarGrupos = async () => { 
+          
     try {
-      // 2. Importar
-      const resultado = await Importer.ImportGrupos(gruposData);
-      console.log('Resultado importación:', resultado);
-      
-      // 3. Retornar resultado
-      if (resultado.success) {
-        return { 
-          success: true, 
-          count: resultado.count,
-          message: `${resultado.count} grupos importados`
-        };
-      } else {
-        setError(resultado.error);
-        return { 
-          success: false, 
-          error: resultado.error 
-        };
-      }
-      
-    } catch (err) {
-      setError(err.message);
-      console.error('Error en importación:', err);
-      return { 
-        success: false, 
-        error: err.message 
+              
+      // 1. CONVERTIR {clave:valor} a [{nombre, precio}]
+      const gruposArray = Object.entries(gruposData).map(([nombre, precio]) => ({
+        nombre: nombre,
+        precio: Number(precio)
+      }));
+  
+      // 2. LIMPIAR TABLA
+      await db.grupos.clear();
+ 
+      // 3. INSERTAR NUEVOS DATOS
+      await db.grupos.bulkAdd(gruposArray);
+  
+      return {
+        success: true,
+        count: gruposArray.length,
+        message: `${gruposArray.length} grupos importados`
       };
-    } finally {
-      setLoading(false);
+  
+    } catch (error) {
+      console.error('Error en importación:', error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
-  };
+  }
+  
 
   const verificarGrupos = async () => {
     try {
