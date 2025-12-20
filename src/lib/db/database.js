@@ -7,10 +7,6 @@ export class NaturaDBClass {
 
     this.db = new Dexie('dbTasaBCV');
     
-    this.TBGRUPOS = "grupos";
-    this.TBPRODUCTOS = "productos";
-    this.TBCONFIG = "config";
-    
     // Versión con migraciones
     this.db.version(2).stores({
       productos: 'id, nombre, grupo, stock, imagen, createdAt',

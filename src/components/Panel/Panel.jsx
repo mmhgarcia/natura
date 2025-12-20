@@ -7,25 +7,25 @@ import styles from "./Panel.module.css";
 export default function Panel() {
   
   const navigate = useNavigate();
+
   const { importarGrupos } = useGrupos();
   const { importarProductos, loading } = useProductos();
 
   // Función simple para importar datos
   async function handleImportarDatos() {
     try {
+
       // 1. Importar grupos
       const resultadoGrupos = await importarGrupos();
       console.log('Grupos:', resultadoGrupos);
 
       // 2. Importar productos
-      const resultadoProductos = await importarProductos();
+      //const resultadoProductos = await importarProductos();
       console.log('Productos:', resultadoProductos);
 
       // 3. Mostrar resultado
-      if (resultadoProductos.success) {
-        alert(`✅ Datos importados\n\n` +
-              `Productos: ${resultadoProductos.count}\n` +
-              `Mensaje: ${resultadoProductos.message}`);
+      if (resultadoGrupos.success) {
+        alert(`✅ Datos importados\n\n`)
       } else {
         alert(`❌ Error\n\n${resultadoProductos.error}`);
       }
