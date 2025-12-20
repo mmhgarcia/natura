@@ -2,27 +2,29 @@
 import Dexie from 'dexie';
 
 export class NaturaDBClass {
-
   constructor() {
-
     this.db = new Dexie('dbTasaBCV');
     
-    // Versión con migraciones
-    this.db.version(2).stores({
-      productos: 'id, nombre, grupo, stock, imagen, createdAt',
-      grupos: '++id, nombre, precio',
-      config: 'clave'
-    });
-
+    // Versión 1 - Esquema inicial
     this.db.version(1).stores({
       productos: 'id, nombre, grupo, stock, imagen, createdAt',
       grupos: '++id, nombre, precio'
     });
 
-    this.productos = db.productos;
-    this.grupos = db.grupos;
-    this.config = db.config;
+    // Versión 2 - Agrega tabla config
+    this.db.version(2).stores({
+      productos: 'id, nombre, grupo, stock, imagen, createdAt',
+      grupos: '++id, nombre, precio',
+      config: 'clave'
+    }).upgrade(trans => {
+      // Migración: puedes inicializar datos aquí si es necesario
+      console.log('Migrando a versión 2...');
+    });
 
+    // Referencias CORRECTAS usando this.db
+    this.productos = this.db.productos;
+    this.grupos = this.db.grupos;
+    this.config = this.db.config;
   }
 
   // Abrir db
@@ -37,6 +39,11 @@ export class NaturaDBClass {
     return await this.db[table].add(data);
   }
 
+  // FALTABA: método get() que se usa en updateStock()
+  async get(table, id) {
+    return await this.db[table].get(id);
+  }
+
   async getAll(table, filters = {}) {
     let query = this.db[table];
     for (const [key, value] of Object.entries(filters)) {
@@ -45,6 +52,7 @@ export class NaturaDBClass {
     return await query.toArray();
   }
 
+  // getById es redundante con get(), puedes eliminar uno
   async getById(table, id) {
     return await this.db[table].get(id);
   }
@@ -63,6 +71,7 @@ export class NaturaDBClass {
   }
 
   async updateStock(productoId, cantidad) {
+    // Ahora this.get() existe
     const producto = await this.get('productos', productoId);
     if (producto) {
       const nuevoStock = Math.max(0, producto.stock + cantidad);
@@ -90,4 +99,3 @@ export class NaturaDBClass {
 
 // Exportar instancia global
 export const db = new NaturaDBClass();
-
