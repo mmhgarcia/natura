@@ -76,31 +76,6 @@ export function useProductos() {
   };
 
   const verificarProductos = async () => {
-    try {
-      // Asegurar DB inicializada
-      if (!db.db.isOpen()) {
-        await db.init();
-      }
-
-      // OPCIÓN A: Usar el método getAll de tu clase
-      const productos = await db.getAll('productos');
-      
-      // OPCIÓN B: Acceder directamente a la tabla Dexie
-      // const productos = await db.db.productos.toArray();
-
-      return {
-        success: true,
-        count: productos.length,
-        data: productos
-      };
-    } catch (err) {
-      console.error('Error:', err);
-      return {
-        success: false,
-        error: err.message,
-        data: []
-      };
-    }
   };
 
   return {
