@@ -8,7 +8,7 @@ export default function Panel() {
   
   const navigate = useNavigate();
 
-  const { importarGrupos } = useGrupos();
+  const { importarGrupos,loading } = useGrupos();
   //const { importarProductos, loading } = useProductos();
 
   // Función simple para importar datos
