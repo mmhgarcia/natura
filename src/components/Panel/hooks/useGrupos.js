@@ -1,6 +1,7 @@
 // src/components/Panel/hooks/useGrupos.js
 import { useState } from 'react';
 import gruposData from '../../../data/grupos.json';
+import { db } from '../../../lib/db/database.js'; // Import normal
 
 export function useGrupos() {
   const [loading, setLoading] = useState(false);
