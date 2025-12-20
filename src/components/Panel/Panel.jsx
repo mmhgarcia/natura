@@ -8,8 +8,8 @@ export default function Panel() {
   
   const navigate = useNavigate();
 
-  const { importarGrupos,loading } = useGrupos();
-  //const { importarProductos, loading } = useProductos();
+  const { importarGrupos } = useGrupos();
+  const { importarProductos } = useProductos();
 
   // Función simple para importar datos
   async function handleImportarDatos() {
@@ -20,16 +20,11 @@ export default function Panel() {
       console.log('Grupos:', resultadoGrupos);
 
       // 2. Importar productos
-      //const resultadoProductos = await importarProductos();
-      console.log('Productos:', resultadoGrupos);
+      const resultadoProductos = await importarProductos();
+      console.log('Productos:', resultadoProductos);
 
-      // 3. Mostrar resultado
-      if (resultadoGrupos.success) {
-        alert(`✅ Datos importados\n\n`)
-      } else {
-        alert(`❌ Error\n\n${resultadoGrupos.error}`);
-      }
-
+      alert(`✅ Datos importados\n\n`)
+      
     } catch (error) {
       console.error('Error general:', error);
       alert('❌ Error inesperado: ' + error.message);
@@ -44,10 +39,9 @@ export default function Panel() {
       {/* Acción principal */}
       <button 
           className={`${styles.button} ${styles.primary}`}
-          onClick={handleImportarDatos}
-          disabled={loading}
+          onClick={handleImportarDatos}          
         >
-        {loading ? '⏳ Importando...' : '📥 Cargar Datos Iniciales'}
+        📥 Cargar Datos Iniciales
       </button>
 
       <div className={styles.buttons}>

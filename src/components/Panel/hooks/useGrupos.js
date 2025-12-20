@@ -1,10 +1,10 @@
 // src/components/Panel/hooks/useGrupos.js
 import { useState } from 'react';
 import gruposData from '../../../data/grupos.json';
-import { db } from '../../../lib/db/database.js'; // Import normal
+import { db } from '../../../lib/db/database.js'; 
 
 export function useGrupos() {
-  const [loading, setLoading] = useState(false);
+  
   const [error, setError] = useState(null);
 
   const importarGrupos = async () => { 
@@ -62,8 +62,7 @@ export function useGrupos() {
 
   return {
     importarGrupos,
-    verificarGrupos,
-    loading,
+    verificarGrupos,    
     error,
     clearError: () => setError(null)
   };

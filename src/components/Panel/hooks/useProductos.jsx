@@ -4,21 +4,13 @@ import productosData from '../../../data/data.json';
 import { db } from '../../../lib/db/database.js'; // Import normal
 
 export function useProductos() {
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const importDataProductos = async () => {
+  const importarProductos = async () => {
+    
     try {
-      console.log('Productos a importar:', productosData.length);
-      console.log('Primer producto:', productosData[0]);
-
-      // 1. INICIALIZAR BASE DE DATOS (IMPORTANTE)
-      await db.init(); // Asegurar que la DB está abierta
-
-      // 2. LIMPIAR TABLA - Usar la tabla Dexie correctamente
-      await db.db.productos.clear(); // o await db.db[db.TBPRODUCTOS].clear()
-
-      // 3. INSERTAR NUEVOS DATOS
+      
+      // INSERTAR NUEVOS DATOS
       let importados = 0;
       for (const producto of productosData) {
         try {
@@ -37,11 +29,29 @@ export function useProductos() {
         }
       }
 
+
+      // 1. CONVERTIR {clave:valor} a [{nombre, precio}]
+      const productosArray = Object.entries(productosData).map(([id, nombre, grupo, stock, imagen, createdAt]) => ({
+        id: id,
+        nombre: nombre,
+        grupo: grupo,
+        stock: stock,
+        imagen: imagen,
+        createdAt: createdAt
+      }));
+  
+      // 2. LIMPIAR TABLA
+      await db.productos.clear();
+ 
+      // 3. INSERTAR NUEVOS DATOS
+      await db.productos.bulkAdd(productosArray);
+  
+
       return {
         success: true,
-        count: importados,
-        total: productosData.length,
-        message: `${importados} de ${productosData.length} productos importados`
+        count: productosArray.length,
+        total: productosArray.length,
+        message: 'Productos importados.'
       };
 
     } catch (error) {
@@ -53,7 +63,7 @@ export function useProductos() {
     }
   };
 
-  const importarProductos = async () => {
+  const ximportarProductos = async () => {
     const confirmar = window.confirm(
       '¿Importar productos?\n\nSe borrarán los productos existentes.\n'
     );
@@ -62,7 +72,6 @@ export function useProductos() {
       return { cancelled: true };
     }
 
-    setLoading(true);
     setError(null);
 
     try {
@@ -117,7 +126,6 @@ export function useProductos() {
   return {
     importarProductos,
     verificarProductos,
-    loading,
     error
   };
 }
