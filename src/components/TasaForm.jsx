@@ -1,85 +1,282 @@
 // src/components/TasaForm.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../lib/db/database'; // Ajusta la ruta según tu estructura
 
-const TasaForm = ({ onSubmit, initialData = null, loading = false }) => {
+const TasaForm = () => {
   const [formData, setFormData] = useState({
-    nombre: initialData?.nombre || '',
-    valor: initialData?.valor || '',
+    valor: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+
+  // Cargar tasa existente al montar el componente
+  useEffect(() => {
+    cargarTasa();
+  }, []);
+
+  const cargarTasa = async () => {
+    setLoading(true);
+    try {
+      // Buscar la tasa en la tabla config con clave 'tasa'
+      const tasa = await db.get('config', 'tasa');
+      if (tasa) {
+        setFormData({ valor: tasa.valor.toString() });
+      }
+      setMessage({ type: '', text: '' });
+    } catch (err) {
+      setMessage({ 
+        type: 'error', 
+        text: 'Error al cargar la tasa: ' + err.message 
+      });
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    const { value } = e.target;
+    // Permitir números con decimales
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      setFormData({ valor: value });
+      setMessage({ type: '', text: '' }); // Limpiar mensaje al cambiar
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    // Validación básica
+    if (!formData.valor.trim()) {
+      setMessage({ 
+        type: 'error', 
+        text: 'El valor de la tasa es requerido' 
+      });
+      return;
+    }
+
+    const valorNumero = parseFloat(formData.valor);
+    if (isNaN(valorNumero) || valorNumero <= 0) {
+      setMessage({ 
+        type: 'error', 
+        text: 'La tasa debe ser un número positivo' 
+      });
+      return;
+    }
+
+    setSaving(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      // Guardar en IndexedDB - tabla config, clave 'tasa'
+      await db.put('config', {
+        clave: 'tasa',
+        valor: valorNumero,
+        updatedAt: new Date().toISOString()
+      });
+
+      setMessage({ 
+        type: 'success', 
+        text: `Tasa guardada exitosamente: ${valorNumero.toFixed(4)}` 
+      });
+      
+      // Opcional: Recargar después de guardar
+      setTimeout(() => cargarTasa(), 500);
+      
+    } catch (err) {
+      setMessage({ 
+        type: 'error', 
+        text: 'Error al guardar la tasa: ' + err.message 
+      });
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const handleLimpiar = () => {
+    setFormData({ valor: '' });
+    setMessage({ type: '', text: '' });
+  };
+
+  // Estilos en línea para simplicidad
+  const styles = {
+    container: {
+      maxWidth: '500px',
+      margin: '0 auto',
+      padding: '20px'
+    },
+    form: {
+      border: '1px solid #e5e7eb',
+      borderRadius: '8px',
+      padding: '20px',
+      backgroundColor: 'white'
+    },
+    title: {
+      fontSize: '20px',
+      fontWeight: '600',
+      marginBottom: '20px',
+      color: '#1f2937'
+    },
+    label: {
+      display: 'block',
+      fontSize: '14px',
+      fontWeight: '500',
+      marginBottom: '8px',
+      color: '#374151'
+    },
+    input: {
+      width: '100%',
+      padding: '10px',
+      border: '1px solid #d1d5db',
+      borderRadius: '6px',
+      fontSize: '16px',
+      boxSizing: 'border-box'
+    },
+    buttonContainer: {
+      display: 'flex',
+      justifyContent: 'flex-end',
+      gap: '12px',
+      marginTop: '20px'
+    },
+    button: {
+      padding: '10px 20px',
+      border: 'none',
+      borderRadius: '6px',
+      fontSize: '14px',
+      fontWeight: '500',
+      cursor: 'pointer',
+      transition: 'background-color 0.2s'
+    },
+    buttonLimpiar: {
+      backgroundColor: '#f3f4f6',
+      color: '#374151',
+      border: '1px solid #d1d5db'
+    },
+    buttonGuardar: {
+      backgroundColor: '#3b82f6',
+      color: 'white'
+    },
+    buttonDisabled: {
+      backgroundColor: '#9ca3af',
+      cursor: 'not-allowed'
+    },
+    message: {
+      padding: '12px',
+      borderRadius: '6px',
+      marginBottom: '20px',
+      fontSize: '14px'
+    },
+    messageSuccess: {
+      backgroundColor: '#d1fae5',
+      color: '#065f46',
+      border: '1px solid #a7f3d0'
+    },
+    messageError: {
+      backgroundColor: '#fee',
+      color: '#991b1b',
+      border: '1px solid #fecaca'
+    },
+    loading: {
+      textAlign: 'center',
+      padding: '20px',
+      color: '#6b7280'
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.loading}>Cargando tasa...</div>
+      </div>
+    );
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-lg">
-        <h2 className="text-xl font-bold">
-            {initialData ? 'Editar Tasa' : 'Nueva Tasa'}
+    <div style={styles.container}>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <h2 style={styles.title}>
+          Configurar Tasa de Cambio
         </h2>
-      
+        
+        {/* Mensajes de estado */}
+        {message.text && (
+          <div style={{
+            ...styles.message,
+            ...(message.type === 'success' ? styles.messageSuccess : styles.messageError)
+          }}>
+            {message.text}
+          </div>
+        )}
+        
+        {/* Campo del valor */}
         <div>
-            <label className="block text-sm font-medium mb-1">
-            Nombre *
-            </label>
-            <input
+          <label style={styles.label}>
+            Valor de la Tasa *
+          </label>
+          <input
             type="text"
-            name="nombre"
-            value={formData.nombre}
+            name="valor"
+            value={formData.valor}
             onChange={handleChange}
             required
-            className="w-full p-2 border rounded"
-            placeholder="Ej: Tasa de cambio USD/EUR"
-            />
+            style={styles.input}
+            placeholder="Ej: 36.50"
+            disabled={saving}
+          />
+          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+            Ingrese el valor numérico de la tasa (ej: 36.50 para tasa de cambio)
+          </div>
         </div>
-      
-        <div className="grid grid-cols-2 gap-4">
-            <div>
-            <label className="block text-sm font-medium mb-1">
-                Valor *
-            </label>
-            <input
-                type="number"
-                name="valor"
-                value={formData.valor}
-                onChange={handleChange}
-                required
-                step="0.0001"
-                className="w-full p-2 border rounded"
-                placeholder="0.00"
-            />
-            </div>
-      
-        <div className="flex justify-end space-x-2">
-            <button
+        
+        {/* Botones */}
+        <div style={styles.buttonContainer}>
+          <button
             type="button"
-            onClick={() => setFormData({
-                nombre: '',
-                valor: '',
-            })}
-            className="px-4 py-2 border rounded hover:bg-gray-50"
-            >
+            onClick={handleLimpiar}
+            style={{
+              ...styles.button,
+              ...styles.buttonLimpiar,
+              opacity: saving ? 0.5 : 1
+            }}
+            disabled={saving}
+          >
             Limpiar
-            </button>
-            
-            <button
+          </button>
+          
+          <button
             type="submit"
-            disabled={loading}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300"
-            >
-            {loading ? 'Guardando...' : initialData ? 'Actualizar' : 'Crear Tasa'}
-            </button>
+            style={{
+              ...styles.button,
+              ...styles.buttonGuardar,
+              ...(saving ? styles.buttonDisabled : {}),
+              opacity: saving ? 0.7 : 1
+            }}
+            disabled={saving}
+          >
+            {saving ? 'Guardando...' : 'Guardar Tasa'}
+          </button>
         </div>
+      </form>
+      
+      {/* Información adicional */}
+      <div style={{ 
+        marginTop: '20px', 
+        padding: '15px', 
+        backgroundColor: '#f9fafb', 
+        borderRadius: '6px',
+        fontSize: '13px',
+        color: '#6b7280'
+      }}>
+        <div style={{ fontWeight: '500', marginBottom: '5px' }}>
+          💡 Información:
+        </div>
+        <div>• La tasa se guarda en IndexedDB (tabla: config, clave: tasa)</div>
+        <div>• Puedes recuperarla en cualquier momento con: <code>db.get('config', 'tasa')</code></div>
+        <div>• Formato almacenado: número decimal (ej: 36.5)</div>
       </div>
-    </form>
+    </div>
   );
 };
 
