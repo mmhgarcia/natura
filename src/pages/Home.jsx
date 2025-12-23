@@ -3,23 +3,47 @@ import { useNavigate } from "react-router-dom";
 // import productosIniciales from "../data/data.json"; // Ya no se usa directamente
 import { db } from '../lib/db/database.js';
 
-// Componente ListaDeProductos
+// Componente ListaDeProductos - MODIFICADO
 function ListaDeProductos({ productos, seleccionarProducto }) {
   return (
-    <div>
+    <div style={styles.listaContainer}>
       <h3>Lista de Productos</h3>
-      <ul>
+      <div style={styles.gridContainer}>
         {productos.map((producto) => (
-          <li key={producto.id} onClick={() => seleccionarProducto(producto)}>
-            {producto.nombre} - ${producto.precio} {/* Cambié stock por precio */}
-          </li>
+          <div 
+            key={producto.id} 
+            style={styles.card}
+            onClick={() => seleccionarProducto(producto)}
+          >
+            {/* Imagen del producto */}
+            {producto.imagen ? (
+              <img 
+                src={producto.imagen} 
+                alt={producto.nombre}
+                style={styles.imagen}
+              />
+            ) : (
+              <div style={styles.placeholderImagen}>
+                Sin imagen
+              </div>
+            )}
+            
+            {/* Información del producto */}
+            <div style={styles.infoContainer}>
+              <h4 style={styles.nombre}>{producto.nombre}</h4>
+              <p style={styles.detalle}>
+                #{producto.id} - Stock: {producto.stock}
+              </p>
+              <p style={styles.precio}>${producto.precio}</p>
+            </div>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
 
-// Componente ListaDeSeleccionados
+// Componente ListaDeSeleccionados (sin cambios)
 function ListaDeSeleccionados({ listaDeSeleccionados, eliminarProducto }) {
   
   const calcularTotal = () => {
@@ -61,6 +85,74 @@ function ListaDeSeleccionados({ listaDeSeleccionados, eliminarProducto }) {
   );
 }
 
+// Estilos para el componente ListaDeProductos
+const styles = {
+  listaContainer: {
+    flex: 1,
+  },
+  gridContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '40px', // Separación vertical de 40px entre cards
+    maxWidth: '600px',
+  },
+  card: {
+    backgroundColor: '#ffffff', // Fondo blanco
+    borderRadius: '12px',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+    overflow: 'hidden',
+    cursor: 'pointer',
+    transition: 'transform 0.2s, box-shadow 0.2s',
+    width: '100%',
+    ':hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15)',
+    },
+  },
+  imagen: {
+    width: '90%',
+    maxWidth: '90%',
+    height: '200px',
+    objectFit: 'cover',
+    display: 'block',
+    margin: '0 auto',
+    padding: '15px 0 0 0',
+  },
+  placeholderImagen: {
+    width: '90%',
+    height: '200px',
+    backgroundColor: '#f5f5f5',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#888',
+    fontSize: '14px',
+    margin: '0 auto',
+    marginTop: '15px',
+  },
+  infoContainer: {
+    padding: '15px',
+    textAlign: 'center',
+  },
+  nombre: {
+    margin: '0 0 10px 0',
+    color: '#333',
+    fontSize: '18px',
+  },
+  detalle: {
+    margin: '0 0 8px 0',
+    color: '#666',
+    fontSize: '14px',
+  },
+  precio: {
+    margin: '0',
+    color: '#2c3e50',
+    fontSize: '20px',
+    fontWeight: 'bold',
+  },
+};
+
+// Componente Home (sin cambios)
 function Home() {
   // Estados
   const [productos, setProductos] = useState([]);
@@ -91,8 +183,6 @@ function Home() {
         console.error('Error:', error);
         if (isMounted) {
           setError('Error al cargar los productos');
-          // Opcional: cargar datos iniciales del JSON si la base de datos falla
-          // setProductos(productosIniciales.productos);
         }
       } finally {
         if (isMounted) {
