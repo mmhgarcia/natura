@@ -113,8 +113,8 @@ const styles = {
     },
   },
   imagen: {
-    width: '90%',
-    maxWidth: '90%',
+    width: '100%',
+    maxWidth: '100%',
     height: '280px',
     objectFit: 'cover',
     display: 'block',
@@ -122,7 +122,7 @@ const styles = {
     paddingTop: '15px', // Mantenemos solo el padding top en la imagen
   },
   placeholderImagen: {
-    width: '90%',
+    width: '100%',
     height: '280px',
     backgroundColor: '#f5f5f5',
     display: 'flex',
@@ -198,7 +198,7 @@ function Home() {
     };
   }, []);
 
-  // Evento - con prevención de duplicados
+  // Evenhttps://natura-42bpnpwlf-mmhgarcia-gmailcoms-projects.vercel.appto - con prevención de duplicados
   const seleccionarProducto = (producto) => {
     if (!listaDeSeleccionados.some(item => item.id === producto.id)) {
       setListaDeSeleccionados(prev => [...prev, producto]);
