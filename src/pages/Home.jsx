@@ -84,7 +84,7 @@ function ListaDeSeleccionados({ listaDeSeleccionados, eliminarProducto }) {
   );
 }
 
-// Estilos para el componente ListaDeProductos - PADDING MODIFICADO
+// Estilos para el componente ListaDeProductos - ALTURA DE IMÁGENES AUMENTADA
 const styles = {
   listaContainer: {
     flex: 1,
@@ -113,17 +113,17 @@ const styles = {
     },
   },
   imagen: {
-    width: '100%',
-    maxWidth: '100%',
-    height: '280px',
+    width: '90%',
+    maxWidth: '90%',
+    height: '340px', // Aumentado de 280px a 340px (+60px)
     objectFit: 'cover',
     display: 'block',
     margin: '0 auto',
     paddingTop: '15px', // Mantenemos solo el padding top en la imagen
   },
   placeholderImagen: {
-    width: '100%',
-    height: '280px',
+    width: '90%',
+    height: '340px', // Aumentado de 280px a 340px (+60px)
     backgroundColor: '#f5f5f5',
     display: 'flex',
     alignItems: 'center',
@@ -198,7 +198,7 @@ function Home() {
     };
   }, []);
 
-  // Evenhttps://natura-42bpnpwlf-mmhgarcia-gmailcoms-projects.vercel.appto - con prevención de duplicados
+  // Evento - con prevención de duplicados
   const seleccionarProducto = (producto) => {
     if (!listaDeSeleccionados.some(item => item.id === producto.id)) {
       setListaDeSeleccionados(prev => [...prev, producto]);
