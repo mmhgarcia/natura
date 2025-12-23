@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 // import productosIniciales from "../data/data.json"; // Ya no se usa directamente
 import { db } from '../lib/db/database.js';
 
-// Componente ListaDeProductos - MODIFICADO
+// Componente ListaDeProductos - MODIFICADO (sin nombre y sin símbolo $)
 function ListaDeProductos({ productos, seleccionarProducto }) {
   return (
     <div style={styles.listaContainer}>
@@ -28,13 +28,12 @@ function ListaDeProductos({ productos, seleccionarProducto }) {
               </div>
             )}
             
-            {/* Información del producto */}
+            {/* Información del producto - SOLO ID y STOCK */}
             <div style={styles.infoContainer}>
-              <h4 style={styles.nombre}>{producto.nombre}</h4>
               <p style={styles.detalle}>
                 #{producto.id} - Stock: {producto.stock}
               </p>
-              <p style={styles.precio}>${producto.precio}</p>
+              <p style={styles.precio}>{producto.precio}</p>
             </div>
           </div>
         ))}
@@ -85,7 +84,7 @@ function ListaDeSeleccionados({ listaDeSeleccionados, eliminarProducto }) {
   );
 }
 
-// Estilos para el componente ListaDeProductos
+// Estilos para el componente ListaDeProductos - PADDING MODIFICADO
 const styles = {
   listaContainer: {
     flex: 1,
@@ -104,6 +103,10 @@ const styles = {
     cursor: 'pointer',
     transition: 'transform 0.2s, box-shadow 0.2s',
     width: '100%',
+    // Padding: top, left, right a 0
+    paddingTop: '0',
+    paddingLeft: '0',
+    paddingRight: '0',
     ':hover': {
       transform: 'translateY(-4px)',
       boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15)',
@@ -112,15 +115,15 @@ const styles = {
   imagen: {
     width: '90%',
     maxWidth: '90%',
-    height: '200px',
+    height: '280px',
     objectFit: 'cover',
     display: 'block',
     margin: '0 auto',
-    padding: '15px 0 0 0',
+    paddingTop: '15px', // Mantenemos solo el padding top en la imagen
   },
   placeholderImagen: {
     width: '90%',
-    height: '200px',
+    height: '280px',
     backgroundColor: '#f5f5f5',
     display: 'flex',
     alignItems: 'center',
@@ -128,16 +131,12 @@ const styles = {
     color: '#888',
     fontSize: '14px',
     margin: '0 auto',
-    marginTop: '15px',
+    paddingTop: '15px', // Mantenemos solo el padding top en el placeholder
   },
   infoContainer: {
+    // Aquí mantenemos padding en todos los lados para el contenido
     padding: '15px',
     textAlign: 'center',
-  },
-  nombre: {
-    margin: '0 0 10px 0',
-    color: '#333',
-    fontSize: '18px',
   },
   detalle: {
     margin: '0 0 8px 0',
