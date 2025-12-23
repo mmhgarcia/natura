@@ -50,30 +50,33 @@ function ListaDeSeleccionados({ listaDeSeleccionados, eliminarProducto }) {
   };
 
   return (
-    <div>
+    <div style={styles.seleccionadosContainer}>
       <h3>Productos Seleccionados</h3>
       
       {listaDeSeleccionados.length === 0 ? (
         <p>No hay productos seleccionados</p>
       ) : (
         <>
-          <ul>
+          <ul style={styles.listaSeleccionados}>
             {listaDeSeleccionados.map((producto) => (
-              <li key={`selected-${producto.id}`}>
-                {producto.nombre} - ${producto.precio}
-                <button onClick={() => eliminarProducto(producto.id)}>
+              <li key={`selected-${producto.id}`} style={styles.itemSeleccionado}>
+                <span>{producto.nombre} - ${producto.precio}</span>
+                <button 
+                  onClick={() => eliminarProducto(producto.id)}
+                  style={styles.botonEliminar}
+                >
                   Eliminar
                 </button>
               </li>
             ))}
           </ul>
           
-          <div>
-            <div>
+          <div style={styles.totalesContainer}>
+            <div style={styles.totalItem}>
               <strong>Total de productos:</strong>
               <span>{listaDeSeleccionados.length}</span>
             </div>
-            <div>
+            <div style={styles.totalItem}>
               <strong>Total a pagar:</strong>
               <span>${calcularTotal()}</span>
             </div>
@@ -87,13 +90,15 @@ function ListaDeSeleccionados({ listaDeSeleccionados, eliminarProducto }) {
 // Estilos para el componente ListaDeProductos - ALTURA DE IMÁGENES AUMENTADA
 const styles = {
   listaContainer: {
-    flex: 1,
+    width: '100%',
+    marginBottom: '2rem',
   },
   gridContainer: {
     display: 'flex',
     flexDirection: 'column',
     gap: '40px', // Separación vertical de 40px entre cards
     maxWidth: '600px',
+    margin: '0 auto',
   },
   card: {
     backgroundColor: '#ffffff', // Fondo blanco
@@ -149,9 +154,54 @@ const styles = {
     fontSize: '20px',
     fontWeight: 'bold',
   },
+  
+  // Estilos para ListaDeSeleccionados
+  seleccionadosContainer: {
+    width: '100%',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '12px',
+    padding: '20px',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+  },
+  listaSeleccionados: {
+    listStyleType: 'none',
+    padding: 0,
+    margin: '0 0 20px 0',
+  },
+  itemSeleccionado: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '10px',
+    marginBottom: '8px',
+    backgroundColor: 'white',
+    borderRadius: '6px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+  },
+  botonEliminar: {
+    backgroundColor: '#dc3545',
+    color: 'white',
+    border: 'none',
+    padding: '5px 10px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+  },
+  totalesContainer: {
+    backgroundColor: 'white',
+    padding: '15px',
+    borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+  },
+  totalItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginBottom: '10px',
+    fontSize: '16px',
+  },
 };
 
-// Componente Home (sin cambios)
+// Componente Home - MODIFICADO (estructura vertical)
 function Home() {
   // Estados
   const [productos, setProductos] = useState([]);
@@ -233,15 +283,18 @@ function Home() {
   }
 
   return (
-    <div>
+    <div style={styles.pageContainer}>
       <h1>Selección de Productos</h1>
       
-      <div style={{ display: 'flex', gap: '2rem' }}>
+      {/* Contenedor principal en columna */}
+      <div style={styles.mainContainer}>
+        {/* Lista de productos */}
         <ListaDeProductos 
           productos={productos} 
           seleccionarProducto={seleccionarProducto}
         />
-
+        
+        {/* Lista de seleccionados */}
         <ListaDeSeleccionados
           listaDeSeleccionados={listaDeSeleccionados}
           eliminarProducto={eliminarProducto}
@@ -250,12 +303,42 @@ function Home() {
 
       <button 
         onClick={() => navigate("/Panel")}
-        style={{ marginTop: '2rem' }}
+        style={styles.botonPanel}
       >
         Panel
       </button>
     </div>
   );
 }
+
+// Estilos adicionales para el layout
+const pageStyles = {
+  pageContainer: {
+    padding: '20px',
+    maxWidth: '800px',
+    margin: '0 auto',
+  },
+  mainContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2rem',
+  },
+  botonPanel: {
+    marginTop: '2rem',
+    padding: '10px 20px',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    display: 'block',
+    marginLeft: 'auto',
+    marginRight: 'auto',
+  },
+};
+
+// Fusionar los estilos
+Object.assign(styles, pageStyles);
 
 export default Home;
