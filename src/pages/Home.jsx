@@ -1,27 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import productosIniciales from "../data/data.json";
+// import productosIniciales from "../data/data.json"; // Ya no se usa directamente
 import { db } from '../lib/db/database.js';
 
-async function initApp() {    
-    await db.init();
-}
-
-
-// Componente
+// Componente ListaDeProductos
 function ListaDeProductos({ productos, seleccionarProducto }) {
-
-  const data = async () => await db.getAll('productos');
-
-  alert(JSON.stringify(data));
-
   return (
     <div>
       <h3>Lista de Productos</h3>
       <ul>
         {productos.map((producto) => (
           <li key={producto.id} onClick={() => seleccionarProducto(producto)}>
-            {producto.nombre} - ${producto.stock}
+            {producto.nombre} - ${producto.precio} {/* Cambié stock por precio */}
           </li>
         ))}
       </ul>
@@ -29,10 +19,9 @@ function ListaDeProductos({ productos, seleccionarProducto }) {
   );
 }
 
-// Componente
+// Componente ListaDeSeleccionados
 function ListaDeSeleccionados({ listaDeSeleccionados, eliminarProducto }) {
   
-  // Totalizar Seleccionados
   const calcularTotal = () => {
     return listaDeSeleccionados.reduce((total, producto) => total + producto.precio, 0);
   };
@@ -73,48 +62,92 @@ function ListaDeSeleccionados({ listaDeSeleccionados, eliminarProducto }) {
 }
 
 function Home() {
-
   // Estados
-  const [productos] = useState(productosIniciales.productos);
+  const [productos, setProductos] = useState([]);
   const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  initApp();
-
   useEffect(() => {
-    const cargarDatos = async () => {
+    let isMounted = true;
+
+    const inicializarYcargarDatos = async () => {
       try {
-        const data = await db.getAll();
-        alert(JSON.stringify(data));
+        setCargando(true);
+        
+        // Primero inicializamos la base de datos
+        await db.init();
+        
+        // Luego cargamos los productos
+        const data = await db.getAll('productos');
+
+        if (isMounted) {
+          setProductos(data);
+          setError(null);
+        }
+
       } catch (error) {
         console.error('Error:', error);
+        if (isMounted) {
+          setError('Error al cargar los productos');
+          // Opcional: cargar datos iniciales del JSON si la base de datos falla
+          // setProductos(productosIniciales.productos);
+        }
+      } finally {
+        if (isMounted) {
+          setCargando(false);
+        }
       }
     };
-      
-    cargarDatos();
-  
-  }, []); // El array vacío [] significa que se ejecuta solo al montar el componente
+    
+    inicializarYcargarDatos();
+    
+    // Función de limpieza
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-  // Evento 
+  // Evento - con prevención de duplicados
   const seleccionarProducto = (producto) => {
-    // if (!listaDeSeleccionados.some(item => item.id === producto.id)) {
-      setListaDeSeleccionados([...listaDeSeleccionados, producto]);
-    // }
+    if (!listaDeSeleccionados.some(item => item.id === producto.id)) {
+      setListaDeSeleccionados(prev => [...prev, producto]);
+    }
   };
 
   // Evento
   const eliminarProducto = (id) => {
-    setListaDeSeleccionados(listaDeSeleccionados.filter(producto => producto.id !== id));
+    setListaDeSeleccionados(prev => prev.filter(producto => producto.id !== id));
   };
 
+  // Estados de carga y error
+  if (cargando) {
+    return (
+      <div>
+        <h1>Selección de Productos</h1>
+        <p>Cargando productos...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <h1>Selección de Productos</h1>
+        <p style={{ color: 'red' }}>{error}</p>
+        <button onClick={() => window.location.reload()}>
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
   return (
-
     <div>
-
       <h1>Selección de Productos</h1>
       
-      <div>
-        
+      <div style={{ display: 'flex', gap: '2rem' }}>
         <ListaDeProductos 
           productos={productos} 
           seleccionarProducto={seleccionarProducto}
@@ -124,17 +157,16 @@ function Home() {
           listaDeSeleccionados={listaDeSeleccionados}
           eliminarProducto={eliminarProducto}
         />
-
       </div>
 
-      <button onClick={() => navigate("/Panel")}>
+      <button 
+        onClick={() => navigate("/Panel")}
+        style={{ marginTop: '2rem' }}
+      >
         Panel
       </button>
-
     </div>
-
   );
-
 }
 
 export default Home;
