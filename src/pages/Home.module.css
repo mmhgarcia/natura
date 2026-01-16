@@ -76,9 +76,12 @@
 
 /* Header selected */
 .selectedHeader {
-  font-weight: bold;
-  margin-bottom: 4px;
-  color: #000;
+    display: flex;
+    justify-content: space-between; /* Aligns head to left and rate to right */
+    align-items: center;
+    font-weight: bold;
+    margin-bottom: 4px;
+    color: #000;
 }
 
 /* Lista de items con scroll */

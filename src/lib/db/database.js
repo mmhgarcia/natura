@@ -21,10 +21,19 @@ export class NaturaDBClass {
       console.log('Migrando a versión 2...');
     });
 
+    // Version 3 - Adds sales table for statistics
+    this.db.version(3).stores({
+        productos: 'id, nombre, grupo, stock, imagen, createdAt',
+        grupos: '++id, nombre, precio',
+        config: 'clave',
+        ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad' // New table
+    });
+
     // Referencias CORRECTAS usando this.db
     this.productos = this.db.productos;
     this.grupos = this.db.grupos;
     this.config = this.db.config;
+    this.ventas = this.db.ventas;
   }
 
   // Abrir db
