@@ -1,0 +1,4713 @@
+ESTRUCTURA DEL PROYECTO: natura
+==================================================
+
+--- ÁRBOL DE DIRECTORIOS ---
+ .vercel/
+   README.txt
+   project.json
+ README.md
+ completar_refactorizacion.py
+ eslint.config.js
+ fase_ui_natura.py
+ implementar_mejoras.py
+ index.html
+ package.json
+ project_reader.py
+ proyecto_completo.txt
+ public/
+   outputs/
+     small/
+ src/
+   App.css
+   App.jsx
+   assets/
+   components/
+     Footer.jsx
+     GruposCRUD/
+       GruposCRUD.jsx
+       ModalGrupo.jsx
+     Header.jsx
+     Panel/
+       Panel.jsx
+       Panel.module.css
+       hooks/
+         useGrupos.js
+         useProductos.jsx
+     ProductosCRUD/
+       ModalProducto.jsx
+       ProductosCRUD.jsx
+     TasaForm.jsx
+     TasaImporter.jsx
+     TasaList.jsx
+   data/
+     data.json
+     grupos.json
+   hooks/
+     useLocalStorageList.js
+   index.css
+   lib/
+     db/
+       database copy.js
+       database.js
+       hooks/
+         useTasa.js
+         useTasaBCV.js
+       index.js
+       repositories/
+         RepoRecommStructure.js
+         TasaRepository.js
+       schemas/
+       utils/
+         Importer.js
+         tasaUtil.js
+     types/
+   main.jsx
+   pages/
+     About.jsx
+     Admin.module.css
+     GruposPage.jsx
+     Home.jsx
+     Home.module.css
+     Lista.jsx
+     NotFound.jsx
+     ProductosPage.jsx
+     TasaBCV.jsx
+     TasaBCV.module.css
+ vite.config.js
+
+==================================================
+
+--- CONTENIDO DE ARCHIVOS (SANITIZADO) ---
+
+FILE: .vercel/README.txt
+------------------------------
+> Why do I have a folder named ".vercel" in my project?
+The ".vercel" folder is created when you link a directory to a Vercel project.
+
+> What does the "project.json" file contain?
+The "project.json" file contains:
+- The ID of the Vercel project that you linked ("projectId")
+- The ID of the user or team your Vercel project is owned by ("orgId")
+
+> Should I commit the ".vercel" folder?
+No, you should not share the ".vercel" folder with anyone.
+Upon creation, it will be automatically added to your ".gitignore" file.
+
+**************************************************
+
+FILE: .vercel/project.json
+------------------------------
+{"projectId":"prj_hjReYCHTcKVrtd3weTmPa3dKTGQl","orgId":"team_esiDhEy9BSjEtp80YsKI8dmT","projectName":"natura"}
+**************************************************
+
+FILE: README.md
+------------------------------
+# React + Vite
+
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+
+Currently, two official plugins are available:
+
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+
+## React Compiler
+
+The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+
+Note: This will impact Vite dev & build performances.
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+**************************************************
+
+FILE: completar_refactorizacion.py
+------------------------------
+import os
+import re
+from pathlib import Path
+
+def completar_fases_finales():
+    base_path = Path(".")
+    app_jsx = base_path / "src" / "App.jsx"
+    home_jsx = base_path / "src" / "pages" / "Home.jsx"
+    
+    # Archivos obsoletos a eliminar
+    archivos_obsoletos = [
+        base_path / "src" / "pages" / "AdminGrupos.jsx",
+        base_path / "src" / "pages" / "AdminProductos.jsx",
+        base_path / "src" / "hooks" / "useLocalStorage.js"
+    ]
+
+    print("--- Iniciando Fase Final de Refactorización ---")
+
+    # 1. ELIMINAR ARCHIVOS OBSOLETOS
+    for archivo in archivos_obsoletos:
+        if archivo.exists():
+            os.remove(archivo)
+            print(f"✓ Eliminado archivo obsoleto: {archivo.name}")
+
+    # 2. RE-CONECTAR RUTAS EN App.jsx
+    # Redirigimos /admingrupos y /adminproductos a las versiones que usan IndexedDB
+    if app_jsx.exists():
+        content = app_jsx.read_text(encoding='utf-8')
+        # Cambiamos las importaciones para usar las "Pages" que cargan los CRUDs de IndexedDB
+        content = content.replace('import AdminProductos from "./pages/AdminProductos";', '')
+        content = content.replace('import AdminGrupos from "./pages/AdminGrupos";', '')
+        
+        # Aseguramos que las rutas usen los componentes correctos
+        content = re.sub(r'<Route path="/adminproductos" element={<AdminProductos />} />', 
+                         '<Route path="/adminproductos" element={<ProductosPage />} />', content)
+        content = re.sub(r'<Route path="/admingrupos" element={<AdminGrupos />} />', 
+                         '<Route path="/admingrupos" element={<GruposPage />} />', content)
+        
+        app_jsx.write_text(content, encoding='utf-8')
+        print(f"✓ App.jsx: Rutas administrativas vinculadas a IndexedDB.")
+
+    # 3. IMPLEMENTAR LÓGICA DE PRECIOS REALES EN Home.jsx
+    if home_jsx.exists():
+        new_home_logic = """import { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
+import { db } from '../lib/db/database.js';
+import { getTasaBCV } from '../lib/db/utils/tasaUtil.js';
+
+function Home() {
+    const [productos, setProductos] = useState([]);
+    const [grupos, setGrupos] = useState([]);
+    const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
+    const [tasa, setTasa] = useState(0);
+    const [cargando, setCargando] = useState(true);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const cargarTodo = async () => {
+            try {
+                await db.init();
+                const [p, g, t] = await Promise.all([
+                    db.getAll('productos'),
+                    db.getAll('grupos'),
+                    getTasaBCV()
+                ]);
+                setProductos(p);
+                setGrupos(g);
+                setTasa(t || 0);
+            } catch (err) {
+                console.error("Error inicializando Home:", err);
+            } finally {
+                setCargando(false);
+            }
+        };
+        cargarTodo();
+    }, []);
+
+    const seleccionarProducto = (producto) => {
+        setListaDeSeleccionados(prev => [...prev, producto]);
+    };
+
+    const calcularTotales = () => {
+        let usd = 0;
+        listaDeSeleccionados.forEach(item => {
+            // Buscamos el precio del grupo al que pertenece el producto
+            const grupoInfo = grupos.find(g => g.nombre === item.grupo);
+            usd += grupoInfo ? grupoInfo.precio : 0;
+        });
+        return { usd, bs: usd * tasa };
+    };
+
+    const { usd, bs } = calcularTotales();
+
+    if (cargando) return <div>Cargando tienda...</div>;
+
+    return (
+        <div style={{ padding: '20px', paddingBottom: '150px' }}>
+            <h1>Natura Ice</h1>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                {productos.filter(p => p.stock > 0).map(p => (
+[CONTENIDO SENSIBLE ELIMINADO: completar_refactorizacion.py]
+                        <img src={p.imagen} style={{ width: '100%', height: '100px', objectFit: 'cover' }} />
+                        <p>{p.nombre}</p>
+                        <small>Stock: {p.stock}</small>
+                    </div>
+                ))}
+            </div>
+
+            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', padding: '20px', borderTop: '2px solid #007bff' }}>
+                <h3>Total: ${usd.toFixed(2)} | Bs. {bs.toFixed(2)}</h3>
+                <button onClick={() => setListaDeSeleccionados([])}>Vaciar</button>
+                <button onClick={() => navigate("/Panel")} style={{ marginLeft: '10px' }}>Panel Admin</button>
+            </div>
+        </div>
+    );
+}
+
+export default Home;
+"""
+        home_jsx.write_text(new_home_logic, encoding='utf-8')
+        print(f"✓ Home.jsx: Cálculo de precios por grupo implementado.")
+
+    print("--- Refactorización finalizada ---")
+
+if __name__ == "__main__":
+    completar_fases_finales()
+**************************************************
+
+FILE: eslint.config.js
+------------------------------
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import { defineConfig, globalIgnores } from 'eslint/config'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{js,jsx}'],
+    extends: [
+      js.configs.recommended,
+      reactHooks.configs.flat.recommended,
+      reactRefresh.configs.vite,
+    ],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        ecmaFeatures: { jsx: true },
+        sourceType: 'module',
+      },
+    },
+    rules: {
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+    },
+  },
+])
+
+**************************************************
+
+FILE: fase_ui_natura.py
+------------------------------
+import os
+import re
+from pathlib import Path
+
+def refactorizar_ui():
+    base_path = Path(".")
+    app_jsx = base_path / "src" / "App.jsx"
+    home_jsx = base_path / "src" / "pages" / "Home.jsx"
+    
+    print("--- Iniciando Fase 2: Unificación de Interfaz (natura) ---")
+
+    # 1. Limpiar App.jsx (Rutas y Referencias)
+    if app_jsx.exists():
+        content = app_jsx.read_text(encoding='utf-8')
+        # Eliminar import de Tasa (vieja) si existe
+        content = re.sub(r'import Tasa from "./pages/Tasa";?\n?', '', content)
+        # Eliminar ruta de Tasa (vieja) si existe
+        content = re.sub(r'<Route path="/tasa" element={<Tasa />} />?\n?', '', content)
+        
+        app_jsx.write_text(content, encoding='utf-8')
+        print(f"✓ App.jsx: Rutas unificadas hacia TasaBCV [2].")
+
+    # 2. Actualizar Home.jsx para mostrar totales en Bs
+    # Este paso inyecta la lógica de conversión en el componente principal
+    if home_jsx.exists():
+        new_home_content = """import { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
+import { db } from '../lib/db/database.js';
+import { getTasaBCV } from '../lib/db/utils/tasaUtil.js';
+
+function ListaDeProductos({ productos, seleccionarProducto }) {
+    return (
+        <div style={styles.gridContainer}>
+            {productos.map((producto) => (
+[CONTENIDO SENSIBLE ELIMINADO: fase_ui_natura.py]
+                    {producto.imagen ? (
+                        <img src={producto.imagen} alt={producto.nombre} style={styles.imagen} />
+                    ) : (
+                        <div style={styles.placeholderImagen}>📷 No Imagen</div>
+                    )}
+                    <div style={styles.infoContainer}>
+                        <p style={styles.detalle}>#{producto.id} - {producto.nombre}</p>
+                        <p style={styles.detalle}>Stock: {producto.stock}</p>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function Home() {
+    const [productos, setProductos] = useState([]);
+    const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
+    const [tasa, setTasa] = useState(0);
+    const [cargando, setCargando] = useState(true);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const cargarDatos = async () => {
+            try {
+                await db.init();
+                const [productosData, tasaData] = await Promise.all([
+                    db.getAll('productos'),
+                    getTasaBCV()
+                ]);
+                setProductos(productosData);
+                setTasa(tasaData || 0);
+            } catch (error) {
+                console.error('Error cargando Home:', error);
+            } finally {
+                setCargando(false);
+            }
+        };
+        cargarDatos();
+    }, []);
+
+    const seleccionarProducto = (producto) => {
+        setListaDeSeleccionados(prev => [...prev, producto]);
+    };
+
+    const calcularTotalUsd = () => {
+        // En un sistema real, aquí se sumaría el precio según el grupo
+        // Por ahora simulamos 1 USD por ítem para la demo de conversión
+        return listaDeSeleccionados.length; 
+    };
+
+    const totalUsd = calcularTotalUsd();
+    const totalBs = totalUsd * tasa;
+
+    if (cargando) return <div>Cargando...</div>;
+
+    return (
+        <div style={styles.pageContainer}>
+            <h2>Natura Ice - Selección</h2>
+            <ListaDeProductos productos={productos} seleccionarProducto={seleccionarProducto} />
+            
+            <div style={styles.seleccionadosContainer}>
+                <h3>Total Selección:</h3>
+                <p>Items: {listaDeSeleccionados.length}</p>
+                <p><strong>Total USD: ${totalUsd.toFixed(2)}</strong></p>
+                <p><strong>Total Bs: {totalBs.toFixed(2)}</strong> (Tasa: {tasa})</p>
+                <button onClick={() => setListaDeSeleccionados([])}>Vaciar</button>
+            </div>
+
+            <button onClick={() => navigate("/Panel")} style={styles.botonPanel}>Ir al Panel</button>
+        </div>
+    );
+}
+
+const styles = {
+    pageContainer: { padding: '20px', maxWidth: '800px', margin: '0 auto' },
+    gridContainer: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' },
+    card: { border: '1px solid #ddd', borderRadius: '8px', cursor: 'pointer', padding: '10px' },
+    imagen: { width: '100%', height: '150px', objectFit: 'cover' },
+    infoContainer: { textAlign: 'center', marginTop: '10px' },
+    detalle: { margin: '5px 0', fontSize: '14px' },
+    seleccionadosContainer: { 
+        position: 'fixed', bottom: 0, left: 0, right: 0, 
+        backgroundColor: '#f8f9fa', padding: '20px', borderTop: '2px solid #007bff' 
+    },
+    botonPanel: { marginTop: '20px', padding: '10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px' }
+};
+
+export default Home;
+"""
+        home_jsx.write_text(new_home_content, encoding='utf-8')
+        print(f"✓ Home.jsx: Lógica de conversión a Bs inyectada [4, 5].")
+
+    print("\n--- Refactorización finalizada con éxito ---")
+    print("Nota: La Fase 4 (Pruebas) debe hacerse manualmente abriendo la App en el navegador.")
+
+if __name__ == "__main__":
+    refactorizar_ui()
+**************************************************
+
+FILE: implementar_mejoras.py
+------------------------------
+import os
+from pathlib import Path
+
+def implementar_mejoras():
+    base_path = Path(".")
+    
+    # 1. Archivos a modificar/eliminar
+    tasa_jsx = base_path / "src" / "pages" / "Tasa.jsx"
+    tasa_repository = base_path / "src" / "lib" / "db" / "repositories" / "TasaRepository.js"
+    tasa_util = base_path / "src" / "lib" / "db" / "utils" / "tasaUtil.js"
+
+    print("--- Iniciando refactorización del Proyecto Natura ---")
+
+    # PASO 1: Eliminar Tasa.jsx (Obsoleto por localStorage)
+    if tasa_jsx.exists():
+        try:
+            os.remove(tasa_jsx)
+            print(f"✓ Eliminado: {tasa_jsx} (Uso de localStorage detectado)")
+        except Exception as e:
+            print(f"✗ Error al eliminar {tasa_jsx}: {e}")
+    else:
+        print(f"! El archivo {tasa_jsx} ya no existe o fue movido.")
+
+    # PASO 2: Corregir TasaRepository.js (Unificar con tabla 'config')
+    new_repository_content = """// src/lib/db/repositories/TasaRepository.js
+import { db } from "../database";
+
+[CONTENIDO SENSIBLE ELIMINADO: implementar_mejoras.py]
+
+export const TasaRepository = {
+  async getTasa() {
+    // Busca en la tabla 'config' que es la correcta según el esquema
+[CONTENIDO SENSIBLE ELIMINADO: implementar_mejoras.py]
+  },
+
+  async saveTasa(valor) {
+    // Usa el método setConfigValue definido en NaturaDBClass
+[CONTENIDO SENSIBLE ELIMINADO: implementar_mejoras.py]
+  },
+
+  async convertirABs(valorenDolar) {
+[CONTENIDO SENSIBLE ELIMINADO: implementar_mejoras.py]
+    
+    if (!valor || typeof valor !== "number") {
+      console.warn("Tasa no configurada en DB. Retornando 0.");
+      return 0;
+    }
+    
+    return valor * Number(valorenDolar || 0);
+  }
+};
+"""
+    try:
+        with open(tasa_repository, "w", encoding="utf-8") as f:
+            f.write(new_repository_content)
+        print(f"✓ Actualizado: {tasa_repository} (Ahora usa tabla 'config')")
+    except Exception as e:
+        print(f"✗ Error al escribir en {tasa_repository}: {e}")
+
+    # PASO 3: Sincronizar tasaUtil.js
+    new_util_content = """// src/lib/db/utils/tasaUtil.js
+import { db } from '../database.js';
+
+export async function getTasaBCV() {
+  try {
+    const valor = await db.getConfigValue('tasa');
+    return valor ? parseFloat(valor) : null;
+  } catch (error) {
+    console.error('Error obteniendo tasa desde utils:', error);
+    return null;
+  }
+}
+
+export async function calcularEnDolares(bs, tasa = null) {
+  try {
+    if (!tasa) {
+      tasa = await getTasaBCV();
+    }
+
+    if (!tasa || tasa <= 0) {
+      console.warn('Cálculo cancelado: Tasa inválida');
+      return null;
+    }
+
+    const dolares = parseFloat(bs) / parseFloat(tasa);
+    return Math.round(dolares * 100) / 100;
+  } catch (error) {
+    console.error('Error calculando conversión:', error);
+    return null;
+  }
+}
+"""
+    try:
+        with open(tasa_util, "w", encoding="utf-8") as f:
+            f.write(new_util_content)
+        print(f"✓ Sincronizado: {tasa_util} (Consistencia con IndexedDB)")
+    except Exception as e:
+        print(f"✗ Error al escribir en {tasa_util}: {e}")
+
+    print("--- Refactorización completada con éxito ---")
+
+if __name__ == "__main__":
+    implementar_mejoras()
+**************************************************
+
+FILE: index.html
+------------------------------
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>natura</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+
+**************************************************
+
+FILE: package.json
+------------------------------
+{
+  "name": "natura",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "dexie": "^4.2.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.10.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "vite": "^7.2.4"
+  }
+}
+
+**************************************************
+
+FILE: project_reader.py
+------------------------------
+import os
+from pathlib import Path
+import sys
+
+# Configuración mejorada
+IGNORE_DIRS = {'.git', 'node_modules', 'dist', 'build', '.next', 
+               '__pycache__', 'env', 'venv', '.idea', '.vscode'}
+IGNORE_FILES = {'.DS_Store', '.env', '.env.*', 'package-lock.json', 
+                'yarn.lock', 'pnpm-lock.yaml', '*.log', '*.pid'}
+ALLOWED_EXTENSIONS = {'.js', '.jsx', '.ts', '.tsx', '.css', '.scss', 
+                      '.html', '.json', '.md', '.py', '.txt', '.yml', '.yaml'}
+MAX_FILE_SIZE = 1024 * 1024  # 1MB máximo por archivo
+[CONTENIDO SENSIBLE ELIMINADO: project_reader.py]
+
+def should_ignore(path, root):
+    """Determina si un archivo/directorio debe ser ignorado"""
+    rel_path = path.relative_to(root)
+    
+    # Ignorar directorios completos
+    for part in path.parts:
+        if part in IGNORE_DIRS:
+            return True
+    
+    # Ignorar archivos específicos y patrones
+    for pattern in IGNORE_FILES:
+        if pattern.startswith('*') and path.name.endswith(pattern[1:]):
+            return True
+        elif path.name == pattern:
+            return True
+    
+    # Verificar extensión permitida solo para archivos
+    if path.is_file() and path.suffix not in ALLOWED_EXTENSIONS:
+        return True
+    
+    return False
+
+def sanitize_content(content, filepath):
+    """Elimina datos sensibles del contenido"""
+    lines = content.split('\n')
+    sanitized = []
+    
+    for line in lines:
+        # Filtrar líneas que parecen contener datos sensibles
+        lower_line = line.lower()
+        if any(pattern in lower_line for pattern in SENSITIVE_PATTERNS):
+            sanitized.append(f"[CONTENIDO SENSIBLE ELIMINADO: {filepath}]")
+            continue
+        
+[CONTENIDO SENSIBLE ELIMINADO: project_reader.py]
+[CONTENIDO SENSIBLE ELIMINADO: project_reader.py]
+[CONTENIDO SENSIBLE ELIMINADO: project_reader.py]
+            continue
+        
+        sanitized.append(line)
+    
+    return '\n'.join(sanitized)
+
+def generate_project_summary(root_path, output_file):
+    """Genera un resumen seguro del proyecto"""
+    root = Path(root_path).resolve()
+    
+    # Validar que el directorio existe y es accesible
+    if not root.exists() or not root.is_dir():
+        raise ValueError(f"Directorio inválido: {root_path}")
+    
+    # Prevenir path traversal
+    try:
+        root.relative_to(Path.cwd())
+    except ValueError:
+        print("Error: Directorio fuera del directorio actual no permitido")
+        return
+    
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(f"ESTRUCTURA DEL PROYECTO: {root.name}\n")
+        f.write("=" * 50 + "\n\n")
+        
+        # Usar un solo recorrido eficiente
+        f.write("--- ÁRBOL DE DIRECTORIOS ---\n")
+        dir_structure = []
+        file_contents = []
+        
+        for path in sorted(root.rglob('*')):
+            if should_ignore(path, root):
+                continue
+            
+            # Construir árbol
+            depth = len(path.relative_to(root).parts) - 1
+            indent = '  ' * depth
+            if path.is_dir():
+                dir_structure.append(f"{indent} {path.name}/")
+            else:
+                dir_structure.append(f"{indent} {path.name}")
+                
+                # Procesar contenido del archivo
+                try:
+                    # Verificar tamaño del archivo
+                    file_size = path.stat().st_size
+                    if file_size > MAX_FILE_SIZE:
+                        file_contents.append(f"\nFILE: {path.relative_to(root)}")
+                        file_contents.append("-" * 30)
+                        file_contents.append(f"[ARCHIVO DEMASIADO GRANDE: {file_size} bytes]")
+                        file_contents.append("*" * 50)
+                        continue
+                    
+                    # Leer contenido con manejo de encoding
+                    content = path.read_text(encoding='utf-8', errors='ignore')
+                    
+                    # Sanitizar contenido
+                    sanitized = sanitize_content(content, path.name)
+                    
+                    file_contents.append(f"\nFILE: {path.relative_to(root)}")
+                    file_contents.append("-" * 30)
+                    file_contents.append(sanitized)
+                    file_contents.append("*" * 50)
+                    
+                except UnicodeDecodeError:
+                    file_contents.append(f"\nFILE: {path.relative_to(root)}")
+                    file_contents.append("-" * 30)
+                    file_contents.append("[ARCHIVO BINARIO O CON CODIFICACIÓN NO SOPORTADA]")
+                    file_contents.append("*" * 50)
+                except Exception as e:
+                    file_contents.append(f"\n[ERROR leyendo {path.name}: {e}]")
+        
+        # Escribir estructura
+        f.write('\n'.join(dir_structure))
+        f.write("\n\n" + "=" * 50 + "\n\n")
+        
+        # Escribir contenido
+        f.write("--- CONTENIDO DE ARCHIVOS (SANITIZADO) ---\n")
+        f.write('\n'.join(file_contents))
+
+def main():
+    """Función principal con validaciones"""
+    # Limitar a directorio actual por defecto
+    current_dir = Path.cwd()
+    
+    # Solicitar confirmación para proyectos grandes
+    print(f"Directorio a analizar: {current_dir}")
+    response = input("¿Continuar? (s/n): ").strip().lower()
+    
+    if response != 's':
+        print("Operación cancelada")
+        return
+    
+    output_filename = "proyecto_completo.txt"
+    
+    try:
+        print(f"Analizando proyecto en: {current_dir}...")
+        generate_project_summary(current_dir, output_filename)
+        print(f"✓ Proceso finalizado. Resultado en: {output_filename}")
+        print("✓ Contenido sanitizado: se eliminaron datos sensibles")
+    except Exception as e:
+        print(f"✗ Error: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+**************************************************
+
+FILE: proyecto_completo.txt
+------------------------------
+
+**************************************************
+
+FILE: src/App.css
+------------------------------
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+[CONTENIDO SENSIBLE ELIMINADO: App.css]
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+**************************************************
+
+FILE: src/App.jsx
+------------------------------
+import { Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import Lista from "./pages/Lista";
+import About from "./pages/About";
+import NotFound from "./pages/NotFound";
+import Panel from "./components/Panel/Panel";
+
+
+import TasaBCV from "./pages/TasaBCV";
+
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import GruposPage from './pages/GruposPage';
+import ProductosPage from './pages/ProductosPage';
+
+function App() {
+  return (
+    <>
+      <Header />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/lista" element={<Lista />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/panel" element={<Panel />} />
+        <Route path="/tasabcv" element={<TasaBCV />} />
+        <Route path="/adminproductos" element={<ProductosPage />} />        
+        <Route path="/admingrupos" element={<GruposPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Footer />
+    </>
+  );
+}
+
+export default App;
+
+**************************************************
+
+FILE: src/components/Footer.jsx
+------------------------------
+export default function Footer() {
+  return (
+    <footer style={{ textAlign: "center", padding: "16px 0", color: "#555" }}>
+      © {new Date().getFullYear()} - Natura-Ice
+    </footer>
+  );
+}
+
+**************************************************
+
+FILE: src/components/GruposCRUD/GruposCRUD.jsx
+------------------------------
+// src/components/GruposCRUD/GruposCRUD.jsx (partes actualizadas)
+import React, { useState, useEffect } from 'react';
+import { db } from '../../lib/db/database';
+import ModalGrupo from './ModalGrupo';
+
+const GruposCRUD = () => {
+  const [grupos, setGrupos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [grupoEditando, setGrupoEditando] = useState(null);
+
+  // Cargar grupos al montar el componente
+  useEffect(() => {
+    cargarGrupos();
+  }, []);
+
+  const cargarGrupos = async () => {
+    try {
+      setLoading(true);
+      const datos = await db.getAll('grupos');
+      setGrupos(datos);
+    } catch (err) {
+      setError('Error al cargar los grupos: ' + err.message);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditar = (grupo) => {
+    setGrupoEditando(grupo);
+    setModalOpen(true);
+  };
+
+  const handleEliminar = async (grupo) => {
+    if (window.confirm(`¿Estás seguro de eliminar el grupo "${grupo.nombre}"?`)) {
+      try {
+        // Verificar si hay productos usando este grupo
+        const productosConGrupo = await db.getAll('productos', { grupo: grupo.nombre });
+        
+        if (productosConGrupo.length > 0) {
+          alert(`No se puede eliminar. Hay ${productosConGrupo.length} producto(s) usando este grupo.`);
+          return;
+        }
+        
+        await db.del('grupos', grupo.id);
+        cargarGrupos(); // Recargar la lista
+      } catch (err) {
+        setError('Error al eliminar: ' + err.message);
+      }
+    }
+  };
+
+  const handleNuevoGrupo = () => {
+    setGrupoEditando(null);
+    setModalOpen(true);
+  };
+
+  const handleGuardarExitoso = () => {
+    cargarGrupos(); // Recargar lista después de guardar
+  };
+
+  if (loading) {
+    return <div style={styles.loading}>Cargando grupos...</div>;
+  }
+
+  return (
+    <div style={styles.container}>
+      <h1 style={styles.title}>Administración de Grupos</h1>
+      
+      {error && (
+        <div style={styles.errorAlert}>
+          {error}
+        </div>
+      )}
+
+      {/* Botón para nuevo grupo */}
+      <button 
+        onClick={handleNuevoGrupo}
+        style={styles.nuevoButton}
+      >
+        + Agregar Nuevo Grupo
+      </button>
+
+      {/* Lista de grupos */}
+      <div style={styles.lista}>
+        {grupos.length === 0 ? (
+          <div style={styles.vacio}>
+            No hay grupos registrados. ¡Crea el primero!
+          </div>
+        ) : (
+          grupos.map(grupo => (
+[CONTENIDO SENSIBLE ELIMINADO: GruposCRUD.jsx]
+              <div style={styles.itemInfo}>
+                <div style={styles.itemNombre}>{grupo.nombre}</div>
+                <div style={styles.itemPrecio}>
+                  Precio: ${grupo.precio.toFixed(2)}
+                </div>
+                <div style={styles.itemId}>ID: {grupo.id}</div>
+              </div>
+
+              <div style={styles.itemActions}>
+                <button
+                  onClick={() => handleEditar(grupo)}
+                  style={styles.btnEditar}
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleEliminar(grupo)}
+                  style={styles.btnEliminar}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Resumen */}
+      <div style={styles.resumen}>
+        Total: {grupos.length} grupo{grupos.length !== 1 ? 's' : ''}
+      </div>
+
+      {/* Modal */}
+      {modalOpen && (
+        <ModalGrupo
+          grupo={grupoEditando}
+          onClose={() => setModalOpen(false)}
+          onSave={handleGuardarExitoso}
+        />
+      )}
+    </div>
+  );
+};
+
+// Agrega estos estilos al componente principal
+const styles = {
+  container: { padding: '20px', maxWidth: '800px', margin: '0 auto' },
+  title: { marginBottom: '20px', color: '#333' },
+  loading: { padding: '40px', textAlign: 'center' },
+  errorAlert: { 
+    backgroundColor: '#fee', 
+    color: '#c33', 
+    padding: '10px', 
+    borderRadius: '4px',
+    marginBottom: '20px'
+  },
+  nuevoButton: {
+    marginBottom: '20px',
+    padding: '10px 15px',
+    backgroundColor: '#4CAF50',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500'
+  },
+  lista: { 
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    overflow: 'hidden',
+    marginBottom: '20px'
+  },
+  vacio: { 
+    padding: '40px', 
+    textAlign: 'center', 
+    color: '#666' 
+  },
+  item: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '15px',
+    borderBottom: '1px solid #eee',
+    backgroundColor: 'white'
+  },
+  itemInfo: { flex: 1 },
+  itemNombre: { fontWeight: 'bold', fontSize: '16px', marginBottom: '5px' },
+  itemPrecio: { color: '#666', marginBottom: '3px' },
+  itemId: { fontSize: '12px', color: '#999' },
+  itemActions: { display: 'flex', gap: '10px' },
+  btnEditar: {
+    padding: '8px 12px',
+    backgroundColor: '#2196F3',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px'
+  },
+  btnEliminar: {
+    padding: '8px 12px',
+    backgroundColor: '#f44336',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px'
+  },
+  resumen: { 
+    marginTop: '20px', 
+    padding: '10px',
+    backgroundColor: '#f5f5f5',
+    borderRadius: '4px',
+    fontSize: '14px',
+    textAlign: 'center'
+  }
+};
+
+export default GruposCRUD;
+**************************************************
+
+FILE: src/components/GruposCRUD/ModalGrupo.jsx
+------------------------------
+// src/components/GruposCRUD/ModalGrupo.jsx
+import React, { useState, useEffect } from 'react';
+import { db } from '../../lib/db/database';
+
+const ModalGrupo = ({ grupo, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    id: '',
+    nombre: '',
+    precio: 0
+  });
+  const [error, setError] = useState('');
+
+  // Inicializar formulario cuando cambia el grupo
+  useEffect(() => {
+    if (grupo) {
+      setFormData({
+        nombre: grupo.nombre || '',
+        precio: grupo.precio || 0
+      });
+    } else {
+      setFormData({ nombre: '', precio: 0 });
+    }
+  }, [grupo]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    // Validaciones
+    if (!formData.nombre.trim()) {
+      setError('El nombre es requerido');
+      return;
+    }
+
+    if (formData.precio < 0) {
+      setError('El precio no puede ser negativo');
+      return;
+    }
+
+    try {
+      // Guardar en la base de datos
+      if (grupo) {
+        // Editar grupo existente
+        await db.put('grupos', {
+          id: grupo.id,
+          ...formData
+        });
+      } else {
+        // Crear nuevo grupo
+        await db.add('grupos', formData);
+      }
+
+      // Notificar al componente padre y cerrar
+      onSave();
+      onClose();
+    } catch (err) {
+      setError('Error al guardar: ' + err.message);
+      console.error(err);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'precio' ? parseFloat(value) || 0 : value
+    }));
+  };
+
+  return (
+    <div style={styles.overlay}>
+      <div style={styles.modal}>
+        <div style={styles.header}>
+          <h2 style={styles.title}>
+            {grupo ? 'Editar Grupo' : 'Nuevo Grupo'}
+          </h2>
+          <button onClick={onClose} style={styles.closeButton}>
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={styles.content}>
+            {error && (
+              <div style={styles.error}>
+                {error}
+              </div>
+            )}
+
+            <div style={styles.formGroup}>
+              <label htmlFor="nombre" style={styles.label}>
+                Nombre del Grupo *
+              </label>
+              <input
+                type="text"
+                id="nombre"
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleChange}
+                style={styles.input}
+                placeholder="Ej: Premium, Básico, etc."
+                autoFocus
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label htmlFor="precio" style={styles.label}>
+                Precio ($)
+              </label>
+              <input
+                type="number"
+                id="precio"
+                name="precio"
+                value={formData.precio}
+                onChange={handleChange}
+                style={styles.input}
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+              />
+              <div style={styles.helpText}>
+                Precio adicional para productos de este grupo
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.footer}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={styles.cancelButton}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              style={styles.saveButton}
+            >
+              {grupo ? 'Guardar Cambios' : 'Crear Grupo'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Estilos en línea para simplicidad
+const styles = {
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    padding: '20px'
+  },
+  modal: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    width: '100%',
+    maxWidth: '500px',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+    maxHeight: '90vh',
+    display: 'flex',
+    flexDirection: 'column'
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '20px',
+    borderBottom: '1px solid #eee'
+  },
+  title: {
+    margin: 0,
+    fontSize: '18px',
+    color: '#333'
+  },
+  closeButton: {
+    background: 'none',
+    border: 'none',
+    fontSize: '24px',
+    cursor: 'pointer',
+    color: '#666',
+    padding: '0',
+    width: '30px',
+    height: '30px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  content: {
+    padding: '20px',
+    overflowY: 'auto'
+  },
+  error: {
+    backgroundColor: '#fee',
+    color: '#c33',
+    padding: '10px',
+    borderRadius: '4px',
+    marginBottom: '15px',
+    fontSize: '14px'
+  },
+  formGroup: {
+    marginBottom: '20px'
+  },
+  label: {
+    display: 'block',
+    marginBottom: '8px',
+    fontWeight: '500',
+    color: '#333'
+  },
+  input: {
+    width: '100%',
+    padding: '10px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '16px',
+    boxSizing: 'border-box'
+  },
+  helpText: {
+    fontSize: '12px',
+    color: '#666',
+    marginTop: '5px'
+  },
+  footer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    padding: '20px',
+    borderTop: '1px solid #eee'
+  },
+  cancelButton: {
+    padding: '10px 20px',
+    backgroundColor: '#f5f5f5',
+    color: '#333',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px'
+  },
+  saveButton: {
+    padding: '10px 20px',
+    backgroundColor: '#4CAF50',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500'
+  }
+};
+
+export default ModalGrupo;
+**************************************************
+
+FILE: src/components/Header.jsx
+------------------------------
+import { Link } from "react-router-dom";
+
+export default function Header() {
+  return (
+    <header>
+      <nav>
+        <Link to="/">Inicio</Link> | <Link to="/about">Acerca de</Link>
+      </nav>
+    </header>
+  );
+}
+
+**************************************************
+
+FILE: src/components/Panel/Panel.jsx
+------------------------------
+// src/components/Panel/Panel.js
+import { useNavigate } from "react-router-dom";
+import { useGrupos } from "./hooks/useGrupos";
+import { useProductos } from "./hooks/useProductos";
+import styles from "./Panel.module.css";
+
+export default function Panel() {
+  
+  const navigate = useNavigate();
+
+  const { importarGrupos } = useGrupos();
+  const { importarProductos } = useProductos();
+
+  // Función simple para importar datos
+  async function handleImportarDatos() {
+    try {
+
+      // 1. Importar grupos
+      const resultadoGrupos = await importarGrupos();
+      console.log('Grupos:', resultadoGrupos);
+
+      // 2. Importar productos
+      const resultadoProductos = await importarProductos();
+      console.log('Productos:', resultadoProductos);
+
+      alert(`✅ Datos importados\n\n`)
+      
+    } catch (error) {
+      console.error('Error general:', error);
+      alert('❌ Error inesperado: ' + error.message);
+    }
+  }
+
+  return (
+    <div className={styles.container}>
+
+      <h2 className={styles.title}>PANEL DE CONTROL</h2>
+
+      {/* Acción principal */}
+      <button 
+          className={`${styles.button} ${styles.primary}`}
+          onClick={handleImportarDatos}          
+        >
+        📥 Cargar Datos Iniciales
+      </button>
+
+      <div className={styles.buttons}>
+        {/* Navegación */}
+        <button className={styles.button} onClick={() => navigate("/tasabcv")}>
+          Tasa BCV
+        </button>
+        
+        <button className={styles.button} onClick={() => navigate("/admingrupos")}>
+          Grupos
+        </button>
+
+        <button className={styles.button} onClick={() => navigate("/adminproductos")}>
+          Productos
+        </button>
+        
+        {/* Volver */}
+        <button 
+          className={`${styles.button} ${styles.back}`}
+          onClick={() => navigate("/")}
+        >
+          ↩️ Regresar
+        </button>
+      </div>
+    </div>
+  );
+}
+**************************************************
+
+FILE: src/components/Panel/Panel.module.css
+------------------------------
+/* Ocupa todo el ancho y alto de la pantalla */
+.container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;   /* centra verticalmente */
+  align-items: center;       /* centra horizontalmente */
+  background: #fafafa;
+}
+
+/* Título */
+.title {
+  font-size: 2rem;
+  margin-bottom: 40px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Contenedor de los botones para mantenerlos centrados */
+.buttons {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Botones */
+.button {
+  width: 75%;
+  max-width: 300px;
+  padding: 14px 0;
+  margin: 10px 0;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #007bff;
+  color: white;
+  transition: background 0.25s;
+}
+
+.button:hover {
+  background: #005fcc;
+}
+
+/* Botón Regresar */
+.back {
+  background: #555;
+}
+
+.back:hover {
+  background: #333;
+}
+
+**************************************************
+
+FILE: src/components/Panel/hooks/useGrupos.js
+------------------------------
+// src/components/Panel/hooks/useGrupos.js
+import { useState } from 'react';
+import gruposData from '../../../data/grupos.json';
+import { db } from '../../../lib/db/database.js'; 
+
+export function useGrupos() {
+  
+  const [error, setError] = useState(null);
+
+  const importarGrupos = async () => { 
+          
+    try {
+              
+      // 1. CONVERTIR {clave:valor} a [{nombre, precio}]
+      const gruposArray = Object.entries(gruposData).map(([nombre, precio]) => ({
+        nombre: nombre,
+        precio: Number(precio)
+      }));
+  
+      // 2. LIMPIAR TABLA
+      await db.grupos.clear();
+ 
+      // 3. INSERTAR NUEVOS DATOS
+      await db.grupos.bulkAdd(gruposArray);
+  
+      return {
+        success: true,
+        count: gruposArray.length,
+        message: `${gruposArray.length} grupos importados`
+      };
+  
+    } catch (error) {
+      console.error('Error en importación:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+  
+
+  const verificarGrupos = async () => {
+    try {
+      const { db } = await import('../../../lib/db/database.js');
+      const grupos = await db.grupos.toArray();
+      
+      return {
+        success: true,
+        data: grupos,
+        count: grupos.length,
+        message: `${grupos.length} grupos encontrados`
+      };
+    } catch (err) {
+      console.error('Error verificando grupos:', err);
+      return {
+        success: false,
+        error: err.message,
+        data: []
+      };
+    }
+  };
+
+  return {
+    importarGrupos,
+    verificarGrupos,    
+    error,
+    clearError: () => setError(null)
+  };
+}
+**************************************************
+
+FILE: src/components/Panel/hooks/useProductos.jsx
+------------------------------
+// src/components/Panel/hooks/useProductos.js
+import { useState } from 'react';
+import productosData from '../../../data/data.json';
+import { db } from '../../../lib/db/database.js'; // Import normal
+
+export function useProductos() {
+  const [error, setError] = useState(null);
+
+const importarProductos = async () => {
+  try {
+    // 1. OBTENER EL ARRAY DE PRODUCTOS
+    // Accedemos a la propiedad "productos" del objeto
+    const productosArray = productosData.productos;
+    
+    // Si necesitas asegurar que cada producto tenga un campo createdAt
+    const productosConFecha = productosArray.map(producto => ({
+      ...producto,
+      createdAt: producto.createdAt || new Date().toISOString() // Fecha actual si no existe
+    }));
+
+    // 2. LIMPIAR TABLA
+    await db.productos.clear();
+
+    // 3. INSERTAR NUEVOS DATOS
+    await db.productos.bulkAdd(productosConFecha);
+
+    console.log(`Importando ${productosConFecha.length} productos...`);
+
+    return {
+      success: true,
+      count: productosConFecha.length,
+      total: productosConFecha.length,
+      message: `${productosConFecha.length} productos importados exitosamente.`
+    };
+
+  } catch (error) {
+    console.error('Error en importación de productos:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
+  const verificarProductos = async () => {
+  };
+
+  return {
+    importarProductos,
+    verificarProductos,
+    error
+  };
+}
+**************************************************
+
+FILE: src/components/ProductosCRUD/ModalProducto.jsx
+------------------------------
+// src/components/ProductosCRUD/ModalProducto.jsx (VERSIÓN SIMPLIFICADA)
+import React, { useState, useEffect } from 'react';
+import { db } from '../../lib/db/database';
+
+const ModalProducto = ({ producto, grupos, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    id: '',
+    nombre: '',
+    grupo: '',
+    stock: 0,
+    imagen: '' // Mantenemos el campo pero sin mostrar vista previa
+  });
+  const [error, setError] = useState('');
+  const [validando, setValidando] = useState(false);
+
+  // Inicializar formulario
+  useEffect(() => {
+    if (producto) {
+      setFormData({
+        id: producto.id.toString(),
+        nombre: producto.nombre || '',
+        grupo: producto.grupo || '',
+        stock: producto.stock || 0,
+        imagen: producto.imagen || ''
+      });
+    } else {
+      // Valores por defecto para nuevo producto
+      setFormData({ 
+        id: '', 
+        nombre: '', 
+        grupo: grupos.length > 0 ? grupos[0].nombre : '', 
+        stock: 0, 
+        imagen: '' 
+      });
+    }
+  }, [producto, grupos]);
+
+  // Validar si un ID ya existe
+  const validarIdExistente = async (id) => {
+    try {
+      const existe = await db.get('productos', parseInt(id));
+      return !!existe;
+    } catch (err) {
+      console.error('Error validando ID:', err);
+      return false;
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setValidando(true);
+
+    // Validaciones
+    if (!formData.id.trim()) {
+      setError('El ID es requerido');
+      setValidando(false);
+      return;
+    }
+
+    const idNumero = parseInt(formData.id);
+    if (isNaN(idNumero) || idNumero <= 0) {
+      setError('El ID debe ser un número positivo');
+      setValidando(false);
+      return;
+    }
+
+    if (!formData.nombre.trim()) {
+      setError('El nombre es requerido');
+      setValidando(false);
+      return;
+    }
+
+    if (!formData.grupo) {
+      setError('Debe seleccionar un grupo');
+      setValidando(false);
+      return;
+    }
+
+    if (formData.stock < 0) {
+      setError('El stock no puede ser negativo');
+      setValidando(false);
+      return;
+    }
+
+    try {
+      const dataToSave = {
+        id: idNumero,
+        nombre: formData.nombre,
+        grupo: formData.grupo,
+        stock: parseInt(formData.stock),
+        imagen: formData.imagen,
+        createdAt: producto ? producto.createdAt : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // Validar ID único
+      if (producto) {
+        const idCambiado = idNumero !== producto.id;
+        
+        if (idCambiado) {
+          const idExiste = await validarIdExistente(idNumero);
+          if (idExiste) {
+            setError(`El ID ${idNumero} ya está en uso por otro producto`);
+            setValidando(false);
+            return;
+          }
+
+          await db.del('productos', producto.id);
+          await db.add('productos', dataToSave);
+        } else {
+          await db.put('productos', dataToSave);
+        }
+      } else {
+        const idExiste = await validarIdExistente(idNumero);
+        if (idExiste) {
+          setError(`El ID ${idNumero} ya está en uso`);
+          setValidando(false);
+          return;
+        }
+
+        await db.add('productos', dataToSave);
+      }
+
+      onSave();
+      onClose();
+    } catch (err) {
+      setError('Error al guardar: ' + err.message);
+      console.error(err);
+    } finally {
+      setValidando(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'stock' || name === 'id' ? 
+              (value === '' ? '' : value.replace(/\D/g, '')) : 
+              value
+    }));
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '20px'
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        width: '100%',
+        maxWidth: '500px',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '20px',
+          borderBottom: '1px solid #eee',
+          backgroundColor: '#f8f9fa'
+        }}>
+          <h2 style={{ margin: 0, fontSize: '18px', color: '#333', fontWeight: '600' }}>
+            {producto ? '✏️ Editar Producto' : '➕ Nuevo Producto'}
+          </h2>
+          <button 
+            onClick={onClose} 
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              color: '#666',
+              padding: '0',
+              width: '30px',
+              height: '30px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              ':hover': {
+                backgroundColor: '#e9ecef'
+              }
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+            {error && (
+              <div style={{
+                backgroundColor: '#fee',
+                color: '#c33',
+                padding: '12px',
+                borderRadius: '4px',
+                marginBottom: '20px',
+                fontSize: '14px',
+                border: '1px solid #fcc'
+              }}>
+                ⚠️ {error}
+              </div>
+            )}
+
+            {/* Fila: ID y Stock */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '15px',
+              marginBottom: '20px'
+            }}>
+              <div>
+                <label htmlFor="id" style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: '500',
+                  color: '#333',
+                  fontSize: '14px'
+                }}>
+                  ID *
+                </label>
+                <input
+                  type="text"
+                  id="id"
+                  name="id"
+                  value={formData.id}
+                  onChange={handleChange}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                    backgroundColor: validando ? '#f8f9fa' : 'white',
+                    cursor: validando ? 'not-allowed' : 'text'
+                  }}
+                  placeholder="Ej: 1, 2, 3..."
+                  autoFocus
+                  disabled={validando}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="stock" style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: '500',
+                  color: '#333',
+                  fontSize: '14px'
+                }}>
+                  Stock
+                </label>
+                <input
+                  type="number"
+                  id="stock"
+                  name="stock"
+                  value={formData.stock}
+                  onChange={handleChange}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                    backgroundColor: validando ? '#f8f9fa' : 'white',
+                    cursor: validando ? 'not-allowed' : 'text'
+                  }}
+                  min="0"
+                  placeholder="0"
+                  disabled={validando}
+                />
+              </div>
+            </div>
+
+            {/* Nombre del producto */}
+            <div style={{ marginBottom: '20px' }}>
+              <label htmlFor="nombre" style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontWeight: '500',
+                color: '#333',
+                fontSize: '14px'
+              }}>
+                Nombre del Producto *
+              </label>
+              <input
+                type="text"
+                id="nombre"
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleChange}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  backgroundColor: validando ? '#f8f9fa' : 'white',
+                  cursor: validando ? 'not-allowed' : 'text'
+                }}
+                placeholder="Ej: Parchita Cremosa, Pina Cremosa, etc."
+                disabled={validando}
+              />
+            </div>
+
+            {/* Grupo */}
+            <div style={{ marginBottom: '20px' }}>
+              <label htmlFor="grupo" style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontWeight: '500',
+                color: '#333',
+                fontSize: '14px'
+              }}>
+                Grupo *
+              </label>
+              <select
+                id="grupo"
+                name="grupo"
+                value={formData.grupo}
+                onChange={handleChange}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  backgroundColor: validando || grupos.length === 0 ? '#f8f9fa' : 'white',
+                  cursor: validando || grupos.length === 0 ? 'not-allowed' : 'pointer',
+                  color: '#333'
+                }}
+                disabled={validando || grupos.length === 0}
+              >
+                <option value="">Seleccionar grupo...</option>
+                {grupos.map(grupo => (
+[CONTENIDO SENSIBLE ELIMINADO: ModalProducto.jsx]
+                    {grupo.nombre} {grupo.precio > 0 ? `(+$${grupo.precio.toFixed(2)})` : ''}
+                  </option>
+                ))}
+              </select>
+              {grupos.length === 0 && (
+                <div style={{
+                  backgroundColor: '#fff3cd',
+                  color: '#856404',
+                  padding: '10px',
+                  borderRadius: '4px',
+                  marginTop: '10px',
+                  fontSize: '13px',
+                  border: '1px solid #ffeaa7'
+                }}>
+                  ⚠️ No hay grupos disponibles. Crea primero un grupo.
+                </div>
+              )}
+            </div>
+
+            {/* Imagen (oculta pero mantiene el campo en DB) */}
+            <input
+              type="hidden"
+              id="imagen"
+              name="imagen"
+              value={formData.imagen}
+            />
+          </div>
+
+          {/* Botones: Cancelar y Grabar */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '12px',
+            padding: '20px',
+            borderTop: '1px solid #eee',
+            backgroundColor: '#f8f9fa',
+            borderBottomLeftRadius: '8px',
+            borderBottomRightRadius: '8px'
+          }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '10px 24px',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: validando ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                opacity: validando ? 0.6 : 1,
+                transition: 'all 0.2s ease'
+              }}
+              disabled={validando}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              style={{
+                padding: '10px 24px',
+                backgroundColor: validando || grupos.length === 0 ? '#adb5bd' : '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: validando || grupos.length === 0 ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                opacity: validando || grupos.length === 0 ? 0.6 : 1,
+                transition: 'all 0.2s ease'
+              }}
+              disabled={validando || grupos.length === 0}
+            >
+              {validando ? '⌛ Grabando...' : 
+               producto ? '💾 Guardar Cambios' : '✅ Grabar Producto'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default ModalProducto;
+**************************************************
+
+FILE: src/components/ProductosCRUD/ProductosCRUD.jsx
+------------------------------
+// src/components/ProductosCRUD/ProductosCRUD.jsx
+import React, { useState, useEffect } from 'react';
+import { db } from '../../lib/db/database';
+import ModalProducto from './ModalProducto';
+
+const ProductosCRUD = () => {
+  const [productos, setProductos] = useState([]);
+  const [grupos, setGrupos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [productoEditando, setProductoEditando] = useState(null);
+  const [filtroGrupo, setFiltroGrupo] = useState('todos');
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    try {
+      setLoading(true);
+      
+      // Cargar productos y grupos en paralelo
+      const [productosData, gruposData] = await Promise.all([
+        db.getAll('productos'),
+        db.getAll('grupos')
+      ]);
+      
+      setProductos(productosData);
+      setGrupos(gruposData);
+    } catch (err) {
+      setError('Error al cargar los datos: ' + err.message);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filtrar productos por grupo
+  const productosFiltrados = filtroGrupo === 'todos' 
+    ? productos 
+    : productos.filter(p => p.grupo === filtroGrupo);
+
+  const handleEditar = (producto) => {
+    setProductoEditando(producto);
+    setModalOpen(true);
+  };
+
+  const handleEliminar = async (producto) => {
+    if (window.confirm(`¿Estás seguro de eliminar el producto "${producto.nombre}"?`)) {
+      try {
+        await db.del('productos', producto.id);
+        cargarDatos(); // Recargar la lista
+      } catch (err) {
+        setError('Error al eliminar: ' + err.message);
+      }
+    }
+  };
+
+  const handleNuevoProducto = () => {
+    setProductoEditando(null);
+    setModalOpen(true);
+  };
+
+  const handleGuardarExitoso = () => {
+    cargarDatos(); // Recargar lista después de guardar
+  };
+
+  const getNombreGrupo = (grupoId) => {
+    const grupo = grupos.find(g => g.nombre === grupoId);
+    return grupo ? grupo.nombre : grupoId;
+  };
+
+  const getPrecioGrupo = (grupoId) => {
+    const grupo = grupos.find(g => g.nombre === grupoId);
+    return grupo ? grupo.precio : 0;
+  };
+
+  if (loading) {
+    return <div style={styles.loading}>Cargando productos...</div>;
+  }
+
+  return (
+    <div style={styles.container}>
+      <h1 style={styles.title}>Administración de Productos</h1>
+      
+      {error && (
+        <div style={styles.errorAlert}>
+          {error}
+        </div>
+      )}
+
+      {/* Controles */}
+      <div style={styles.controles}>
+        <div style={styles.filtros}>
+          <div style={styles.filtroGrupo}>
+            <label htmlFor="filtro-grupo" style={styles.filtroLabel}>
+              Filtrar por grupo:
+            </label>
+            <select
+              id="filtro-grupo"
+              value={filtroGrupo}
+              onChange={(e) => setFiltroGrupo(e.target.value)}
+              style={styles.select}
+            >
+              <option value="todos">Todos los grupos</option>
+              {grupos.map(grupo => (
+[CONTENIDO SENSIBLE ELIMINADO: ProductosCRUD.jsx]
+                  {grupo.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <button 
+          onClick={handleNuevoProducto}
+          style={styles.nuevoButton}
+        >
+          + Nuevo Producto
+        </button>
+      </div>
+
+      {/* Lista de productos */}
+      <div style={styles.lista}>
+        {productosFiltrados.length === 0 ? (
+          <div style={styles.vacio}>
+            {filtroGrupo === 'todos' 
+              ? 'No hay productos registrados. ¡Crea el primero!' 
+              : `No hay productos en el grupo "${filtroGrupo}"`}
+          </div>
+        ) : (
+          productosFiltrados.map(producto => (
+[CONTENIDO SENSIBLE ELIMINADO: ProductosCRUD.jsx]
+              <div style={styles.itemImagen}>
+                {producto.imagen ? (
+                  <img 
+                    src={producto.imagen} 
+                    alt={producto.nombre}
+                    style={styles.imagen}
+                    onError={(e) => e.target.style.display = 'none'}
+                  />
+                ) : (
+                  <div style={styles.imagenPlaceholder}>
+                    📷
+                  </div>
+                )}
+              </div>
+
+              <div style={styles.itemInfo}>
+                <div style={styles.itemNombre}>{producto.nombre}</div>
+                
+                <div style={styles.itemDetalles}>
+                  <div style={styles.detalle}>
+                    <span style={styles.detalleLabel}>Grupo:</span>
+                    <span style={styles.detalleValor}>
+                      {getNombreGrupo(producto.grupo)}
+                      {getPrecioGrupo(producto.grupo) > 0 && 
+                        ` (+$${getPrecioGrupo(producto.grupo).toFixed(2)})`}
+                    </span>
+                  </div>
+                  
+                  <div style={styles.detalle}>
+                    <span style={styles.detalleLabel}>Stock:</span>
+                    <span style={{
+                      ...styles.detalleValor,
+                      color: producto.stock > 0 ? '#2e7d32' : '#c62828',
+                      fontWeight: 'bold'
+                    }}>
+                      {producto.stock} unidad{producto.stock !== 1 ? 'es' : ''}
+                    </span>
+                  </div>
+                  
+                  <div style={styles.detalle}>
+                    <span style={styles.detalleLabel}>ID:</span>
+                    <span style={styles.detalleValor}>{producto.id}</span>
+                  </div>
+                  
+                  {producto.createdAt && (
+                    <div style={styles.detalle}>
+                      <span style={styles.detalleLabel}>Creado:</span>
+                      <span style={styles.detalleValor}>
+                        {new Date(producto.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div style={styles.itemActions}>
+                <button
+                  onClick={() => handleEditar(producto)}
+                  style={styles.btnEditar}
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleEliminar(producto)}
+                  style={styles.btnEliminar}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Resumen */}
+      <div style={styles.resumen}>
+        <div>
+          Mostrando: <strong>{productosFiltrados.length}</strong> de <strong>{productos.length}</strong> productos
+          {filtroGrupo !== 'todos' && ` (filtrado por: ${filtroGrupo})`}
+        </div>
+        <div style={styles.stockTotal}>
+          Stock total: <strong>{productos.reduce((sum, p) => sum + p.stock, 0)}</strong> unidades
+        </div>
+      </div>
+
+      {/* Modal */}
+      {modalOpen && (
+        <ModalProducto
+          producto={productoEditando}
+          grupos={grupos}
+          onClose={() => setModalOpen(false)}
+          onSave={handleGuardarExitoso}
+        />
+      )}
+    </div>
+  );
+};
+
+// Estilos
+const styles = {
+  container: { 
+    padding: '20px', 
+    maxWidth: '1000px', 
+    margin: '0 auto',
+    minHeight: '100vh'
+  },
+  title: { 
+    marginBottom: '20px', 
+    color: '#333',
+    fontSize: '24px'
+  },
+  loading: { 
+    padding: '40px', 
+    textAlign: 'center',
+    fontSize: '18px',
+    color: '#666'
+  },
+  errorAlert: { 
+    backgroundColor: '#fee', 
+    color: '#c33', 
+    padding: '12px', 
+    borderRadius: '4px',
+    marginBottom: '20px',
+    border: '1px solid #fcc'
+  },
+  controles: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: '25px',
+    flexWrap: 'wrap',
+    gap: '15px'
+  },
+  filtros: {
+    flex: 1
+  },
+  filtroGrupo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '5px'
+  },
+  filtroLabel: {
+    fontSize: '14px',
+    color: '#555',
+    fontWeight: '500'
+  },
+  select: {
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '14px',
+    maxWidth: '200px',
+    backgroundColor: 'white'
+  },
+  nuevoButton: {
+    padding: '10px 20px',
+    backgroundColor: '#2196F3',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    whiteSpace: 'nowrap'
+  },
+  lista: { 
+    border: '1px solid #ddd',
+    borderRadius: '8px',
+    overflow: 'hidden',
+    marginBottom: '20px'
+  },
+  vacio: { 
+    padding: '40px', 
+    textAlign: 'center', 
+    color: '#666',
+    fontSize: '16px'
+  },
+  item: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '15px',
+    borderBottom: '1px solid #eee',
+    backgroundColor: 'white',
+    gap: '15px'
+  },
+  itemImagen: {
+    width: '60px',
+    height: '60px',
+    flexShrink: 0
+  },
+  imagen: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    borderRadius: '4px',
+    border: '1px solid #eee'
+  },
+  imagenPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#f5f5f5',
+    borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '24px',
+    color: '#999',
+    border: '1px dashed #ddd'
+  },
+  itemInfo: {
+    flex: 1,
+    minWidth: 0 // Para que el texto no desborde
+  },
+  itemNombre: { 
+    fontWeight: 'bold', 
+    fontSize: '16px', 
+    marginBottom: '8px',
+    color: '#333'
+  },
+  itemDetalles: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+    gap: '8px',
+    fontSize: '13px'
+  },
+  detalle: {
+    display: 'flex',
+    gap: '5px'
+  },
+  detalleLabel: {
+    color: '#666',
+    fontWeight: '500'
+  },
+  detalleValor: {
+    color: '#333'
+  },
+  itemActions: { 
+    display: 'flex', 
+    gap: '10px',
+    flexShrink: 0
+  },
+  btnEditar: {
+    padding: '8px 16px',
+    backgroundColor: '#2196F3',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    whiteSpace: 'nowrap'
+  },
+  btnEliminar: {
+    padding: '8px 16px',
+    backgroundColor: '#f44336',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    whiteSpace: 'nowrap'
+  },
+  resumen: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '15px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '8px',
+    fontSize: '14px',
+    color: '#555',
+    flexWrap: 'wrap',
+    gap: '10px'
+  },
+  stockTotal: {
+    fontWeight: 'bold',
+    color: '#1976d2'
+  }
+};
+
+export default ProductosCRUD;
+**************************************************
+
+FILE: src/components/TasaForm.jsx
+------------------------------
+// src/components/TasaForm.jsx
+import React, { useState, useEffect } from 'react';
+import { db } from '../lib/db/database'; // Ajusta la ruta según tu estructura
+
+const TasaForm = () => {
+  const [formData, setFormData] = useState({
+    valor: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+
+  // Cargar tasa existente al montar el componente
+  useEffect(() => {
+    cargarTasa();
+  }, []);
+
+  const cargarTasa = async () => {
+    setLoading(true);
+    try {
+      // Buscar la tasa en la tabla config con clave 'tasa'
+      const tasa = await db.get('config', 'tasa');
+      if (tasa) {
+        setFormData({ valor: tasa.valor.toString() });
+      }
+      setMessage({ type: '', text: '' });
+    } catch (err) {
+      setMessage({ 
+        type: 'error', 
+        text: 'Error al cargar la tasa: ' + err.message 
+      });
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { value } = e.target;
+    // Permitir números con decimales
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      setFormData({ valor: value });
+      setMessage({ type: '', text: '' }); // Limpiar mensaje al cambiar
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validación básica
+    if (!formData.valor.trim()) {
+      setMessage({ 
+        type: 'error', 
+        text: 'El valor de la tasa es requerido' 
+      });
+      return;
+    }
+
+    const valorNumero = parseFloat(formData.valor);
+    if (isNaN(valorNumero) || valorNumero <= 0) {
+      setMessage({ 
+        type: 'error', 
+        text: 'La tasa debe ser un número positivo' 
+      });
+      return;
+    }
+
+    setSaving(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      // Guardar en IndexedDB - tabla config, clave 'tasa'
+      await db.put('config', {
+        clave: 'tasa',
+        valor: valorNumero,
+        updatedAt: new Date().toISOString()
+      });
+
+      setMessage({ 
+        type: 'success', 
+        text: `Tasa guardada exitosamente: ${valorNumero.toFixed(4)}` 
+      });
+      
+      // Opcional: Recargar después de guardar
+      setTimeout(() => cargarTasa(), 500);
+      
+    } catch (err) {
+      setMessage({ 
+        type: 'error', 
+        text: 'Error al guardar la tasa: ' + err.message 
+      });
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLimpiar = () => {
+    setFormData({ valor: '' });
+    setMessage({ type: '', text: '' });
+  };
+
+  // Estilos en línea para simplicidad
+  const styles = {
+    container: {
+      maxWidth: '500px',
+      margin: '0 auto',
+      padding: '20px'
+    },
+    form: {
+      border: '1px solid #e5e7eb',
+      borderRadius: '8px',
+      padding: '20px',
+      backgroundColor: 'white'
+    },
+    title: {
+      fontSize: '20px',
+      fontWeight: '600',
+      marginBottom: '20px',
+      color: '#1f2937'
+    },
+    label: {
+      display: 'block',
+      fontSize: '14px',
+      fontWeight: '500',
+      marginBottom: '8px',
+      color: '#374151'
+    },
+    input: {
+      width: '100%',
+      padding: '10px',
+      border: '1px solid #d1d5db',
+      borderRadius: '6px',
+      fontSize: '16px',
+      boxSizing: 'border-box'
+    },
+    buttonContainer: {
+      display: 'flex',
+      justifyContent: 'flex-end',
+      gap: '12px',
+      marginTop: '20px'
+    },
+    button: {
+      padding: '10px 20px',
+      border: 'none',
+      borderRadius: '6px',
+      fontSize: '14px',
+      fontWeight: '500',
+      cursor: 'pointer',
+      transition: 'background-color 0.2s'
+    },
+    buttonLimpiar: {
+      backgroundColor: '#f3f4f6',
+      color: '#374151',
+      border: '1px solid #d1d5db'
+    },
+    buttonGuardar: {
+      backgroundColor: '#3b82f6',
+      color: 'white'
+    },
+    buttonDisabled: {
+      backgroundColor: '#9ca3af',
+      cursor: 'not-allowed'
+    },
+    message: {
+      padding: '12px',
+      borderRadius: '6px',
+      marginBottom: '20px',
+      fontSize: '14px'
+    },
+    messageSuccess: {
+      backgroundColor: '#d1fae5',
+      color: '#065f46',
+      border: '1px solid #a7f3d0'
+    },
+    messageError: {
+      backgroundColor: '#fee',
+      color: '#991b1b',
+      border: '1px solid #fecaca'
+    },
+    loading: {
+      textAlign: 'center',
+      padding: '20px',
+      color: '#6b7280'
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.loading}>Cargando tasa...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.container}>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <h2 style={styles.title}>
+          Configurar Tasa de Cambio
+        </h2>
+        
+        {/* Mensajes de estado */}
+        {message.text && (
+          <div style={{
+            ...styles.message,
+            ...(message.type === 'success' ? styles.messageSuccess : styles.messageError)
+          }}>
+            {message.text}
+          </div>
+        )}
+        
+        {/* Campo del valor */}
+        <div>
+          <label style={styles.label}>
+            Valor de la Tasa *
+          </label>
+          <input
+            type="text"
+            name="valor"
+            value={formData.valor}
+            onChange={handleChange}
+            required
+            style={styles.input}
+            placeholder="Ej: 36.50"
+            disabled={saving}
+          />
+          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+            Ingrese el valor numérico de la tasa (ej: 36.50 para tasa de cambio)
+          </div>
+        </div>
+        
+        {/* Botones */}
+        <div style={styles.buttonContainer}>
+          <button
+            type="button"
+            onClick={handleLimpiar}
+            style={{
+              ...styles.button,
+              ...styles.buttonLimpiar,
+              opacity: saving ? 0.5 : 1
+            }}
+            disabled={saving}
+          >
+            Limpiar
+          </button>
+          
+          <button
+            type="submit"
+            style={{
+              ...styles.button,
+              ...styles.buttonGuardar,
+              ...(saving ? styles.buttonDisabled : {}),
+              opacity: saving ? 0.7 : 1
+            }}
+            disabled={saving}
+          >
+            {saving ? 'Guardando...' : 'Guardar Tasa'}
+          </button>
+        </div>
+      </form>
+      
+      {/* Información adicional */}
+      <div style={{ 
+        marginTop: '20px', 
+        padding: '15px', 
+        backgroundColor: '#f9fafb', 
+        borderRadius: '6px',
+        fontSize: '13px',
+        color: '#6b7280'
+      }}>
+        <div style={{ fontWeight: '500', marginBottom: '5px' }}>
+          💡 Información:
+        </div>
+        <div>• La tasa se guarda en IndexedDB (tabla: config, clave: tasa)</div>
+        <div>• Puedes recuperarla en cualquier momento con: <code>db.get('config', 'tasa')</code></div>
+        <div>• Formato almacenado: número decimal (ej: 36.5)</div>
+      </div>
+    </div>
+  );
+};
+
+export default TasaForm;
+**************************************************
+
+FILE: src/components/TasaImporter.jsx
+------------------------------
+// src/components/TasaImporter.jsx
+import React, { useRef } from 'react';
+import { useDataImport } from '../lib/db/hooks/useDataImport.js';
+import tasaRepository from '../lib/db/repositories/TasaRepository.js';
+
+const TasaImporter = ({ onImportComplete }) => {
+  const fileInputRef = useRef(null);
+  const { importing, result, importFromFile } = useDataImport();
+  const [demoJson, setDemoJson] = useState('');
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const result = await importFromFile(file);
+    if (result.success && onImportComplete) {
+      onImportComplete();
+    }
+  };
+
+  const handleDemoImport = async () => {
+    try {
+      const tasasDemo = [
+        {
+          nombre: "Tasa de Cambio USD/EUR",
+          valor: 0.92,
+          moneda: "EUR",
+          descripcion: "Tasa de cambio dólar a euro",
+          activo: true
+        },
+        {
+          nombre: "Tasa de Cambio USD/GBP",
+          valor: 0.79,
+          moneda: "GBP",
+          descripcion: "Tasa de cambio dólar a libra",
+          activo: true
+        },
+        {
+          nombre: "Tasa de Interés Referencial",
+          valor: 4.25,
+          moneda: "USD",
+          descripcion: "Tasa de interés anual",
+          activo: true
+        }
+      ];
+
+      const count = await tasaRepository.bulkImport(tasasDemo, { clearBeforeImport: false });
+      
+      if (onImportComplete) {
+        onImportComplete();
+      }
+      
+      alert(`✅ ${count} tasas de demostración importadas`);
+    } catch (error) {
+      alert(`❌ Error: ${error.message}`);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const tasas = await tasaRepository.getAll(false);
+      const dataStr = JSON.stringify(tasas, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(dataBlob);
+      link.download = `tasas_${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+    } catch (error) {
+      alert(`Error al exportar: ${error.message}`);
+    }
+  };
+
+  return (
+    <div className="p-4 border rounded-lg space-y-4">
+      <h3 className="font-bold">Importar/Exportar Tasas</h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Importar desde archivo */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium">
+            Importar desde JSON
+          </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleFileSelect}
+            disabled={importing}
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          />
+        </div>
+        
+        {/* Datos de demostración */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium">
+            Datos de demostración
+          </label>
+          <button
+            onClick={handleDemoImport}
+            disabled={importing}
+            className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
+          >
+            Cargar Datos Demo
+          </button>
+        </div>
+        
+        {/* Exportar */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium">
+            Exportar datos
+          </label>
+          <button
+            onClick={handleExport}
+            className="w-full px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+          >
+            Exportar JSON
+          </button>
+        </div>
+      </div>
+      
+      {/* Resultado de importación */}
+      {importing && (
+        <div className="p-2 bg-blue-50 rounded text-center">
+          <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500 mr-2"></div>
+          Importando...
+        </div>
+      )}
+      
+      {result && (
+        <div className={`p-3 rounded ${result.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {result.success 
+            ? `✅ ${result.count} tasas importadas exitosamente`
+            : `❌ Error: ${result.error}`
+          }
+        </div>
+      )}
+    </div>
+  );
+};
+export default TasaImporter;
+**************************************************
+
+FILE: src/components/TasaList.jsx
+------------------------------
+// src/components/TasaList.jsx
+import React, { useState } from 'react';
+import { useTasa } from '../lib/db/hooks/useTasa.js';
+
+const TasaList = () => {
+  const { 
+    tasas, 
+    tasaActiva, 
+    loading, 
+    error, 
+    eliminarTasa, 
+    loadHistorial,
+    historial,
+    stats 
+  } = useTasa();
+  
+  const [busqueda, setBusqueda] = useState('');
+  const [tasaSeleccionada, setTasaSeleccionada] = useState(null);
+
+  const handleEliminar = async (id) => {
+    if (window.confirm('¿Estás seguro de desactivar esta tasa?')) {
+      const result = await eliminarTasa(id);
+      if (result.success) {
+        alert('Tasa desactivada');
+      } else {
+        alert(`Error: ${result.error}`);
+      }
+    }
+  };
+
+  const handleVerHistorial = async (tasa) => {
+    setTasaSeleccionada(tasa);
+    await loadHistorial(tasa.id);
+  };
+
+  if (loading && tasas.length === 0) {
+    return (
+      <div className="p-4 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+        <p className="mt-2">Cargando tasas...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+        Error: {error}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Estadísticas */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="p-4 bg-blue-50 rounded">
+            <p className="text-sm text-gray-600">Total Tasas</p>
+            <p className="text-2xl font-bold">{stats.total}</p>
+          </div>
+          <div className="p-4 bg-green-50 rounded">
+            <p className="text-sm text-gray-600">Activas</p>
+            <p className="text-2xl font-bold">{stats.activas}</p>
+          </div>
+          <div className="p-4 bg-yellow-50 rounded">
+            <p className="text-sm text-gray-600">Promedio</p>
+            <p className="text-2xl font-bold">{stats.promedio.toFixed(4)}</p>
+          </div>
+          <div className="p-4 bg-purple-50 rounded">
+            <p className="text-sm text-gray-600">Rango</p>
+            <p className="text-lg font-bold">
+              {stats.minima.toFixed(4)} - {stats.maxima.toFixed(4)}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tasa Activa */}
+      {tasaActiva && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded">
+          <h3 className="font-bold text-green-800 mb-2">⭐ Tasa Activa Actual</h3>
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-lg font-semibold">{tasaActiva.nombre}</p>
+              <p className="text-2xl font-bold">{tasaActiva.valor} {tasaActiva.moneda}</p>
+            </div>
+            <button
+              onClick={() => handleVerHistorial(tasaActiva)}
+              className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
+            >
+              Ver Historial
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Buscador */}
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="Buscar tasas..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          className="w-full p-2 pl-10 border rounded"
+        />
+        <span className="absolute left-3 top-2.5">🔍</span>
+      </div>
+
+      {/* Lista de Tasas */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold">
+          Todas las Tasas ({tasas.length})
+        </h3>
+        
+        {tasas.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">
+            No hay tasas registradas
+          </p>
+        ) : (
+          tasas.map(tasa => (
+            <div 
+[CONTENIDO SENSIBLE ELIMINADO: TasaList.jsx]
+              className={`p-4 border rounded flex justify-between items-center ${
+                !tasa.activo ? 'bg-gray-50 opacity-75' : ''
+              }`}
+            >
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h4 className="font-medium">{tasa.nombre}</h4>
+                  {!tasa.activo && (
+                    <span className="text-xs bg-gray-200 px-2 py-1 rounded">INACTIVA</span>
+                  )}
+                  {tasa.id === tasaActiva?.id && (
+                    <span className="text-xs bg-green-200 px-2 py-1 rounded">ACTUAL</span>
+                  )}
+                </div>
+                <p className="text-2xl font-bold my-1">{tasa.valor} {tasa.moneda}</p>
+                {tasa.descripcion && (
+                  <p className="text-sm text-gray-600">{tasa.descripcion}</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  Creada: {new Date(tasa.fechaCreacion).toLocaleDateString()}
+                </p>
+              </div>
+              
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handleVerHistorial(tasa)}
+                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                >
+                  Historial
+                </button>
+                <button
+                  onClick={() => handleEliminar(tasa.id)}
+                  className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                >
+                  {tasa.activo ? 'Desactivar' : 'Eliminar'}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Modal de Historial */}
+      {tasaSeleccionada && historial.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-auto">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="text-lg font-bold">
+                Historial: {tasaSeleccionada.nombre}
+              </h3>
+              <button
+                onClick={() => setTasaSeleccionada(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-4">
+              <div className="space-y-3">
+                {historial.map((item, index) => (
+[CONTENIDO SENSIBLE ELIMINADO: TasaList.jsx]
+                    <div className="flex justify-between">
+                      <span className="font-medium">{item.tipo}</span>
+                      <span className="text-sm text-gray-500">
+                        {new Date(item.fechaCambio).toLocaleString()}
+                      </span>
+                    </div>
+                    {item.valorAnterior !== null && (
+                      <div className="mt-2 text-sm">
+                        <span className="text-gray-600">De: </span>
+                        <span className="line-through">{item.valorAnterior}</span>
+                        <span className="mx-2">→</span>
+                        <span className="text-green-600 font-semibold">{item.valorNuevo}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TasaList;
+**************************************************
+
+FILE: src/data/data.json
+------------------------------
+{
+  "productos": [
+    {
+      "id": 1,
+      "nombre": "PARCHITA CREMOSA",
+      "grupo": "cremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/parchitacremosa_400.webp"
+    },
+    {
+      "id": 2,
+      "nombre": "PINA CREMOSA",
+      "grupo": "cremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/pinacremosa_400.webp"
+    },
+    {
+      "id": 3,
+      "nombre": "DURAZNO cremoso",
+      "grupo": "cremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/duraznocremoso_400.webp"
+    },
+    {
+      "id": 4,
+      "nombre": "FRESA",
+      "grupo": "cremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/fresa_400.webp"
+    },
+    {
+      "id": 5,
+      "nombre": "GUANA-GUANA",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/guanaguana_400.webp"
+    },
+    {
+      "id": 6,
+      "nombre": "OREO CREMITA",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/oreocremita_400.webp"
+    },
+    {
+      "id": 7,
+      "nombre": "PIE PARCHITA",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/pieparchita_400.webp"
+    },
+    {
+      "id": 8,
+      "nombre": "PIE NARANJA",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/pienaranja_400.webp"
+    },
+    {
+      "id": 9,
+      "nombre": "CHOCO OREO",
+      "grupo": "premium",
+      "stock": 0,
+      "imagen": "/outputs/small/_chocooreo_400.webp"
+    },
+    {
+      "id": 10,
+      "nombre": "DALMATA",
+      "grupo": "premium",
+      "stock": 0,
+      "imagen": "/outputs/small/_dalmata_400.webp"
+    },
+    {
+      "id": 11,
+      "nombre": "VAINILLA",
+      "grupo": "premium",
+      "stock": 0,
+      "imagen": "/outputs/small/_vainilla_400.webp"
+    },
+    {
+      "id": 12,
+      "nombre": "COCO",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/coco_400.webp"
+    },
+    {
+      "id": 13,
+      "nombre": "PIE LIMON",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/pielimon_400.webp"
+    },
+    {
+      "id": 14,
+      "nombre": "CHOKO MILK",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/chokomilk_400.webp"
+    },
+    {
+      "id": 15,
+      "nombre": "AGUACATE",
+      "grupo": "cremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/aguacate_400.webp"
+    },
+    {
+      "id": 16,
+      "nombre": "MANI cremoso",
+      "grupo": "cremoso",
+      "stock": 1,
+      "imagen": "/outputs/small/manicremoso_400.webp"
+    },
+    {
+      "id": 17,
+      "nombre": "FRESA BLANCO",
+      "grupo": "premium",
+      "stock": 0,
+      "imagen": "/outputs/small/fresablanco_400.webp"
+    },
+    {
+      "id": 18,
+      "nombre": "TAMARINDO",
+      "grupo": "ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/tamarindo_400.webp"
+    },
+    {
+      "id": 19,
+      "nombre": "RON CON PASAS",
+      "grupo": "ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/ronconpasas_400.webp"
+    },
+    {
+      "id": 20,
+      "nombre": "NATUGOMITAS",
+      "grupo": "ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/natugomitas_400.webp"
+    },
+    {
+      "id": 21,
+      "nombre": "MORA CREMOSA",
+      "grupo": "ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/moracremosa_400.webp"
+    },
+    {
+      "id": 22,
+      "nombre": "CAFE LATTE",
+      "grupo": "ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/cafelatte_400.webp"
+    },
+    {
+      "id": 23,
+      "nombre": "CHOCO LIGHT",
+      "grupo": "ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/chocolight_400.webp"
+    },
+    {
+      "id": 24,
+      "nombre": "TAMARINDO CITRICO",
+      "grupo": "ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/tamarindocitrico_400.webp"
+    },
+    {
+      "id": 25,
+      "nombre": "COCOSETTE",
+      "grupo": "ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/cocosette_400.webp"
+    },
+    {
+      "id": 26,
+      "nombre": "CHOCO SUSSY",
+      "grupo": "ninguno",
+      "stock": 0,
+      "imagen": "/outputs/small/chocosussy_400.webp"
+    },
+        {
+      "id": 27,
+      "nombre": "Pastelados1",
+      "grupo": "premium",
+      "stock": 1,
+      "imagen": "/outputs/small/pastelados_400.webp"
+    },
+    {
+      "id": 28,
+      "nombre": "Pastelados2",
+      "grupo": "premium",
+      "stock": 0,
+      "imagen": "/outputs/small/pastela2_400.webp"
+    }
+  ]
+}
+
+
+
+**************************************************
+
+FILE: src/data/grupos.json
+------------------------------
+{
+  "cremoso": 0.5,
+  "fullcremoso": 0.7,
+  "premium": 1.0,
+  "ninguno": 0.0
+}
+**************************************************
+
+FILE: src/hooks/useLocalStorageList.js
+------------------------------
+import { useState, useEffect } from "react";
+
+[CONTENIDO SENSIBLE ELIMINADO: useLocalStorageList.js]
+  const [data, setData] = useState(() => {
+[CONTENIDO SENSIBLE ELIMINADO: useLocalStorageList.js]
+    return stored ? JSON.parse(stored) : initialValue;
+  });
+
+  useEffect(() => {
+[CONTENIDO SENSIBLE ELIMINADO: useLocalStorageList.js]
+[CONTENIDO SENSIBLE ELIMINADO: useLocalStorageList.js]
+
+  return { data, setData };
+}
+
+**************************************************
+
+FILE: src/index.css
+------------------------------
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+**************************************************
+
+FILE: src/lib/db/database copy.js
+------------------------------
+// src/lib/db/database.js
+
+import Dexie from "dexie";
+
+const db = new Dexie("dbTasaBCV");
+
+// Actualizar esquema para incluir tabla de configuración
+db.version(2).stores({
+  productos: 'id, nombre, grupo, stock, imagen, createdAt',
+  grupos: '++id, nombre, precio',
+  config: 'clave' // Clave primaria única
+});
+
+// Para migración desde versión 1
+db.version(1).stores({
+  productos: 'id, nombre, grupo, stock, imagen, createdAt',
+  grupos: '++id, nombre, precio'
+});
+
+export { db };
+
+**************************************************
+
+FILE: src/lib/db/database.js
+------------------------------
+// src/lib/db/database.js
+import Dexie from 'dexie';
+
+export class NaturaDBClass {
+  constructor() {
+    this.db = new Dexie('dbTasaBCV');
+    
+    // Versión 1 - Esquema inicial
+    this.db.version(1).stores({
+      productos: 'id, nombre, grupo, stock, imagen, createdAt',
+      grupos: '++id, nombre, precio'
+    });
+
+    // Versión 2 - Agrega tabla config
+    this.db.version(2).stores({
+      productos: 'id, nombre, grupo, stock, imagen, createdAt',
+      grupos: '++id, nombre, precio',
+      config: 'clave'
+    }).upgrade(trans => {
+      // Migración: puedes inicializar datos aquí si es necesario
+      console.log('Migrando a versión 2...');
+    });
+
+    // Referencias CORRECTAS usando this.db
+    this.productos = this.db.productos;
+    this.grupos = this.db.grupos;
+    this.config = this.db.config;
+  }
+
+  // Abrir db
+  async init() {
+    await this.db.open();
+    console.log("db open.");
+    return this;
+  }
+
+  // Métodos SimpleRepo compatibles
+  async add(table, data) {
+    return await this.db[table].add(data);
+  }
+
+  // FALTABA: método get() que se usa en updateStock()
+  async get(table, id) {
+    return await this.db[table].get(id);
+  }
+
+  async getAll(table, filters = {}) {
+    let query = this.db[table];
+[CONTENIDO SENSIBLE ELIMINADO: database.js]
+[CONTENIDO SENSIBLE ELIMINADO: database.js]
+    }
+    return await query.toArray();
+  }
+
+  // getById es redundante con get(), puedes eliminar uno
+  async getById(table, id) {
+    return await this.db[table].get(id);
+  }
+
+  async put(table, data) {
+    return await this.db[table].put(data);
+  }
+
+  async del(table, id) {
+    await this.db[table].delete(id);
+  }
+
+  // Métodos adicionales específicos
+  async getProductosByGrupo(grupoId) {
+    return await this.db.productos.where('grupo').equals(grupoId).toArray();
+  }
+
+  async updateStock(productoId, cantidad) {
+    // Ahora this.get() existe
+    const producto = await this.get('productos', productoId);
+    if (producto) {
+      const nuevoStock = Math.max(0, producto.stock + cantidad);
+      return await this.put('productos', {
+        ...producto,
+        stock: nuevoStock
+      });
+    }
+    return null;
+  }
+
+  async getConfigValue(clave) {
+    const config = await this.get('config', clave);
+    return config ? config.valor : null;
+  }
+
+  async setConfigValue(clave, valor) {
+    return await this.put('config', {
+      clave,
+      valor,
+      updatedAt: new Date()
+    });
+  }
+}
+
+// Exportar instancia global
+export const db = new NaturaDBClass();
+**************************************************
+
+FILE: src/lib/db/hooks/useTasa.js
+------------------------------
+// src/lib/db/hooks/useTasa.js
+import { useState, useEffect, useCallback } from 'react';
+import tasaRepository from '../repositories/TasaRepository.js';
+
+export function useTasa() {
+  const [tasas, setTasas] = useState([]);
+  const [tasaActiva, setTasaActiva] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [historial, setHistorial] = useState([]);
+  const [stats, setStats] = useState(null);
+
+  // Cargar todas las tasas
+  const loadTasas = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [tasasData, tasaActivaData, statsData] = await Promise.all([
+        tasaRepository.getAll(),
+        tasaRepository.getActive(),
+        tasaRepository.getStats()
+      ]);
+      
+      setTasas(tasasData);
+      setTasaActiva(tasaActivaData);
+      setStats(statsData);
+      setError(null);
+    } catch (err) {
+      setError(err.message || 'Error al cargar tasas');
+      console.error('Error en loadTasas:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Cargar historial de una tasa
+  const loadHistorial = useCallback(async (tasaId) => {
+    try {
+      const historialData = await tasaRepository.getHistorial(tasaId);
+      setHistorial(historialData);
+    } catch (err) {
+      setError(err.message || 'Error al cargar historial');
+    }
+  }, []);
+
+  // Crear nueva tasa
+  const crearTasa = useCallback(async (tasaData) => {
+    try {
+      const id = await tasaRepository.create(tasaData);
+      await loadTasas(); // Refrescar lista
+      return { success: true, id };
+    } catch (err) {
+      const errorMsg = err.message || 'Error al crear tasa';
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  }, [loadTasas]);
+
+  // Actualizar tasa
+  const actualizarTasa = useCallback(async (id, updates) => {
+    try {
+      await tasaRepository.update(id, updates);
+      await loadTasas(); // Refrescar lista
+      return { success: true };
+    } catch (err) {
+      const errorMsg = err.message || 'Error al actualizar tasa';
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  }, [loadTasas]);
+
+  // Eliminar tasa (soft delete)
+  const eliminarTasa = useCallback(async (id) => {
+    try {
+      await tasaRepository.delete(id);
+      await loadTasas(); // Refrescar lista
+      return { success: true };
+    } catch (err) {
+      const errorMsg = err.message || 'Error al eliminar tasa';
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  }, [loadTasas]);
+
+  // Buscar tasas
+  const buscarTasas = useCallback(async (query) => {
+    try {
+      setLoading(true);
+      const resultados = await tasaRepository.search(query);
+      setTasas(resultados);
+      setError(null);
+    } catch (err) {
+      setError(err.message || 'Error en búsqueda');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Cargar datos al inicio
+  useEffect(() => {
+    loadTasas();
+  }, [loadTasas]);
+
+  return {
+    // Datos
+    tasas,
+    tasaActiva,
+    historial,
+    stats,
+    
+    // Estados
+    loading,
+    error,
+    
+    // Acciones CRUD
+    crearTasa,
+    actualizarTasa,
+    eliminarTasa,
+    buscarTasas,
+    loadHistorial,
+    
+    // Utilidades
+    refresh: loadTasas,
+    resetError: () => setError(null),
+    resetHistorial: () => setHistorial([])
+  };
+  
+}
+
+**************************************************
+
+FILE: src/lib/db/hooks/useTasaBCV.js
+------------------------------
+// src/lib/db/hooks/useTasaBCV.js
+import { useState, useEffect } from 'react';
+import { db } from '../database.js';
+
+export function useTasaBCV() {
+  const [tasa, setTasa] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // Cargar tasa al inicio
+  useEffect(() => {
+    async function loadTasa() {
+      try {
+        // Buscar en la tabla 'config' donde clave = 'tasa'
+        const config = await db.config.get('tasa');
+        
+        if (config && config.valor) {
+          // Asegurar que siempre tenga punto decimal
+          const valor = String(config.valor).replace(',', '.');
+          setTasa(valor);
+        } else {
+          setTasa(''); // Vacío si no existe
+        }
+      } catch (error) {
+        console.error('Error cargando tasa:', error);
+        setTasa('');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadTasa();
+  }, []);
+
+  // Guardar tasa
+  const saveTasa = async (valor) => {
+    try {
+      // Normalizar: reemplazar coma por punto
+      const tasaNormalizada = String(valor).replace(',', '.');
+      
+      // Guardar como número con punto decimal
+      const tasaNumero = parseFloat(tasaNormalizada);
+      
+      // Verificar que sea un número válido
+      if (isNaN(tasaNumero)) {
+        console.error('Valor no es un número:', valor);
+        return false;
+      }
+
+      // Guardar en IndexedDB
+      await db.config.put({
+        clave: 'tasa',
+        valor: tasaNumero, // Guardar como número
+        fechaActualizacion: new Date(),
+        tipo: 'decimal'
+      });
+
+      console.log('Tasa guardada:', tasaNumero);
+      return true;
+
+    } catch (error) {
+      console.error('Error guardando tasa:', error);
+      return false;
+    }
+  };
+
+  return {
+    tasa,
+    setTasa,
+    saveTasa,
+    loading
+  };
+}
+**************************************************
+
+FILE: src/lib/db/index.js
+------------------------------
+export {default as db} from './db';
+// export * from './hooks';
+// export * from './repositories';
+
+
+**************************************************
+
+FILE: src/lib/db/repositories/RepoRecommStructure.js
+------------------------------
+// Ejemplo de repositorio completo para Tasa
+class TasaRepository {
+  // === CRUD BÁSICO ===
+  async create(data) { /* ... */ }
+  async getById(id) { /* ... */ }
+  async getAll() { /* ... */ }
+  async update(id, data) { /* ... */ }
+  async delete(id) { /* ... */ }
+  
+  // === CONSULTAS ESPECÍFICAS ===
+  async getActivas() { /* ... */ }
+  async getByMoneda(moneda) { /* ... */ }
+  async getByRangoValor(min, max) { /* ... */ }
+  
+  // === BÚSQUEDAS ===
+  async search(term) { /* ... */ }
+  async getFiltradas(filtros) { /* ... */ }
+  
+  // === AGREGACIONES ===
+  async getEstadisticas() { /* ... */ }
+  async getConteoPorMoneda() { /* ... */ }
+  
+  // === VALIDACIONES ===
+  async validarTasa(data) { /* ... */ }
+  async existeTasaSimilar(data) { /* ... */ }
+  
+  // === OPERACIONES MASIVAS ===
+  async bulkInsert(tasas) { /* ... */ }
+  async bulkUpdate(ids, updates) { /* ... */ }
+  
+  // === HISTORIAL/AUDITORÍA ===
+  async getHistorial(tasaId) { /* ... */ }
+  async registrarCambio(tasaId, cambios) { /* ... */ }
+  
+  // === SINCRONIZACIÓN ===
+  async getCambiosPendientes() { /* ... */ }
+  async marcarComoSincronizado(id) { /* ... */ }
+  
+  // === UTILIDADES ===
+  async hacerBackup() { /* ... */ }
+  async compactar() { /* ... */ }
+  async getInfo() { /* ... */ }
+}
+**************************************************
+
+FILE: src/lib/db/repositories/TasaRepository.js
+------------------------------
+// src/lib/db/repositories/TasaRepository.js
+import { db } from "../database";
+
+[CONTENIDO SENSIBLE ELIMINADO: TasaRepository.js]
+
+export const TasaRepository = {
+  async getTasa() {
+    // Busca en la tabla 'config' que es la correcta según el esquema
+[CONTENIDO SENSIBLE ELIMINADO: TasaRepository.js]
+  },
+
+  async saveTasa(valor) {
+    // Usa el método setConfigValue definido en NaturaDBClass
+[CONTENIDO SENSIBLE ELIMINADO: TasaRepository.js]
+  },
+
+  async convertirABs(valorenDolar) {
+[CONTENIDO SENSIBLE ELIMINADO: TasaRepository.js]
+    
+    if (!valor || typeof valor !== "number") {
+      console.warn("Tasa no configurada en DB. Retornando 0.");
+      return 0;
+    }
+    
+    return valor * Number(valorenDolar || 0);
+  }
+};
+
+**************************************************
+
+FILE: src/lib/db/utils/Importer.js
+------------------------------
+// src/lib/db/utils/Importer.js
+import { db } from '../database.js';
+
+const Importer = {
+    async ImportGrupos(jsonData) {
+        try {
+            // 1. CONVERTIR {clave:valor} a [{nombre, precio}]
+            const gruposArray = Object.entries(jsonData).map(([nombre, precio]) => ({
+                nombre: nombre,
+                precio: Number(precio)
+            }));
+
+            // 2. LIMPIAR TABLA
+            await db.grupos.clear();
+
+            // 3. INSERTAR NUEVOS DATOS
+            await db.grupos.bulkAdd(gruposArray);
+
+            return {
+                success: true,
+                count: gruposArray.length,
+                message: `${gruposArray.length} grupos importados`
+            };
+
+        } catch (error) {
+            console.error('Error en importación:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    },
+
+    async ImportProductos(jsonData) {
+        try {
+            // ¡CORRECCIÓN! - jsonData ya es el array de productos
+            // No necesitas Object.entries, ya viene como array
+            const productosArray = jsonData.productos || jsonData;
+
+            console.log('Productos a importar:', productosArray.length);
+            console.log('Primer producto:', productosArray[0]);
+
+            // 1. LIMPIAR TABLA
+            await db.TBPRODUCTOS.clear();
+
+            // 2. INSERTAR NUEVOS DATOS UNO POR UNO
+            let importados = 0;
+            for (const producto of productosArray) {
+                try {
+                    await db.productos.add({
+                        id: producto.id,
+                        nombre: producto.nombre,
+                        grupo: producto.grupo,
+                        stock: Number(producto.stock),
+                        imagen: producto.imagen,
+                        createdAt: new Date() // Agregar timestamp
+                    });
+                    importados++;
+                } catch (error) {
+                    console.error(`Error insertando producto ${producto.id}:`, error);
+                }
+            }
+
+            return {
+                success: true,
+                count: importados,
+                total: productosArray.length,
+                message: `${importados} de ${productosArray.length} productos importados`
+            };
+
+        } catch (error) {
+            console.error('Error en importación de productos:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+};
+
+export default Importer;
+**************************************************
+
+FILE: src/lib/db/utils/tasaUtil.js
+------------------------------
+// src/lib/db/utils/tasaUtil.js
+import { db } from '../database.js';
+
+export async function getTasaBCV() {
+  try {
+    const valor = await db.getConfigValue('tasa');
+    return valor ? parseFloat(valor) : null;
+  } catch (error) {
+    console.error('Error obteniendo tasa desde utils:', error);
+    return null;
+  }
+}
+
+export async function calcularEnDolares(bs, tasa = null) {
+  try {
+    if (!tasa) {
+      tasa = await getTasaBCV();
+    }
+
+    if (!tasa || tasa <= 0) {
+      console.warn('Cálculo cancelado: Tasa inválida');
+      return null;
+    }
+
+    const dolares = parseFloat(bs) / parseFloat(tasa);
+    return Math.round(dolares * 100) / 100;
+  } catch (error) {
+    console.error('Error calculando conversión:', error);
+    return null;
+  }
+}
+
+**************************************************
+
+FILE: src/main.jsx
+------------------------------
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import App from "./App";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+);
+
+**************************************************
+
+FILE: src/pages/About.jsx
+------------------------------
+export default function About() {
+  return <h1>About Page</h1>;
+}
+
+**************************************************
+
+FILE: src/pages/Admin.module.css
+------------------------------
+.adminContainer {
+  padding: 20px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+h2, h3 {
+  text-align: center;
+  color: #00BFFF;
+}
+
+/* AQUI AGREGAMOS COLOR NEGRO A TODO EL CONTENIDO DE LAS FILAS */
+.item, 
+.item p,
+.item strong,
+.info p {
+  color: #000 !important;
+}
+
+.formBox {
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.formBox input {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #bbb;
+}
+
+.saveBtn {
+  background: #00BFFF;
+  border: none;
+  padding: 10px;
+  color: #fff;
+  border-radius: 8px;
+  margin-top: 10px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.cancelBtn {
+  background: #ccc;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.item {
+  background: #fff;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.item img {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.info {
+  flex: 1;
+}
+
+.actions button {
+  margin-left: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  color: #000; /* aseguramos color visible */
+}
+
+.actions button:first-child {
+  background: #FFB800;
+}
+
+.actions button:last-child {
+  background: #FF5757;
+  color: #fff;
+}
+
+/* ------------------- */
+/*       MODAL         */
+/* ------------------- */
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modalContent {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  color: #000; /* texto negro dentro del modal */
+}
+
+**************************************************
+
+FILE: src/pages/GruposPage.jsx
+------------------------------
+// src/pages/GruposPage.jsx
+import React from 'react';
+import GruposCRUD from '../components/GruposCRUD/GruposCRUD';
+
+const GruposPage = () => {
+  return (
+    <div>
+      <GruposCRUD />
+    </div>
+  );
+};
+
+export default GruposPage;
+**************************************************
+
+FILE: src/pages/Home.jsx
+------------------------------
+import { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
+import { db } from '../lib/db/database.js';
+import { getTasaBCV } from '../lib/db/utils/tasaUtil.js';
+
+function Home() {
+    const [productos, setProductos] = useState([]);
+    const [grupos, setGrupos] = useState([]);
+    const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
+    const [tasa, setTasa] = useState(0);
+    const [cargando, setCargando] = useState(true);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const cargarTodo = async () => {
+            try {
+                await db.init();
+                const [p, g, t] = await Promise.all([
+                    db.getAll('productos'),
+                    db.getAll('grupos'),
+                    getTasaBCV()
+                ]);
+                setProductos(p);
+                setGrupos(g);
+                setTasa(t || 0);
+            } catch (err) {
+                console.error("Error inicializando Home:", err);
+            } finally {
+                setCargando(false);
+            }
+        };
+        cargarTodo();
+    }, []);
+
+    const seleccionarProducto = (producto) => {
+        setListaDeSeleccionados(prev => [...prev, producto]);
+    };
+
+    const calcularTotales = () => {
+        let usd = 0;
+        listaDeSeleccionados.forEach(item => {
+            // Buscamos el precio del grupo al que pertenece el producto
+            const grupoInfo = grupos.find(g => g.nombre === item.grupo);
+            usd += grupoInfo ? grupoInfo.precio : 0;
+        });
+        return { usd, bs: usd * tasa };
+    };
+
+    const { usd, bs } = calcularTotales();
+
+    if (cargando) return <div>Cargando tienda...</div>;
+
+    return (
+        <div style={{ padding: '20px', paddingBottom: '150px' }}>
+            <h1>Natura Ice</h1>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                {productos.filter(p => p.stock > 0).map(p => (
+[CONTENIDO SENSIBLE ELIMINADO: Home.jsx]
+                        <img src={p.imagen} style={{ width: '100%', height: '100px', objectFit: 'cover' }} />
+                        <p>{p.nombre}</p>
+                        <small>Stock: {p.stock}</small>
+                    </div>
+                ))}
+            </div>
+
+            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', padding: '20px', borderTop: '2px solid #007bff' }}>
+                <h3>Total: ${usd.toFixed(2)} | Bs. {bs.toFixed(2)}</h3>
+                <button onClick={() => setListaDeSeleccionados([])}>Vaciar</button>
+                <button onClick={() => navigate("/Panel")} style={{ marginLeft: '10px' }}>Panel Admin</button>
+            </div>
+        </div>
+    );
+}
+
+export default Home;
+
+**************************************************
+
+FILE: src/pages/Home.module.css
+------------------------------
+.title{
+    text-align: center;
+    font-size: 28px;
+    color: #00BFFF;
+}
+
+/* Contenedor principal deja espacio abajo para la lista fija */
+.container {
+  padding-bottom: 260px; /* suficiente para lista de seleccionados + total + margen */
+}
+
+/* Grid principal */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr; /* una card por fila */
+  gap: 16px;
+  justify-content: center;
+  padding: 0 12px; /* margen lateral */
+}
+
+/* Card individual */
+.card {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  width: 100%;        
+  max-width: 100%;    
+  margin: 0 auto;     
+  min-height: 100px;  
+  cursor: pointer; /* indica que es clickable */
+  margin-right: 8px; /* evita que quede pegada al borde derecho */
+}
+/* Imagen dentro de la card */
+.card img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+/* Nombre del producto */
+.card p {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  color: red;
+}
+
+/* Hover effect */
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Contenedor fijo de seleccionados */
+.selectedContainer {
+  position: fixed;
+  bottom: 10px;
+  left: 12px;
+  right: 12px;
+  background-color: #f0f0f0;
+  border-radius: 12px;
+  padding: 8px;
+  max-height: 240px; /* hasta 3 items + total */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 999; /* encima de la grid */
+}
+
+/* Header selected */
+.selectedHeader {
+  font-weight: bold;
+  margin-bottom: 4px;
+  color: #000;
+}
+
+/* Lista de items con scroll */
+.selectedList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  max-height: 180px; /* scroll para más de 3 items */
+  padding-right: 4px; /* margen interno para scroll */
+}
+
+/* Item seleccionado */
+.selectedItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  padding: 4px 8px; /* altura reducida */
+  border-radius: 8px;
+  color: #000;
+  font-size: 0.95rem;
+}
+
+/* Botón eliminar dentro de cada item */
+.selectedItem button {
+  background: #FF5757;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+/* Botón Vaciar fuera de la lista scrollable */
+.vaciarBtn {
+  margin-top: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #FF5757;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* Modal overlay y content */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  min-width: 300px;
+}
+
+**************************************************
+
+FILE: src/pages/Lista.jsx
+------------------------------
+import { useLocalStorageList } from "../hooks/useLocalStorageList";
+
+function Lista() {
+  const { data } = useLocalStorageList("productos", []);
+
+  return (
+    <div>
+      <h2>Lista de Helados</h2>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
+        {data.map((producto) => (
+[CONTENIDO SENSIBLE ELIMINADO: Lista.jsx]
+            <img
+              src={producto.imagen}
+              alt={producto.nombre}
+              style={{ width: "100%", borderRadius: "8px" }}
+            />
+            <p>{producto.nombre}</p>
+            <small>{producto.grupo}</small>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default Lista;
+
+**************************************************
+
+FILE: src/pages/NotFound.jsx
+------------------------------
+export default function NotFound() {
+  return <h1>404 - Página no encontrada</h1>;
+}
+
+**************************************************
+
+FILE: src/pages/ProductosPage.jsx
+------------------------------
+// src/pages/ProductosPage.jsx
+import React from 'react';
+import ProductosCRUD from '../components/ProductosCRUD/ProductosCRUD';
+
+const ProductosPage = () => {
+  return (
+    <div>
+      <ProductosCRUD />
+    </div>
+  );
+};
+
+export default ProductosPage;
+**************************************************
+
+FILE: src/pages/TasaBCV.jsx
+------------------------------
+// src/pages/TasaBCV.jsx
+import { useState } from 'react';
+import { useTasaBCV } from "../lib/db/hooks/useTasaBCV";
+import styles from './TasaBCV.module.css'; // Opcional
+
+export default function TasaBCV() {
+  const { tasa, setTasa, saveTasa, loading } = useTasaBCV();
+  const [message, setMessage] = useState('');
+
+  // Manejar cambio de input
+  const handleChange = (e) => {
+    let valor = e.target.value;
+    
+    // Permitir solo números y un punto decimal
+    valor = valor.replace(/[^0-9.]/g, '');
+    
+    // Asegurar solo un punto decimal
+    const puntos = valor.split('.').length - 1;
+    if (puntos > 1) {
+      // Si hay más de un punto, mantener solo el primero
+      const partes = valor.split('.');
+      valor = partes[0] + '.' + partes.slice(1).join('');
+    }
+    
+    setTasa(valor);
+  };
+
+  // Manejar envío del formulario
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!tasa.trim()) {
+      setMessage('⚠️ Ingresa un valor para la tasa');
+      return;
+    }
+
+    // Convertir a número para validación
+    const tasaNumero = parseFloat(tasa.replace(',', '.'));
+    
+    if (isNaN(tasaNumero) || tasaNumero <= 0) {
+      setMessage('❌ Ingresa un número válido mayor que 0');
+      return;
+    }
+
+    setMessage('💾 Guardando...');
+    
+    const success = await saveTasa(tasa);
+    
+    if (success) {
+      setMessage(`✅ Tasa BCV guardada: $${tasaNumero.toFixed(2)}`);
+      
+      // Limpiar mensaje después de 3 segundos
+      setTimeout(() => setMessage(''), 3000);
+    } else {
+      setMessage('❌ Error al guardar la tasa');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loading}>⏳ Cargando tasa BCV...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      <h1 className={styles.title}>💰 Tasa BCV</h1>
+      
+      <div className={styles.currentRate}>
+        {tasa ? (
+          <>
+            <span>Tasa actual: </span>
+            <strong>${parseFloat(tasa).toFixed(2)}</strong>
+          </>
+        ) : (
+          <span>No hay tasa configurada</span>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <div className={styles.inputGroup}>
+          <label htmlFor="tasa">Nueva Tasa BCV:</label>
+          <input
+            id="tasa"
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9]*[.]?[0-9]*"
+            placeholder="Ej: 36.50"
+            value={tasa}
+            onChange={handleChange}
+            className={styles.input}
+          />
+          <small className={styles.hint}>
+            Usa punto decimal (ej: 36.50)
+          </small>
+        </div>
+
+        {message && (
+          <div className={`${styles.message} ${
+            message.includes('✅') ? styles.success : 
+            message.includes('⚠️') ? styles.warning : 
+            styles.error
+          }`}>
+            {message}
+          </div>
+        )}
+
+        <button 
+          type="submit" 
+          className={styles.button}
+          disabled={!tasa.trim()}
+        >
+          💾 Guardar Tasa
+        </button>
+      </form>
+    </div>
+  );
+}
+**************************************************
+
+FILE: src/pages/TasaBCV.module.css
+------------------------------
+/* src/pages/TasaBCV.module.css */
+.container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.title {
+  color: #2c3e50;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.currentRate {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  text-align: center;
+  border: 1px solid #e9ecef;
+}
+
+.currentRate strong {
+  color: #28a745;
+  font-size: 1.2em;
+}
+
+.form {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.inputGroup {
+  margin-bottom: 20px;
+}
+
+.inputGroup label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.input {
+  width: 100%;
+  padding: 12px 15px;
+  font-size: 16px;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  box-sizing: border-box;
+  transition: border-color 0.3s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+}
+
+.hint {
+  display: block;
+  margin-top: 5px;
+  color: #6c757d;
+  font-size: 0.9em;
+}
+
+.button {
+  width: 100%;
+  padding: 14px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.button:hover:not(:disabled) {
+  background: #218838;
+}
+
+.button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.message {
+  padding: 12px 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.loading {
+  text-align: center;
+  padding: 50px;
+  font-size: 1.2em;
+  color: #6c757d;
+}
+**************************************************
+
+FILE: vite.config.js
+------------------------------
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [
+    react({
+      babel: {
+        plugins: [['babel-plugin-react-compiler']],
+      },
+    }),
+  ],
+})
+
+
+
+**************************************************

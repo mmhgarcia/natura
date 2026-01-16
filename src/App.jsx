@@ -4,8 +4,8 @@ import Lista from "./pages/Lista";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import Panel from "./components/Panel/Panel";
-import AdminProductos from "./pages/AdminProductos";
-import AdminGrupos from "./pages/AdminGrupos";
+
+
 import TasaBCV from "./pages/TasaBCV";
 
 import Header from "./components/Header";

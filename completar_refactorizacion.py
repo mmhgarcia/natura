@@ -1,4 +1,48 @@
-import { useState, useEffect } from 'react';
+import os
+import re
+from pathlib import Path
+
+def completar_fases_finales():
+    base_path = Path(".")
+    app_jsx = base_path / "src" / "App.jsx"
+    home_jsx = base_path / "src" / "pages" / "Home.jsx"
+    
+    # Archivos obsoletos a eliminar
+    archivos_obsoletos = [
+        base_path / "src" / "pages" / "AdminGrupos.jsx",
+        base_path / "src" / "pages" / "AdminProductos.jsx",
+        base_path / "src" / "pages" / "Home copy.jsx",
+        base_path / "src" / "hooks" / "useLocalStorage.js"
+    ]
+
+    print("--- Iniciando Fase Final de Refactorización ---")
+
+    # 1. ELIMINAR ARCHIVOS OBSOLETOS
+    for archivo in archivos_obsoletos:
+        if archivo.exists():
+            os.remove(archivo)
+            print(f"✓ Eliminado archivo obsoleto: {archivo.name}")
+
+    # 2. RE-CONECTAR RUTAS EN App.jsx
+    # Redirigimos /admingrupos y /adminproductos a las versiones que usan IndexedDB
+    if app_jsx.exists():
+        content = app_jsx.read_text(encoding='utf-8')
+        # Cambiamos las importaciones para usar las "Pages" que cargan los CRUDs de IndexedDB
+        content = content.replace('import AdminProductos from "./pages/AdminProductos";', '')
+        content = content.replace('import AdminGrupos from "./pages/AdminGrupos";', '')
+        
+        # Aseguramos que las rutas usen los componentes correctos
+        content = re.sub(r'<Route path="/adminproductos" element={<AdminProductos />} />', 
+                         '<Route path="/adminproductos" element={<ProductosPage />} />', content)
+        content = re.sub(r'<Route path="/admingrupos" element={<AdminGrupos />} />', 
+                         '<Route path="/admingrupos" element={<GruposPage />} />', content)
+        
+        app_jsx.write_text(content, encoding='utf-8')
+        print(f"✓ App.jsx: Rutas administrativas vinculadas a IndexedDB.")
+
+    # 3. IMPLEMENTAR LÓGICA DE PRECIOS REALES EN Home.jsx
+    if home_jsx.exists():
+        new_home_logic = """import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import { db } from '../lib/db/database.js';
 import { getTasaBCV } from '../lib/db/utils/tasaUtil.js';
@@ -73,3 +117,11 @@ function Home() {
 }
 
 export default Home;
+"""
+        home_jsx.write_text(new_home_logic, encoding='utf-8')
+        print(f"✓ Home.jsx: Cálculo de precios por grupo implementado.")
+
+    print("--- Refactorización finalizada ---")
+
+if __name__ == "__main__":
+    completar_fases_finales()

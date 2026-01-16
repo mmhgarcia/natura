@@ -1,44 +1,27 @@
 // src/lib/db/repositories/TasaRepository.js
-
 import { db } from "../database";
 
-const TASA_ID = 1;
+const TASA_KEY = 'tasa';
 
 export const TasaRepository = {
-
   async getTasa() {
-
-    return await db.tasa.get(TASA_ID);
-
+    // Busca en la tabla 'config' que es la correcta según el esquema
+    return await db.getConfigValue(TASA_KEY);
   },
 
   async saveTasa(valor) {
-
-    await db.tasa.put({
-      
-      id: TASA_ID,
-      
-      valor: Number(valor),
-      
-      updatedAt: new Date()
-    
-    });
-  
+    // Usa el método setConfigValue definido en NaturaDBClass
+    return await db.setConfigValue(TASA_KEY, Number(valor));
   },
 
   async convertirABs(valorenDolar) {
+    const valor = await db.getConfigValue(TASA_KEY);
     
-    const tasa = await db.tasa.get(TASA_ID);
-
-    if (!tasa || typeof tasa.valor !== "number") {
-
+    if (!valor || typeof valor !== "number") {
+      console.warn("Tasa no configurada en DB. Retornando 0.");
       return 0;
-
     }
-
-    return tasa.valor * Number(valorenDolar || 0);
-  
+    
+    return valor * Number(valorenDolar || 0);
   }
-
 };
-
