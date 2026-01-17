@@ -4,7 +4,7 @@
       "id": 1,
       "nombre": "PARCHITA CREMOSA",
       "grupo": "cremoso",
-      "stock": 1,
+      "stock": 0,
       "imagen": "/outputs/small/parchitacremosa_400.webp"
     },
     {
@@ -23,7 +23,7 @@
     },
     {
       "id": 4,
-      "nombre": "FRESA",
+      "nombre": "FRESA CREMOSA",
       "grupo": "cremoso",
       "stock": 1,
       "imagen": "/outputs/small/fresa_400.webp"
@@ -60,22 +60,22 @@
       "id": 9,
       "nombre": "CHOCO OREO",
       "grupo": "premium",
-      "stock": 0,
-      "imagen": "/outputs/small/_chocooreo_400.webp"
+      "stock": 1,
+      "imagen": ""
     },
     {
       "id": 10,
       "nombre": "DALMATA",
       "grupo": "premium",
-      "stock": 0,
-      "imagen": "/outputs/small/_dalmata_400.webp"
+      "stock": 1,
+      "imagen": ""
     },
     {
       "id": 11,
       "nombre": "VAINILLA",
       "grupo": "premium",
-      "stock": 0,
-      "imagen": "/outputs/small/_vainilla_400.webp"
+      "stock": 1,
+      "imagen": ""
     },
     {
       "id": 12,
@@ -107,95 +107,82 @@
     },
     {
       "id": 16,
-      "nombre": "MANI cremoso",
-      "grupo": "cremoso",
-      "stock": 1,
+      "nombre": "MANI",
+      "grupo": "fullcremoso",
+      "stock": 0,
       "imagen": "/outputs/small/manicremoso_400.webp"
     },
     {
       "id": 17,
       "nombre": "FRESA BLANCO",
       "grupo": "premium",
-      "stock": 0,
+      "stock": 1,
       "imagen": "/outputs/small/fresablanco_400.webp"
     },
     {
-      "id": 18,
-      "nombre": "TAMARINDO",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/tamarindo_400.webp"
-    },
-    {
-      "id": 19,
-      "nombre": "RON CON PASAS",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/ronconpasas_400.webp"
-    },
-    {
-      "id": 20,
-      "nombre": "NATUGOMITAS",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/natugomitas_400.webp"
-    },
-    {
-      "id": 21,
-      "nombre": "MORA CREMOSA",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/moracremosa_400.webp"
-    },
-    {
-      "id": 22,
-      "nombre": "CAFE LATTE",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/cafelatte_400.webp"
-    },
-    {
-      "id": 23,
-      "nombre": "CHOCO LIGHT",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/chocolight_400.webp"
-    },
-    {
-      "id": 24,
-      "nombre": "TAMARINDO CITRICO",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/tamarindocitrico_400.webp"
-    },
-    {
-      "id": 25,
-      "nombre": "COCOSETTE",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/cocosette_400.webp"
-    },
-    {
       "id": 26,
-      "nombre": "CHOCO SUSSY",
-      "grupo": "ninguno",
-      "stock": 0,
+      "nombre": "CHOCO SUSY",
+      "grupo": "fullcremoso",
+      "stock": 1,
       "imagen": "/outputs/small/chocosussy_400.webp"
     },
         {
       "id": 27,
-      "nombre": "Pastelados1",
-      "grupo": "premium",
+      "nombre": "DURAZNO CITRICO",
+      "grupo": "citrico",
       "stock": 1,
-      "imagen": "/outputs/small/pastelados_400.webp"
+      "imagen": ""
     },
     {
       "id": 28,
-      "nombre": "Pastelados2",
-      "grupo": "premium",
-      "stock": 0,
-      "imagen": "/outputs/small/pastela2_400.webp"
+      "nombre": "FRESA CITRICO",
+      "grupo": "citrico",
+      "stock": 1,
+      "imagen": ""
+    },
+    {
+      "id": 29,
+      "nombre": "TAMARINDO",
+      "grupo": "citrico",
+      "stock": 1,
+      "imagen": ""
+    },
+    {
+      "id": 30,
+      "nombre": "NATUGOMITAS",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": ""
+    },
+    {
+      "id": 31,
+      "nombre": "RON CON PASAS",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": ""
+    },
+    {
+      "id": 32,
+      "nombre": "MANGO BICHE",
+      "grupo": "citrico",
+      "stock": 1,
+      "imagen": ""
+    },
+        {
+      "id": 33,
+      "nombre": "GUAYABA",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": ""
+    },
+    {
+      "id": 34,
+      "nombre": "MORA",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": ""
     }
+
   ]
 }
 

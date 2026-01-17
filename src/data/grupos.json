@@ -1,6 +1,7 @@
 {
   "cremoso": 0.5,
   "fullcremoso": 0.7,
-  "premium": 1.0,
+  "premium": 1.05,
+  "citrico": 0.4,
   "ninguno": 0.0
 }

@@ -47,7 +47,6 @@ ESTRUCTURA DEL PROYECTO: natura
    index.css
    lib/
      db/
-       database copy.js
        database.js
        hooks/
          useTasa.js
@@ -138,6 +137,7 @@ def completar_fases_finales():
     archivos_obsoletos = [
         base_path / "src" / "pages" / "AdminGrupos.jsx",
         base_path / "src" / "pages" / "AdminProductos.jsx",
+        base_path / "src" / "pages" / "Home copy.jsx",
         base_path / "src" / "hooks" / "useLocalStorage.js"
     ]
 
@@ -1032,7 +1032,12 @@ const styles = {
     backgroundColor: 'white'
   },
   itemInfo: { flex: 1 },
-  itemNombre: { fontWeight: 'bold', fontSize: '16px', marginBottom: '5px' },
+  itemNombre: { 
+    fontWeight: 'bold', 
+    fontSize: '16px', 
+    marginBottom: '5px',
+    color: '#333' 
+  },
   itemPrecio: { color: '#666', marginBottom: '3px' },
   itemId: { fontSize: '12px', color: '#999' },
   itemActions: { display: 'flex', gap: '10px' },
@@ -1061,7 +1066,7 @@ const styles = {
     borderRadius: '4px',
     fontSize: '14px',
     textAlign: 'center'
-  }
+  },
 };
 
 export default GruposCRUD;
@@ -1334,18 +1339,62 @@ export default ModalGrupo;
 
 FILE: src/components/Header.jsx
 ------------------------------
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Header() {
-  return (
-    <header>
-      <nav>
-        <Link to="/">Inicio</Link> | <Link to="/about">Acerca de</Link>
-      </nav>
-    </header>
-  );
+    const navigate = useNavigate();
+
+    const handleAdminAccess = (e) => {
+        // Evitamos que el enlace actúe como una navegación normal inmediatamente
+        e.preventDefault();
+
+        // Solicitamos el PIN de acceso
+        const pin = window.prompt("Ingrese el PIN de acceso:");
+
+        // Verificamos el PIN solicitado (aaaaa)
+        if (pin === "aaaaa") {
+            navigate("/Panel");
+        } else {
+            alert("Acceso denegado: PIN incorrecto.");
+        }
+    };
+
+    return (
+        <header style={styles.header}>
+            <nav style={styles.nav}>
+                <Link to="/" style={styles.link}>Inicio</Link>
+                <Link to="/about" style={styles.link}>Acerca de</Link>
+                
+                {/* Nueva opción de Panel con validación */}
+                <span 
+                    onClick={handleAdminAccess} 
+                    style={{ ...styles.link, cursor: 'pointer' }}
+                >
+                    Panel
+                </span>
+            </nav>
+        </header>
+    );
 }
 
+const styles = {
+    header: {
+        padding: '1rem',
+        backgroundColor: '#f8f9fa',
+        borderBottom: '1px solid #dee2e6',
+        marginBottom: '20px'
+    },
+    nav: {
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '20px'
+    },
+    link: {
+        textDecoration: 'none',
+        color: '#007bff',
+        fontWeight: 'bold'
+    }
+};
 **************************************************
 
 FILE: src/components/Panel/Panel.jsx
@@ -3130,7 +3179,7 @@ FILE: src/data/data.json
       "id": 1,
       "nombre": "PARCHITA CREMOSA",
       "grupo": "cremoso",
-      "stock": 1,
+      "stock": 0,
       "imagen": "/outputs/small/parchitacremosa_400.webp"
     },
     {
@@ -3149,7 +3198,7 @@ FILE: src/data/data.json
     },
     {
       "id": 4,
-      "nombre": "FRESA",
+      "nombre": "FRESA CREMOSA",
       "grupo": "cremoso",
       "stock": 1,
       "imagen": "/outputs/small/fresa_400.webp"
@@ -3186,22 +3235,22 @@ FILE: src/data/data.json
       "id": 9,
       "nombre": "CHOCO OREO",
       "grupo": "premium",
-      "stock": 0,
-      "imagen": "/outputs/small/_chocooreo_400.webp"
+      "stock": 1,
+      "imagen": ""
     },
     {
       "id": 10,
       "nombre": "DALMATA",
       "grupo": "premium",
-      "stock": 0,
-      "imagen": "/outputs/small/_dalmata_400.webp"
+      "stock": 1,
+      "imagen": ""
     },
     {
       "id": 11,
       "nombre": "VAINILLA",
       "grupo": "premium",
-      "stock": 0,
-      "imagen": "/outputs/small/_vainilla_400.webp"
+      "stock": 1,
+      "imagen": ""
     },
     {
       "id": 12,
@@ -3233,95 +3282,82 @@ FILE: src/data/data.json
     },
     {
       "id": 16,
-      "nombre": "MANI cremoso",
-      "grupo": "cremoso",
-      "stock": 1,
+      "nombre": "MANI",
+      "grupo": "fullcremoso",
+      "stock": 0,
       "imagen": "/outputs/small/manicremoso_400.webp"
     },
     {
       "id": 17,
       "nombre": "FRESA BLANCO",
       "grupo": "premium",
-      "stock": 0,
+      "stock": 1,
       "imagen": "/outputs/small/fresablanco_400.webp"
     },
     {
-      "id": 18,
-      "nombre": "TAMARINDO",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/tamarindo_400.webp"
-    },
-    {
-      "id": 19,
-      "nombre": "RON CON PASAS",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/ronconpasas_400.webp"
-    },
-    {
-      "id": 20,
-      "nombre": "NATUGOMITAS",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/natugomitas_400.webp"
-    },
-    {
-      "id": 21,
-      "nombre": "MORA CREMOSA",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/moracremosa_400.webp"
-    },
-    {
-      "id": 22,
-      "nombre": "CAFE LATTE",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/cafelatte_400.webp"
-    },
-    {
-      "id": 23,
-      "nombre": "CHOCO LIGHT",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/chocolight_400.webp"
-    },
-    {
-      "id": 24,
-      "nombre": "TAMARINDO CITRICO",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/tamarindocitrico_400.webp"
-    },
-    {
-      "id": 25,
-      "nombre": "COCOSETTE",
-      "grupo": "ninguno",
-      "stock": 0,
-      "imagen": "/outputs/small/cocosette_400.webp"
-    },
-    {
       "id": 26,
-      "nombre": "CHOCO SUSSY",
-      "grupo": "ninguno",
-      "stock": 0,
+      "nombre": "CHOCO SUSY",
+      "grupo": "fullcremoso",
+      "stock": 1,
       "imagen": "/outputs/small/chocosussy_400.webp"
     },
         {
       "id": 27,
-      "nombre": "Pastelados1",
-      "grupo": "premium",
+      "nombre": "DURAZNO CITRICO",
+      "grupo": "citrico",
       "stock": 1,
-      "imagen": "/outputs/small/pastelados_400.webp"
+      "imagen": ""
     },
     {
       "id": 28,
-      "nombre": "Pastelados2",
-      "grupo": "premium",
-      "stock": 0,
-      "imagen": "/outputs/small/pastela2_400.webp"
+      "nombre": "FRESA CITRICO",
+      "grupo": "citrico",
+      "stock": 1,
+      "imagen": ""
+    },
+    {
+      "id": 29,
+      "nombre": "TAMARINDO",
+      "grupo": "citrico",
+      "stock": 1,
+      "imagen": ""
+    },
+    {
+      "id": 30,
+      "nombre": "NATUGOMITAS",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": ""
+    },
+    {
+      "id": 31,
+      "nombre": "RON CON PASAS",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": ""
+    },
+    {
+      "id": 32,
+      "nombre": "MANGO BICHE",
+      "grupo": "citrico",
+      "stock": 1,
+      "imagen": ""
+    },
+        {
+      "id": 33,
+      "nombre": "GUAYABA",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": ""
+    },
+    {
+      "id": 34,
+      "nombre": "MORA",
+      "grupo": "fullcremoso",
+      "stock": 1,
+      "imagen": ""
     }
+
   ]
 }
 
@@ -3334,7 +3370,8 @@ FILE: src/data/grupos.json
 {
   "cremoso": 0.5,
   "fullcremoso": 0.7,
-  "premium": 1.0,
+  "premium": 1.05,
+  "citrico": 0.4,
   "ninguno": 0.0
 }
 **************************************************
@@ -3431,31 +3468,6 @@ button:focus-visible {
 
 **************************************************
 
-FILE: src/lib/db/database copy.js
-------------------------------
-// src/lib/db/database.js
-
-import Dexie from "dexie";
-
-const db = new Dexie("dbTasaBCV");
-
-// Actualizar esquema para incluir tabla de configuración
-db.version(2).stores({
-  productos: 'id, nombre, grupo, stock, imagen, createdAt',
-  grupos: '++id, nombre, precio',
-  config: 'clave' // Clave primaria única
-});
-
-// Para migración desde versión 1
-db.version(1).stores({
-  productos: 'id, nombre, grupo, stock, imagen, createdAt',
-  grupos: '++id, nombre, precio'
-});
-
-export { db };
-
-**************************************************
-
 FILE: src/lib/db/database.js
 ------------------------------
 // src/lib/db/database.js
@@ -3481,10 +3493,19 @@ export class NaturaDBClass {
       console.log('Migrando a versión 2...');
     });
 
+    // Version 3 - Adds sales table for statistics
+    this.db.version(3).stores({
+        productos: 'id, nombre, grupo, stock, imagen, createdAt',
+        grupos: '++id, nombre, precio',
+        config: 'clave',
+        ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad' // New table
+    });
+
     // Referencias CORRECTAS usando this.db
     this.productos = this.db.productos;
     this.grupos = this.db.grupos;
     this.config = this.db.config;
+    this.ventas = this.db.ventas;
   }
 
   // Abrir db
@@ -4156,8 +4177,9 @@ FILE: src/pages/Home.jsx
 ------------------------------
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { db } from '../lib/db/database.js';
-import { getTasaBCV } from '../lib/db/utils/tasaUtil.js';
+import { db } from '../lib/db/database.js'; // [6, 7]
+import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // [7, 8]
+import styles from './Home.module.css';
 
 function Home() {
     const [productos, setProductos] = useState([]);
@@ -4165,12 +4187,16 @@ function Home() {
     const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
     const [tasa, setTasa] = useState(0);
     const [cargando, setCargando] = useState(true);
+    
+    // NUEVO ESTADO: Filtro de grupo
+    const [filtroGrupo, setFiltroGrupo] = useState('todos');
+    
     const navigate = useNavigate();
 
     useEffect(() => {
         const cargarTodo = async () => {
             try {
-                await db.init();
+                await db.init(); // [9]
                 const [p, g, t] = await Promise.all([
                     db.getAll('productos'),
                     db.getAll('grupos'),
@@ -4188,48 +4214,159 @@ function Home() {
         cargarTodo();
     }, []);
 
+    // LÓGICA DE FILTRADO: Basada en stock y grupo seleccionado [1, 5]
+    const productosFiltrados = productos.filter(p => {
+        const tieneStock = p.stock > 0;
+        const coincideGrupo = filtroGrupo === 'todos' || p.grupo === filtroGrupo;
+        return tieneStock && coincideGrupo;
+    });
+
+    const handleGrabar = async () => {
+        if (listaDeSeleccionados.length === 0) return;
+        const confirmar = window.confirm(`¿Grabar venta de ${listaDeSeleccionados.length} items?`);
+        if (!confirmar) return;
+
+        try {
+            for (const item of listaDeSeleccionados) {
+                const grupoInfo = grupos.find(g => g.nombre === item.grupo);
+                const precioUsd = grupoInfo ? grupoInfo.precio : 0;
+
+                // Registro en tabla ventas y actualización de stock [3, 4, 10]
+                await db.add('ventas', {
+                    productoId: item.id,
+                    nombre: item.nombre,
+                    grupo: item.grupo,
+                    precioUsd: precioUsd,
+                    cantidad: 1,
+                    fecha: new Date().toISOString()
+                });
+                await db.updateStock(item.id, -1);
+            }
+
+            const productosActualizados = await db.getAll('productos');
+            setProductos(productosActualizados);
+            setListaDeSeleccionados([]);
+            alert("✅ Venta procesada correctamente.");
+        } catch (error) {
+            console.error("Error al grabar:", error);
+        }
+    };
+
     const seleccionarProducto = (producto) => {
         setListaDeSeleccionados(prev => [...prev, producto]);
+    };
+
+    const eliminarItem = (indexParaEliminar) => {
+        setListaDeSeleccionados(prev => prev.filter((_, index) => index !== indexParaEliminar));
     };
 
     const calcularTotales = () => {
         let usd = 0;
         listaDeSeleccionados.forEach(item => {
-            // Buscamos el precio del grupo al que pertenece el producto
             const grupoInfo = grupos.find(g => g.nombre === item.grupo);
             usd += grupoInfo ? grupoInfo.precio : 0;
         });
-        return { usd, bs: usd * tasa };
+        return { usd, bs: usd * tasa }; // [5, 11]
     };
 
     const { usd, bs } = calcularTotales();
 
-    if (cargando) return <div>Cargando tienda...</div>;
+    if (cargando) return <div className={styles.loading}>Cargando tienda...</div>;
 
     return (
-        <div style={{ padding: '20px', paddingBottom: '150px' }}>
-            <h1>Natura Ice</h1>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                {productos.filter(p => p.stock > 0).map(p => (
+        <div className={styles.container}>
+            <h1 className={styles.title}>Natura Ice</h1>
+
+            {/* NUEVO: Combo de selección de grupo */}
+            <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+                <label htmlFor="filtro-home" style={{ fontWeight: 'bold', marginRight: '10px', color: '#333' }}>
+                    Filtrar por Grupo:
+                </label>
+                <select 
+                    id="filtro-home"
+                    value={filtroGrupo} 
+                    onChange={(e) => setFiltroGrupo(e.target.value)}
+                    style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ccc' }}
+                >
+                    <option value="todos">Todos los helados</option>
+                    {grupos.map(g => (
 [CONTENIDO SENSIBLE ELIMINADO: Home.jsx]
-                        <img src={p.imagen} style={{ width: '100%', height: '100px', objectFit: 'cover' }} />
-                        <p>{p.nombre}</p>
-                        <small>Stock: {p.stock}</small>
-                    </div>
-                ))}
+                    ))}
+                </select>
+            </div>
+            
+            <div className={styles.grid}>
+                {productosFiltrados.map(p => {
+                    const grupoInfo = grupos.find(g => g.nombre === p.grupo);
+                    const precio = grupoInfo ? grupoInfo.precio : 0;
+                    
+                    return (
+[CONTENIDO SENSIBLE ELIMINADO: Home.jsx]
+                            {p.imagen && p.imagen.trim() !== "" ? (
+                                <>
+                                    <img src={p.imagen} alt={p.nombre} className={styles.imagen} />
+                                    <div style={{ fontWeight: 'bold', fontSize: '14px', marginTop: '4px', color: '#333' }}>
+                                        {p.nombre}
+                                    </div>
+                                </>
+                            ) : (
+                                <div style={{ 
+                                    fontWeight: 'bold', fontSize: '14px', height: '100px', 
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    textAlign: 'center', backgroundColor: '#f9f9f9', borderRadius: '8px',
+                                    marginBottom: '10px', color: '#333', padding: '5px'
+                                }}>
+                                    {p.nombre}
+                                </div>
+                            )}
+                            <p style={{ color: 'red', fontWeight: '600', margin: '5px 0 0 0' }}>
+                                Id: {p.id} Existencia: {p.stock} Precio $: {precio.toFixed(2)}
+                            </p> 
+                        </div>
+                    );
+                })}
             </div>
 
-            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', padding: '20px', borderTop: '2px solid #007bff' }}>
-                <h3>Total: ${usd.toFixed(2)} | Bs. {bs.toFixed(2)}</h3>
-                <button onClick={() => setListaDeSeleccionados([])}>Vaciar</button>
-                <button onClick={() => navigate("/Panel")} style={{ marginLeft: '10px' }}>Panel Admin</button>
+            <div className={styles.selectedContainer}>
+                <div className={styles.selectedHeader}>
+                    <span>Items Seleccionados ({listaDeSeleccionados.length}):</span>
+                    <span>Tasa: {tasa.toFixed(2)}</span> {/* [12] */}
+                </div>
+
+                <div className={styles.selectedList}>
+                    {listaDeSeleccionados.map((item, index) => {
+                        const grupoInfo = grupos.find(g => g.nombre === item.grupo);
+                        const precioIndividual = grupoInfo ? grupoInfo.precio : 0;
+                        return (
+[CONTENIDO SENSIBLE ELIMINADO: Home.jsx]
+                                <span>#{item.id} - {item.nombre} (${precioIndividual.toFixed(2)})</span>
+                                <button onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}>ELIM</button>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                <div style={{ marginTop: '8px', borderTop: '1px solid #ccc', paddingTop: '8px' }}>
+                    <h3 style={{ margin: '0 0 8px 0', color: '#000' }}>
+                        Total: ${usd.toFixed(2)} | Bs. {bs.toFixed(2)}
+                    </h3>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button className={styles.vaciarBtn} onClick={() => setListaDeSeleccionados([])}>Vaciar</button>
+                        <button 
+                            onClick={handleGrabar}
+                            style={{ flex: 2, backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}
+                            disabled={listaDeSeleccionados.length === 0}
+                        >
+                            Grabar
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
 }
 
 export default Home;
-
 **************************************************
 
 FILE: src/pages/Home.module.css
@@ -4312,9 +4449,12 @@ FILE: src/pages/Home.module.css
 
 /* Header selected */
 .selectedHeader {
-  font-weight: bold;
-  margin-bottom: 4px;
-  color: #000;
+    display: flex;
+    justify-content: space-between; /* Aligns head to left and rate to right */
+    align-items: center;
+    font-weight: bold;
+    margin-bottom: 4px;
+    color: #000;
 }
 
 /* Lista de items con scroll */
@@ -4380,6 +4520,7 @@ FILE: src/pages/Home.module.css
   border-radius: 12px;
   min-width: 300px;
 }
+
 
 **************************************************
 

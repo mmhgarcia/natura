@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { db } from '../lib/db/database.js';
-import { getTasaBCV } from '../lib/db/utils/tasaUtil.js';
+import { db } from '../lib/db/database.js'; 
+import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; 
 import styles from './Home.module.css';
 
 function Home() {
@@ -10,13 +10,17 @@ function Home() {
     const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
     const [tasa, setTasa] = useState(0);
     const [cargando, setCargando] = useState(true);
+    
+    // Filter state for the group selection [1]
+    const [filtroGrupo, setFiltroGrupo] = useState('todos');
+    
     const navigate = useNavigate();
 
-    // Carga inicial de datos desde IndexedDB y utilidades [1-3]
+    // Initial data load from IndexedDB and utilities [2-4]
     useEffect(() => {
         const cargarTodo = async () => {
             try {
-                await db.init();
+                await db.init(); 
                 const [p, g, t] = await Promise.all([
                     db.getAll('productos'),
                     db.getAll('grupos'),
@@ -26,7 +30,7 @@ function Home() {
                 setGrupos(g);
                 setTasa(t || 0);
             } catch (err) {
-                console.error("Error inicializando Home:", err);
+                console.error("Error initializing Home:", err);
             } finally {
                 setCargando(false);
             }
@@ -34,43 +38,48 @@ function Home() {
         cargarTodo();
     }, []);
 
-    // Lógica para grabar la venta, rebajar stock y registrar estadísticas
+    // Logic to filter products by stock and group [4]
+    const productosFiltrados = productos.filter(p => {
+        const tieneStock = p.stock > 0;
+        const coincideGrupo = filtroGrupo === 'todos' || p.grupo === filtroGrupo;
+        return tieneStock && coincideGrupo;
+    });
+
+    // Handle recording the sale with confirmation prompt [5, 6]
     const handleGrabar = async () => {
         if (listaDeSeleccionados.length === 0) return;
 
+        // REQUESTED CHANGE: Confirmation prompt before proceeding
         const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
-        if (!confirmar) return;
+        if (!confirmar) return; // Abort if user cancels [5]
 
         try {
-            // Procesamos cada producto seleccionado uno por uno
             for (const item of listaDeSeleccionados) {
                 const grupoInfo = grupos.find(g => g.nombre === item.grupo);
                 const precioUsd = grupoInfo ? grupoInfo.precio : 0;
 
-                // 1. Añadimos el registro a la tabla 'ventas' para estadísticas
+                // Record each item in the sales table [5]
                 await db.add('ventas', {
                     productoId: item.id,
                     nombre: item.nombre,
                     grupo: item.grupo,
                     precioUsd: precioUsd,
-                    cantidad: 1, // Valor fijo solicitado
-                    fecha: new Date().toISOString() // Fecha del día actual
+                    cantidad: 1,
+                    fecha: new Date().toISOString()
                 });
 
-                // 2. Rebajamos el stock del producto en la tabla 'productos' [4]
+                // Update inventory by subtracting 1 from stock [6, 7]
                 await db.updateStock(item.id, -1);
             }
 
-            // 3. Refrescamos la UI con los nuevos datos de la DB
+            // Refresh local state and clear selection [6]
             const productosActualizados = await db.getAll('productos');
             setProductos(productosActualizados);
-
-            // 4. Limpiamos la selección y reseteamos totales
             setListaDeSeleccionados([]);
-            alert("✅ Venta grabada y stock actualizado correctamente.");
+            alert("✅ Venta procesada con éxito.");
         } catch (error) {
-            console.error("Error al procesar la grabación:", error);
-            alert("❌ Hubo un error al guardar los datos.");
+            console.error("Error saving sale:", error);
+            alert("❌ Error al procesar la venta.");
         }
     };
 
@@ -88,7 +97,7 @@ function Home() {
             const grupoInfo = grupos.find(g => g.nombre === item.grupo);
             usd += grupoInfo ? grupoInfo.precio : 0;
         });
-        return { usd, bs: usd * tasa };
+        return { usd, bs: usd * tasa }; 
     };
 
     const { usd, bs } = calcularTotales();
@@ -98,27 +107,62 @@ function Home() {
     return (
         <div className={styles.container}>
             <h1 className={styles.title}>Natura Ice</h1>
+
+            {/* Group selection combo [8] */}
+            <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+                <label htmlFor="filtro-home" style={{ fontWeight: 'bold', marginRight: '10px', color: '#333' }}>
+                    Filtrar por Grupo:
+                </label>
+                <select 
+                    id="filtro-home"
+                    value={filtroGrupo} 
+                    onChange={(e) => setFiltroGrupo(e.target.value)}
+                    style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ccc' }}
+                >
+                    <option value="todos">Todos los helados</option>
+                    {grupos.map(g => (
+                        <option key={g.id} value={g.nombre}>{g.nombre}</option>
+                    ))}
+                </select>
+            </div>
             
-            {/* Grid de productos con precio dinámico según grupo [5] */}
+            {/* Product Grid [9] */}
             <div className={styles.grid}>
-                {productos.filter(p => p.stock > 0).map(p => {
+                {productosFiltrados.map(p => {
                     const grupoInfo = grupos.find(g => g.nombre === p.grupo);
                     const precio = grupoInfo ? grupoInfo.precio : 0;
                     
                     return (
                         <div key={p.id} className={styles.card} onClick={() => seleccionarProducto(p)}>
-                            <img src={p.imagen} alt={p.nombre} />
-                            <p>
+                            {/* Logic: If image exists, show image and name below; otherwise, name placeholder [9, 10] */}
+                            {p.imagen && p.imagen.trim() !== "" ? (
+                                <>
+                                    <img src={p.imagen} alt={p.nombre} className={styles.imagen} />
+                                    <div style={{ fontWeight: 'bold', fontSize: '14px', marginTop: '4px', color: '#333' }}>
+                                        {p.nombre}
+                                    </div>
+                                </>
+                            ) : (
+                                <div style={{ 
+                                    fontWeight: 'bold', fontSize: '14px', height: '100px', 
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    textAlign: 'center', backgroundColor: '#f9f9f9', borderRadius: '8px',
+                                    marginBottom: '10px', color: '#333', padding: '5px'
+                                }}>
+                                    {p.nombre}
+                                </div>
+                            )}
+                            <p style={{ color: 'red', fontWeight: '600', margin: '5px 0 0 0' }}>
                                 Id: {p.id} Existencia: {p.stock} Precio $: {precio.toFixed(2)}
-                            </p>
+                            </p> 
                         </div>
                     );
                 })}
             </div>
 
-            {/* Contenedor Fijo Inferior para Selección y Totales [6, 7] */}
+            {/* Fixed Selection and Totals Panel [10, 11] */}
             <div className={styles.selectedContainer}>
-                <div className={styles.selectedHeader} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div className={styles.selectedHeader}>
                     <span>Items Seleccionados ({listaDeSeleccionados.length}):</span>
                     <span>Tasa: {tasa.toFixed(2)}</span>
                 </div>
@@ -132,14 +176,10 @@ function Home() {
                         listaDeSeleccionados.map((item, index) => {
                             const grupoInfo = grupos.find(g => g.nombre === item.grupo);
                             const precioIndividual = grupoInfo ? grupoInfo.precio : 0;
-                            
                             return (
                                 <div key={index} className={styles.selectedItem}>
                                     <span>#{item.id} - {item.nombre} (${precioIndividual.toFixed(2)})</span>
-                                    <button onClick={(e) => {
-                                        e.stopPropagation();
-                                        eliminarItem(index);
-                                    }}>
+                                    <button onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}>
                                         ELIM
                                     </button>
                                 </div>
@@ -153,15 +193,10 @@ function Home() {
                         Total: ${usd.toFixed(2)} | Bs. {bs.toFixed(2)}
                     </h3>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                        <button 
-                            className={styles.vaciarBtn} 
-                            onClick={() => setListaDeSeleccionados([])}
-                            style={{ flex: 1 }}
-                        >
+                        <button className={styles.vaciarBtn} onClick={() => setListaDeSeleccionados([])}>
                             Vaciar
                         </button>
                         <button 
-                            className={styles.grabarBtn}
                             onClick={handleGrabar}
                             style={{ 
                                 flex: 2, 

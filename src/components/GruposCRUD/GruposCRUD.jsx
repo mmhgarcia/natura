@@ -179,7 +179,12 @@ const styles = {
     backgroundColor: 'white'
   },
   itemInfo: { flex: 1 },
-  itemNombre: { fontWeight: 'bold', fontSize: '16px', marginBottom: '5px' },
+  itemNombre: { 
+    fontWeight: 'bold', 
+    fontSize: '16px', 
+    marginBottom: '5px',
+    color: '#333' 
+  },
   itemPrecio: { color: '#666', marginBottom: '3px' },
   itemId: { fontSize: '12px', color: '#999' },
   itemActions: { display: 'flex', gap: '10px' },
@@ -208,7 +213,7 @@ const styles = {
     borderRadius: '4px',
     fontSize: '14px',
     textAlign: 'center'
-  }
+  },
 };
 
 export default GruposCRUD;
