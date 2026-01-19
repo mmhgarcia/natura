@@ -19,6 +19,7 @@ ESTRUCTURA DEL PROYECTO: natura
   📁 assets/
   📁 components/
     📄 Footer.jsx
+    📄 GestionPedido.jsx
     📁 GruposCRUD/
       📄 GruposCRUD.jsx
       📄 ModalGrupo.jsx
@@ -421,6 +422,239 @@ export default function Footer() {
   );
 }
 
+**************************************************
+
+FILE: src/components/GestionPedido.jsx
+------------------------------
+import React, { useState, useEffect } from 'react';
+import { db } from '../lib/db/database'; // Acceso a la base de datos dbTasaBCV [5]
+
+const GestionPedido = ({ pedido, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    numero_pedido: '',
+    fecha_pedido: new Date().toISOString().split('T'),
+    tasa: '' // Se llenará desde la tabla config [2]
+  });
+  
+  const [productos, setProductos] = useState([]);
+  const [listaGrupos, setListaGrupos] = useState([]);
+  const [filtro, setFiltro] = useState('');
+  const [cantidades, setCantidades] = useState({});
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        // 1. Cargar la tasa BCV desde la tabla config [3, 4, 6]
+        const tasaConfig = await db.getConfigValue('tasa');
+        
+        // 2. Cargar productos y grupos de la base de datos [7]
+        const [todosLosProductos, todosLosGrupos] = await Promise.all([
+          db.getAll('productos'),
+          db.getAll('grupos')
+        ]);
+
+        setProductos(todosLosProductos);
+        setListaGrupos(todosLosGrupos);
+
+        // 3. Inicializar formulario
+        if (pedido) {
+          setFormData({
+            numero_pedido: pedido.numero_pedido || '',
+            fecha_pedido: pedido.fecha_pedido || '',
+            tasa: pedido.tasa || (tasaConfig ? tasaConfig.toString() : '')
+          });
+        } else if (tasaConfig) {
+          setFormData(prev => ({ ...prev, tasa: tasaConfig.toString() }));
+        }
+      } catch (err) {
+        console.error("Error al cargar datos iniciales:", err);
+      }
+    };
+    cargarDatos();
+  }, [pedido]);
+
+  const handleIncrement = (id) => {
+    setCantidades(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+  };
+
+  const handleDecrement = (id) => {
+    setCantidades(prev => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) - 1) }));
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const pedidoData = { ...formData, items: cantidades };
+      if (pedido) {
+        await db.put('pedidos', { id: pedido.id, ...pedidoData });
+      } else {
+        await db.add('pedidos', pedidoData);
+      }
+      onSave();
+      onClose();
+    } catch (err) {
+      setError('Error al grabar el pedido: ' + err.message);
+    }
+  };
+
+  const getPrecioGrupo = (nombreGrupo) => {
+    const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === nombreGrupo.toLowerCase());
+    return grupo ? grupo.precio.toFixed(2) : "0.00";
+  };
+
+  const productosFiltrados = productos.filter(p => 
+    p.nombre.toLowerCase().includes(filtro.toLowerCase())
+  );
+
+  const productosAgrupados = productosFiltrados.reduce((acc, prod) => {
+    const grupo = prod.grupo || 'Otros';
+    if (!acc[grupo]) acc[grupo] = [];
+    acc[grupo].push(prod);
+    return acc;
+  }, {});
+
+  return (
+    <div style={styles.overlay}>
+      <div style={styles.modal}>
+        <div style={styles.header}>
+          <h2 style={styles.title}>GESTION DE PEDIDOS</h2>
+          <button onClick={onClose} style={styles.closeButton}>×</button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={styles.content}>
+          <div style={styles.topRow}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Pedido #</label>
+              <input 
+                type="text" 
+                name="numero_pedido" 
+                value={formData.numero_pedido} 
+                onChange={handleChange} 
+                style={styles.inputSmall} 
+                required 
+              />
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Fecha</label>
+              <input 
+                type="date" 
+                name="fecha_pedido" 
+                value={formData.fecha_pedido} 
+                onChange={handleChange} 
+                style={styles.inputSmall} 
+              />
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Tasa (BCV)</label>
+              <input 
+                type="text" 
+                name="tasa" 
+                value={formData.tasa} 
+                style={styles.inputReadOnly} 
+                readOnly // Campo de solo lectura solicitado
+              />
+            </div>
+          </div>
+
+          <div style={styles.filterBar}>
+            <input 
+              type="text" 
+              placeholder="Filtro de productos" 
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+              style={styles.filterInput}
+            />
+            <div style={styles.filterIcon}>▼</div>
+          </div>
+
+          <div style={styles.productListContainer}>
+            <div style={styles.productListHeader}>Lista de Productos</div>
+            <div style={styles.productList}>
+              {Object.entries(productosAgrupados).map(([grupo, items]) => (
+                <div key={grupo}>
+                  <div style={styles.groupTitle}>
+                    {grupo.toUpperCase()} 
+                    <span style={styles.groupPrice}> (${getPrecioGrupo(grupo)})</span>
+                  </div>
+                  {items.map((prod) => (
+                    <div key={prod.id} style={styles.productItem}>
+                      <div style={styles.productName}>
+                        <strong>{prod.nombre}</strong> <small>(ID: {prod.id})</small>
+                      </div>
+                      <div style={styles.productDetails}>
+                        <span style={styles.stockText}>Stock: {prod.stock}</span>
+                        <div style={styles.quantityControl}>
+                          <button type="button" onClick={() => handleDecrement(prod.id)} style={styles.qtyBtn}>-</button>
+                          <input 
+                            type="number" 
+                            value={cantidades[prod.id] || 0}
+                            onChange={(e) => setCantidades({...cantidades, [prod.id]: parseInt(e.target.value) || 0})}
+                            style={styles.qtyInput}
+                          />
+                          <button type="button" onClick={() => handleIncrement(prod.id)} style={styles.qtyBtn}>+</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.footer}>
+            <button type="button" onClick={() => setCantidades({})} style={styles.blueBtn}>Vaciar</button>
+            <button type="submit" style={styles.blueBtn}>Grabar</button>
+          </div>
+          {error && <div style={styles.error}>{error}</div>}
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const styles = {
+  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 },
+  modal: { backgroundColor: '#fff', width: '95%', maxWidth: '500px', maxHeight: '95vh', border: '1px solid #ccc', padding: '10px', borderRadius: '4px', display: 'flex', flexDirection: 'column' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #00BFFF', marginBottom: '10px' },
+  title: { fontSize: '16px', fontWeight: 'bold', color: '#000', margin: 0 },
+  closeButton: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#000' },
+  content: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  topRow: { display: 'flex', gap: '8px', justifyContent: 'space-between' },
+  inputGroup: { display: 'flex', flexDirection: 'column', flex: 1, gap: '4px' },
+  label: { fontSize: '12px', fontWeight: 'bold', color: '#000' }, 
+  inputSmall: { padding: '6px', border: '1px solid #aaa', fontSize: '13px', color: '#000', backgroundColor: '#fff', width: '100%', boxSizing: 'border-box' },
+  // Estilo específico para el campo de solo lectura
+  inputReadOnly: { padding: '6px', border: '1px solid #ccc', fontSize: '13px', color: '#555', backgroundColor: '#f0f0f0', width: '100%', boxSizing: 'border-box', cursor: 'not-allowed' },
+  filterBar: { display: 'flex' },
+  filterInput: { flex: 1, padding: '8px', border: '1px solid #aaa', color: '#000', backgroundColor: '#fff' },
+  filterIcon: { padding: '8px', backgroundColor: '#e1f5fe', border: '1px solid #aaa', color: '#00BFFF' },
+  productListContainer: { border: '1px solid #aaa', borderRadius: '2px' },
+  productListHeader: { textAlign: 'center', color: '#00BFFF', padding: '5px', borderBottom: '1px solid #aaa', fontWeight: 'bold' },
+  productList: { height: '275px', overflowY: 'auto', backgroundColor: '#fff' }, 
+  groupTitle: { fontSize: '18px', fontWeight: 'bold', backgroundColor: '#f1f1f1', padding: '8px 10px', color: '#000', display: 'flex', justifyContent: 'space-between' },
+  groupPrice: { color: '#007bff', fontSize: '16px' },
+  productItem: { padding: '8px 10px', borderBottom: '1px solid #eee' },
+  productName: { fontSize: '14px', color: '#000' }, 
+  productDetails: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  stockText: { fontSize: '12px', color: '#333' },
+  quantityControl: { display: 'flex', alignItems: 'center', gap: '4px' },
+  qtyBtn: { 
+    width: '30px', height: '30px', backgroundColor: '#eee', border: '1px solid #ccc', cursor: 'pointer', 
+    fontWeight: 'bold', fontSize: '18px', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center'
+  },
+  qtyInput: { width: '40px', textAlign: 'center', border: '1px solid #ccc', padding: '4px', color: '#000', backgroundColor: '#fff' },
+  footer: { display: 'flex', gap: '15px', marginTop: '5px' },
+  blueBtn: { backgroundColor: '#7ecbff', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' },
+  error: { color: 'red', fontSize: '12px', textAlign: 'center' }
+};
+
+export default GestionPedido;
 **************************************************
 
 FILE: src/components/GruposCRUD/GruposCRUD.jsx
@@ -1216,66 +1450,189 @@ const importarProductos = async () => {
 
 FILE: src/components/Pedidos.jsx
 ------------------------------
-// src/components/Pedidos.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { db } from '../lib/db/database'; 
+import GestionPedido from './GestionPedido';
 
 const PedidosComponente = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const [listaPedidos, setListaPedidos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [modalOpen, setModalOpen] = useState(false);
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
 
-    const styles = {
-        container: {
-            display: 'flex',
-            flexDirection: 'column',
-            width: '100%',
-            minHeight: '100vh',
-            backgroundColor: '#fff'
-        },
-        customHeader: {
-            display: 'flex',
-            alignItems: 'center',
-            padding: '10px 15px',
-            backgroundColor: '#00BFFF', // Color coherente con la identidad visual [1, 2]
-            color: 'white',
-            position: 'sticky',
-            top: 0,
-            zIndex: 1000,
-            boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-        },
-        backBtn: {
-            background: 'none',
-            border: 'none',
-            color: 'white',
-            fontSize: '1.8rem',
-            cursor: 'pointer',
-            padding: '0',
-            marginRight: '15px',
-            display: 'flex',
-            alignItems: 'center'
-        },
-        title: {
-            fontSize: '1.4rem',
-            margin: 0,
-            fontWeight: 'bold',
-            flex: 1
-        }
-    };
+  const cargarRegistros = async () => {
+    try {
+      setLoading(true);
+      const datos = await db.getAll('pedidos'); // Fuente [4, 5]
+      setListaPedidos(datos);
+    } catch (error) {
+      console.error("Error al cargar pedidos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div style={styles.container}>
-            {/* Cabecera propia con flecha y título */}
-            <div style={styles.customHeader}>
-                <button onClick={() => navigate(-1)} style={styles.backBtn}>
-                    ←
-                </button>
-                <h2 style={styles.title}>Pedidos</h2>
-            </div>
+  useEffect(() => {
+    cargarRegistros();
+  }, []);
 
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-                <p>Aquí irá la lógica de facturación o lista de pedidos en el futuro [1].</p>
-            </div>
+  const handleNuevoPedido = () => {
+    setPedidoSeleccionado(null);
+    setModalOpen(true); // Fuente [6, 7]
+  };
+
+  const handleSeleccionarPedido = (pedido) => {
+    // Solo permite editar Pedidos Activos [7, 8]
+    if (pedido.estado === 'Activo' || !pedido.estado) {
+      setPedidoSeleccionado(pedido);
+      setModalOpen(true);
+    } else {
+      alert("Solo se permite editar pedidos en estado Activo.");
+    }
+  };
+
+  const styles = {
+    // Ajuste para ocupar el 100% real y evitar la franja gris de fondo [3, 9]
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      width: '100%',
+      minHeight: '100vh',
+      backgroundColor: '#fff',
+      margin: 0,
+      padding: 0,
+      boxSizing: 'border-box'
+    },
+    // Header con alineación a la izquierda [3, 10]
+    header: {
+      display: 'flex',
+      alignItems: 'center',
+      padding: '15px',
+      backgroundColor: '#00BFFF', 
+      color: 'white',
+      width: '100%',
+      boxSizing: 'border-box'
+    },
+    backArrow: {
+      background: 'none',
+      border: 'none',
+      color: 'white',
+      fontSize: '24px',
+      cursor: 'pointer',
+      marginRight: '10px',
+      padding: 0 // Elimina padding heredado para alineación precisa
+    },
+    title: {
+      fontSize: '20px',
+      fontWeight: 'bold',
+      margin: 0
+    },
+    content: {
+      padding: '20px',
+      display: 'flex',
+      flexDirection: 'column',
+      width: '100%',
+      boxSizing: 'border-box'
+    },
+    // CORRECCIÓN: Se añade 'padding: 0' para que sea un círculo perfecto y no una elipse [1, 6]
+    addBtnCircle: {
+      width: '55px',
+      height: '55px',
+      borderRadius: '50%',
+      backgroundColor: '#28a745',
+      color: 'white',
+      border: 'none',
+      fontSize: '35px',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      cursor: 'pointer',
+      marginBottom: '20px',
+      boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+      padding: 0, // Fundamental para evitar la forma de elipse
+      lineHeight: 0
+    },
+    listaContainer: {
+      width: '100%'
+    },
+    table: {
+      width: '100%',
+      borderCollapse: 'collapse'
+    },
+    row: {
+      borderBottom: '1px solid #eee',
+      cursor: 'pointer'
+    },
+    cell: {
+      padding: '15px 5px',
+      textAlign: 'left',
+      color: '#000'
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      {/* Header: Flecha y Título alineados a la izquierda [3] */}
+      <header style={styles.header}>
+        <button onClick={() => navigate(-1)} style={styles.backArrow}>←</button>
+        <h1 style={styles.title}>Pedidos</h1>
+      </header>
+
+      <div style={styles.content}>
+        {/* Botón circular verde con signo + blanco [6] */}
+        <button 
+          style={styles.addBtnCircle} 
+          onClick={handleNuevoPedido}
+        >
+          +
+        </button>
+
+        <div style={styles.listaContainer}>
+          {loading ? (
+            <p>Cargando registros...</p>
+          ) : (
+            <table style={styles.table}>
+              <tbody>
+                {listaPedidos.length === 0 ? (
+                  <tr>
+                    <td style={styles.cell}>No hay pedidos registrados en dbTasaBCV.</td>
+                  </tr>
+                ) : (
+                  listaPedidos.map((p) => (
+                    <tr 
+                      key={p.id} 
+                      style={styles.row} 
+                      onClick={() => handleSeleccionarPedido(p)}
+                    >
+                      <td style={styles.cell}>
+                        <strong>{p.numero_pedido}</strong><br/>
+                        <small>{new Date(p.fecha_pedido).toLocaleDateString()}</small>
+                      </td>
+                      <td style={{...styles.cell, textAlign: 'right'}}>
+                        Bs. {p.tasa}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
-    );
+      </div>
+
+      {/* Modal de Gestión [6, 11] */}
+      {modalOpen && (
+        <GestionPedido 
+          pedido={pedidoSeleccionado}
+          onClose={() => setModalOpen(false)}
+          onSave={cargarRegistros}
+        />
+      )}
+    </div>
+  );
 };
 
 export default PedidosComponente;
@@ -3033,115 +3390,114 @@ button:focus-visible {
 FILE: src/lib/db/database.js
 ------------------------------
 // src/lib/db/database.js
+
 import Dexie from 'dexie';
 import 'dexie-export-import';
 
 export class NaturaDBClass {
-  constructor() {
-    this.db = new Dexie('dbTasaBCV');
-    
-    // Versión 1 - Esquema inicial
-    this.db.version(1).stores({
-      productos: 'id, nombre, grupo, stock, imagen, createdAt',
-      grupos: '++id, nombre, precio'
-    });
+    constructor() {
+        // La base de datos se mantiene como dbTasaBCV [4]
+        this.db = new Dexie('dbTasaBCV');
 
-    // Versión 2 - Agrega tabla config
-    this.db.version(2).stores({
-      productos: 'id, nombre, grupo, stock, imagen, createdAt',
-      grupos: '++id, nombre, precio',
-      config: 'clave'
-    }).upgrade(trans => {
-      // Migración: puedes inicializar datos aquí si es necesario
-      console.log('Migrando a versión 2...');
-    });
+        // Versión 1 - Esquema inicial [2]
+        this.db.version(1).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio'
+        });
 
-    // Version 3 - Adds sales table for statistics
-    this.db.version(3).stores({
-        productos: 'id, nombre, grupo, stock, imagen, createdAt',
-        grupos: '++id, nombre, precio',
-        config: 'clave',
-        ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad' // New table
-    });
+        // Versión 2 - Agrega tabla config [2]
+        this.db.version(2).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio',
+            config: 'clave'
+        });
 
-    // Referencias CORRECTAS usando this.db
-    this.productos = this.db.productos;
-    this.grupos = this.db.grupos;
-    this.config = this.db.config;
-    this.ventas = this.db.ventas;
-  }
+        // Versión 3 - Agrega tabla ventas [3]
+        this.db.version(3).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad'
+        });
 
-  // Abrir db
-  async init() {
-    await this.db.open();
-    console.log("db open.");
-    return this;
-  }
+        // NUEVA Versión 4 - Agrega tabla pedidos con ID AUTONUMÉRICO
+        // El prefijo '++' define el campo como autoincremental en Dexie [1].
+        this.db.version(4).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa' 
+        });
 
-  // Métodos SimpleRepo compatibles
-  async add(table, data) {
-    return await this.db[table].add(data);
-  }
-
-  // FALTABA: método get() que se usa en updateStock()
-  async get(table, id) {
-    return await this.db[table].get(id);
-  }
-
-  async getAll(table, filters = {}) {
-    let query = this.db[table];
-    for (const [key, value] of Object.entries(filters)) {
-      query = query.where(key).equals(value);
+        // Referencias para acceso directo [5]
+        this.productos = this.db.productos;
+        this.grupos = this.db.grupos;
+        this.config = this.db.config;
+        this.ventas = this.db.ventas;
+        this.pedidos = this.db.pedidos; // Referencia a la nueva tabla
     }
-    return await query.toArray();
-  }
 
-  // getById es redundante con get(), puedes eliminar uno
-  async getById(table, id) {
-    return await this.db[table].get(id);
-  }
-
-  async put(table, data) {
-    return await this.db[table].put(data);
-  }
-
-  async del(table, id) {
-    await this.db[table].delete(id);
-  }
-
-  // Métodos adicionales específicos
-  async getProductosByGrupo(grupoId) {
-    return await this.db.productos.where('grupo').equals(grupoId).toArray();
-  }
-
-  async updateStock(productoId, cantidad) {
-    // Ahora this.get() existe
-    const producto = await this.get('productos', productoId);
-    if (producto) {
-      const nuevoStock = Math.max(0, producto.stock + cantidad);
-      return await this.put('productos', {
-        ...producto,
-        stock: nuevoStock
-      });
+    // Métodos de inicialización [5]
+    async init() {
+        await this.db.open();
+        console.log("db open.");
+        return this;
     }
-    return null;
-  }
 
-  async getConfigValue(clave) {
-    const config = await this.get('config', clave);
-    return config ? config.valor : null;
-  }
+    // Métodos CRUD genéricos [5, 6]
+    async add(table, data) {
+        return await this.db[table].add(data);
+    }
 
-  async setConfigValue(clave, valor) {
-    return await this.put('config', {
-      clave,
-      valor,
-      updatedAt: new Date()
-    });
-  }
+    async get(table, id) {
+        return await this.db[table].get(id);
+    }
+
+    async getAll(table, filters = {}) {
+        let query = this.db[table];
+        for (const [key, value] of Object.entries(filters)) {
+            query = query.where(key).equals(value);
+        }
+        return await query.toArray();
+    }
+
+    async put(table, data) {
+        return await this.db[table].put(data);
+    }
+
+    async del(table, id) {
+        await this.db[table].delete(id);
+    }
+
+    // Métodos específicos del negocio [7]
+    async updateStock(productoId, cantidad) {
+        const producto = await this.get('productos', productoId);
+        if (producto) {
+            const nuevoStock = Math.max(0, producto.stock + cantidad);
+            return await this.put('productos', {
+                ...producto,
+                stock: nuevoStock
+            });
+        }
+        return null;
+    }
+
+    async getConfigValue(clave) {
+        const config = await this.get('config', clave);
+        return config ? config.valor : null;
+    }
+
+    async setConfigValue(clave, valor) {
+        return await this.put('config', {
+            clave,
+            valor,
+            updatedAt: new Date()
+        });
+    }
 }
 
-// Exportar instancia global
+// Exportar instancia global [7]
 export const db = new NaturaDBClass();
 **************************************************
 
