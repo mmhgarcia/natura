@@ -1,56 +1,57 @@
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState } from 'react';
+import Sidebar from './Sidebar';
 
 export default function Header() {
-    const navigate = useNavigate();
-
-    const handleAdminAccess = (e) => {
-        // Evitamos que el enlace actúe como una navegación normal inmediatamente
-        e.preventDefault();
-
-        // Solicitamos el PIN de acceso
-        const pin = window.prompt("Ingrese el PIN de acceso:");
-
-        // Verificamos el PIN solicitado (aaaaa)
-        if (pin === "aaaaa") {
-            navigate("/Panel");
-        } else {
-            alert("Acceso denegado: PIN incorrecto.");
-        }
-    };
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
         <header style={styles.header}>
-            <nav style={styles.nav}>
-                <Link to="/" style={styles.link}>Inicio</Link>
-                <Link to="/about" style={styles.link}>Acerca de</Link>
-                
-                {/* Nueva opción de Panel con validación */}
-                <span 
-                    onClick={handleAdminAccess} 
-                    style={{ ...styles.link, cursor: 'pointer' }}
+            <div style={styles.nav}>
+                {/* Botón Tipo Side Menu (Hamburguesa) */}
+                <button 
+                    onClick={() => setIsMenuOpen(true)} 
+                    style={styles.menuBtn}
                 >
-                    Panel
-                </span>
-            </nav>
+                    ☰
+                </button>
+                
+                <h1 style={styles.brand}>Natura Ice</h1>
+                <div style={{ width: '40px' }} /> {/* Espaciador para centrar título */}
+            </div>
+
+            <Sidebar 
+                isOpen={isMenuOpen} 
+                onClose={() => setIsMenuOpen(false)} 
+            />
         </header>
     );
 }
 
 const styles = {
     header: {
-        padding: '1rem',
+        padding: '0.5rem 1rem',
         backgroundColor: '#f8f9fa',
         borderBottom: '1px solid #dee2e6',
-        marginBottom: '20px'
+        position: 'sticky',
+        top: 0,
+        zIndex: 999
     },
     nav: {
         display: 'flex',
-        justifyContent: 'center',
-        gap: '20px'
+        justifyContent: 'space-between',
+        alignItems: 'center'
     },
-    link: {
-        textDecoration: 'none',
+    menuBtn: {
+        fontSize: '1.8rem',
+        background: 'none',
+        border: 'none',
         color: '#007bff',
+        cursor: 'pointer'
+    },
+    brand: {
+        fontSize: '1.8rem',
+        margin: 0,
+        color: '#333',
         fontWeight: 'bold'
     }
 };

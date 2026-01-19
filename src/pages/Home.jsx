@@ -106,10 +106,9 @@ function Home() {
 
     return (
         <div className={styles.container}>
-            <h1 className={styles.title}>Natura Ice</h1>
-
+            
             {/* Group selection combo [8] */}
-            <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+            <div style={{ marginTop: '15px', marginBottom: '15px', textAlign: 'center' }}>
                 <label htmlFor="filtro-home" style={{ fontWeight: 'bold', marginRight: '10px', color: '#333' }}>
                     Filtrar por Grupo:
                 </label>

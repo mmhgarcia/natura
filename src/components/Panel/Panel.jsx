@@ -1,71 +1,48 @@
-// src/components/Panel/Panel.js
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGrupos } from "./hooks/useGrupos";
 import { useProductos } from "./hooks/useProductos";
+import { exportDatabase } from "../../lib/db/utils/exportService"; // Importar servicio
 import styles from "./Panel.module.css";
 
 export default function Panel() {
-  
-  const navigate = useNavigate();
+    const navigate = useNavigate();
+    const { importarGrupos } = useGrupos();
+    const { importarProductos } = useProductos();
+    const [isExporting, setIsExporting] = useState(false);
 
-  const { importarGrupos } = useGrupos();
-  const { importarProductos } = useProductos();
+    const handleExport = async () => {
+        setIsExporting(true);
+        const result = await exportDatabase();
+        if (result.success) {
+            alert("✅ Copia de seguridad guardada en Descargas");
+        } else {
+            alert("❌ Error al exportar: " + (result.error?.message || "Error desconocido"))
+        }
+        setIsExporting(false);
+    };
 
-  // Función simple para importar datos
-  async function handleImportarDatos() {
-    try {
+    return (
+        <div className={styles.container}>
+            <h1 className={styles.title}>PANEL DE CONTROL</h1>
 
-      // 1. Importar grupos
-      const resultadoGrupos = await importarGrupos();
-      console.log('Grupos:', resultadoGrupos);
+            <div className={styles.buttons}>
+                <button className={`${styles.button} ${styles.primary}`} onClick={handleExport} disabled={isExporting}>
+                    {isExporting ? "⌛ Exportando..." : "📤 Exportar DB"}
+                </button>
 
-      // 2. Importar productos
-      const resultadoProductos = await importarProductos();
-      console.log('Productos:', resultadoProductos);
+                <button className={`${styles.button} ${styles.primary}`} onClick={importarGrupos}>
+                    📥 Cargar Datos Iniciales
+                </button>
 
-      alert(`✅ Datos importados\n\n`)
-      
-    } catch (error) {
-      console.error('Error general:', error);
-      alert('❌ Error inesperado: ' + error.message);
-    }
-  }
+                <button className={styles.button} onClick={() => navigate("/tasabcv")}>Tasa BCV</button>
+                <button className={styles.button} onClick={() => navigate("/admingrupos")}>Grupos</button>
+                <button className={styles.button} onClick={() => navigate("/adminproductos")}>Productos</button>
 
-  return (
-    <div className={styles.container}>
-
-      <h2 className={styles.title}>PANEL DE CONTROL</h2>
-
-      {/* Acción principal */}
-      <button 
-          className={`${styles.button} ${styles.primary}`}
-          onClick={handleImportarDatos}          
-        >
-        📥 Cargar Datos Iniciales
-      </button>
-
-      <div className={styles.buttons}>
-        {/* Navegación */}
-        <button className={styles.button} onClick={() => navigate("/tasabcv")}>
-          Tasa BCV
-        </button>
-        
-        <button className={styles.button} onClick={() => navigate("/admingrupos")}>
-          Grupos
-        </button>
-
-        <button className={styles.button} onClick={() => navigate("/adminproductos")}>
-          Productos
-        </button>
-        
-        {/* Volver */}
-        <button 
-          className={`${styles.button} ${styles.back}`}
-          onClick={() => navigate("/")}
-        >
-          ↩️ Regresar
-        </button>
-      </div>
-    </div>
-  );
+                <button className={`${styles.button} ${styles.back}`} onClick={() => navigate("/")}>
+                    ↩️ Regresar
+                </button>
+            </div>
+        </div>
+    );
 }

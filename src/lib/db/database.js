@@ -1,110 +1,110 @@
 // src/lib/db/database.js
+
 import Dexie from 'dexie';
+import 'dexie-export-import';
 
 export class NaturaDBClass {
-  constructor() {
-    this.db = new Dexie('dbTasaBCV');
-    
-    // Versión 1 - Esquema inicial
-    this.db.version(1).stores({
-      productos: 'id, nombre, grupo, stock, imagen, createdAt',
-      grupos: '++id, nombre, precio'
-    });
+    constructor() {
+        // La base de datos se mantiene como dbTasaBCV [4]
+        this.db = new Dexie('dbTasaBCV');
 
-    // Versión 2 - Agrega tabla config
-    this.db.version(2).stores({
-      productos: 'id, nombre, grupo, stock, imagen, createdAt',
-      grupos: '++id, nombre, precio',
-      config: 'clave'
-    }).upgrade(trans => {
-      // Migración: puedes inicializar datos aquí si es necesario
-      console.log('Migrando a versión 2...');
-    });
+        // Versión 1 - Esquema inicial [2]
+        this.db.version(1).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio'
+        });
 
-    // Version 3 - Adds sales table for statistics
-    this.db.version(3).stores({
-        productos: 'id, nombre, grupo, stock, imagen, createdAt',
-        grupos: '++id, nombre, precio',
-        config: 'clave',
-        ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad' // New table
-    });
+        // Versión 2 - Agrega tabla config [2]
+        this.db.version(2).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio',
+            config: 'clave'
+        });
 
-    // Referencias CORRECTAS usando this.db
-    this.productos = this.db.productos;
-    this.grupos = this.db.grupos;
-    this.config = this.db.config;
-    this.ventas = this.db.ventas;
-  }
+        // Versión 3 - Agrega tabla ventas [3]
+        this.db.version(3).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad'
+        });
 
-  // Abrir db
-  async init() {
-    await this.db.open();
-    console.log("db open.");
-    return this;
-  }
+        // NUEVA Versión 4 - Agrega tabla pedidos con ID AUTONUMÉRICO
+        // El prefijo '++' define el campo como autoincremental en Dexie [1].
+        this.db.version(4).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa' 
+        });
 
-  // Métodos SimpleRepo compatibles
-  async add(table, data) {
-    return await this.db[table].add(data);
-  }
-
-  // FALTABA: método get() que se usa en updateStock()
-  async get(table, id) {
-    return await this.db[table].get(id);
-  }
-
-  async getAll(table, filters = {}) {
-    let query = this.db[table];
-    for (const [key, value] of Object.entries(filters)) {
-      query = query.where(key).equals(value);
+        // Referencias para acceso directo [5]
+        this.productos = this.db.productos;
+        this.grupos = this.db.grupos;
+        this.config = this.db.config;
+        this.ventas = this.db.ventas;
+        this.pedidos = this.db.pedidos; // Referencia a la nueva tabla
     }
-    return await query.toArray();
-  }
 
-  // getById es redundante con get(), puedes eliminar uno
-  async getById(table, id) {
-    return await this.db[table].get(id);
-  }
-
-  async put(table, data) {
-    return await this.db[table].put(data);
-  }
-
-  async del(table, id) {
-    await this.db[table].delete(id);
-  }
-
-  // Métodos adicionales específicos
-  async getProductosByGrupo(grupoId) {
-    return await this.db.productos.where('grupo').equals(grupoId).toArray();
-  }
-
-  async updateStock(productoId, cantidad) {
-    // Ahora this.get() existe
-    const producto = await this.get('productos', productoId);
-    if (producto) {
-      const nuevoStock = Math.max(0, producto.stock + cantidad);
-      return await this.put('productos', {
-        ...producto,
-        stock: nuevoStock
-      });
+    // Métodos de inicialización [5]
+    async init() {
+        await this.db.open();
+        console.log("db open.");
+        return this;
     }
-    return null;
-  }
 
-  async getConfigValue(clave) {
-    const config = await this.get('config', clave);
-    return config ? config.valor : null;
-  }
+    // Métodos CRUD genéricos [5, 6]
+    async add(table, data) {
+        return await this.db[table].add(data);
+    }
 
-  async setConfigValue(clave, valor) {
-    return await this.put('config', {
-      clave,
-      valor,
-      updatedAt: new Date()
-    });
-  }
+    async get(table, id) {
+        return await this.db[table].get(id);
+    }
+
+    async getAll(table, filters = {}) {
+        let query = this.db[table];
+        for (const [key, value] of Object.entries(filters)) {
+            query = query.where(key).equals(value);
+        }
+        return await query.toArray();
+    }
+
+    async put(table, data) {
+        return await this.db[table].put(data);
+    }
+
+    async del(table, id) {
+        await this.db[table].delete(id);
+    }
+
+    // Métodos específicos del negocio [7]
+    async updateStock(productoId, cantidad) {
+        const producto = await this.get('productos', productoId);
+        if (producto) {
+            const nuevoStock = Math.max(0, producto.stock + cantidad);
+            return await this.put('productos', {
+                ...producto,
+                stock: nuevoStock
+            });
+        }
+        return null;
+    }
+
+    async getConfigValue(clave) {
+        const config = await this.get('config', clave);
+        return config ? config.valor : null;
+    }
+
+    async setConfigValue(clave, valor) {
+        return await this.put('config', {
+            clave,
+            valor,
+            updatedAt: new Date()
+        });
+    }
 }
 
-// Exportar instancia global
+// Exportar instancia global [7]
 export const db = new NaturaDBClass();
