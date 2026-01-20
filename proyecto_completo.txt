@@ -18,6 +18,7 @@ ESTRUCTURA DEL PROYECTO: natura
   📄 App.jsx
   📁 assets/
   📁 components/
+    📄 Delivery.jsx
     📄 Footer.jsx
     📄 GestionPedido.jsx
     📁 GruposCRUD/
@@ -48,15 +49,18 @@ ESTRUCTURA DEL PROYECTO: natura
     📁 db/
       📄 database.js
       📁 hooks/
+        📄 useDelivery.js
         📄 useTasa.js
         📄 useTasaBCV.js
       📄 index.js
       📁 repositories/
+        📄 DeliveryRepository.js
         📄 RepoRecommStructure.js
         📄 TasaRepository.js
       📁 schemas/
       📁 utils/
         📄 Importer.js
+        📄 deliveryUtil.js
         📄 exportService.js
         📄 tasaUtil.js
     📁 types/
@@ -64,6 +68,7 @@ ESTRUCTURA DEL PROYECTO: natura
   📁 pages/
     📄 About.jsx
     📄 Admin.module.css
+    📄 DeliveryPage.jsx
     📄 GruposPage.jsx
     📄 Home.jsx
     📄 Home.module.css
@@ -387,6 +392,8 @@ import GruposPage from './pages/GruposPage';
 import ProductosPage from './pages/ProductosPage';
 // Nueva importación de la página de Pedidos
 import PedidosPage from './pages/Pedidos'; 
+// Asegúrate de tener esto:
+import DeliveryPage from './pages/DeliveryPage';
 
 function App() {
   return (
@@ -400,6 +407,7 @@ function App() {
         <Route path="/tasabcv" element={<TasaBCV />} />
         <Route path="/admingrupos" element={<GruposPage />} />
         <Route path="/adminproductos" element={<ProductosPage />} />
+        <Route path="/delivery" element={<DeliveryPage />} />
         {/* Nueva ruta para Pedidos */}
         <Route path="/pedidos" element={<PedidosPage />} />
         <Route path="*" element={<NotFound />} />
@@ -410,6 +418,353 @@ function App() {
 }
 
 export default App;
+**************************************************
+
+FILE: src/components/Delivery.jsx
+------------------------------
+// Gestiona el parametro de sistema: Delivery
+import React, { useState, useEffect } from 'react';
+import { db } from '../lib/db/database';
+
+const Delivery = () => {
+  const [costoDelivery, setCostoDelivery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [mensaje, setMensaje] = useState('');
+
+  // Cargar costo de delivery al inicio
+  useEffect(() => {
+    cargarDelivery();
+  }, []);
+
+  const cargarDelivery = async () => {
+    try {
+      setLoading(true);
+      // Buscar en la tabla 'config' donde clave = 'delivery'
+      const config = await db.get('config', 'delivery');
+      
+      if (config && config.valor !== undefined) {
+        setCostoDelivery(String(config.valor));
+      } else {
+        setCostoDelivery(''); // Vacío si no existe
+      }
+      setMensaje('');
+    } catch (error) {
+      console.error('Error cargando delivery:', error);
+      setMensaje('❌ Error al cargar el costo de delivery');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    let valor = e.target.value;
+    
+    // Permitir solo números y un punto decimal
+    valor = valor.replace(/[^0-9.]/g, '');
+    
+    // Asegurar solo un punto decimal
+    const puntos = valor.split('.').length - 1;
+    if (puntos > 1) {
+      const partes = valor.split('.');
+      valor = partes[0] + '.' + partes.slice(1).join('');
+    }
+    
+    setCostoDelivery(valor);
+    setMensaje(''); // Limpiar mensaje al cambiar
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!costoDelivery.trim()) {
+      setMensaje('⚠️ Ingresa un valor para el delivery');
+      return;
+    }
+
+    // Convertir a número para validación
+    const valorNumero = parseFloat(costoDelivery.replace(',', '.'));
+    
+    if (isNaN(valorNumero) || valorNumero < 0) {
+      setMensaje('❌ Ingresa un número válido (mayor o igual a 0)');
+      return;
+    }
+
+    setGuardando(true);
+    setMensaje('💾 Guardando...');
+
+    try {
+      // Guardar en IndexedDB
+      await db.put('config', {
+        clave: 'delivery',
+        valor: valorNumero,
+        tipo: 'costo_servicio',
+        moneda: 'USD',
+        updatedAt: new Date().toISOString()
+      });
+
+      setMensaje(`✅ Costo de delivery guardado: $${valorNumero.toFixed(2)}`);
+      
+      // Limpiar mensaje después de 3 segundos
+      setTimeout(() => setMensaje(''), 3000);
+      
+    } catch (error) {
+      setMensaje('❌ Error al guardar: ' + error.message);
+      console.error(error);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const handleLimpiar = () => {
+    setCostoDelivery('');
+    setMensaje('');
+  };
+
+  // Estilos
+  const styles = {
+    container: {
+      maxWidth: '500px',
+      margin: '0 auto',
+      padding: '20px'
+    },
+    titulo: {
+      color: '#2c3e50',
+      textAlign: 'center',
+      marginBottom: '30px',
+      fontSize: '24px',
+      fontWeight: 'bold'
+    },
+    formContainer: {
+      backgroundColor: 'white',
+      borderRadius: '12px',
+      padding: '25px',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+    },
+    label: {
+      display: 'block',
+      fontSize: '14px',
+      fontWeight: '500',
+      marginBottom: '8px',
+      color: '#2c3e50'
+    },
+    input: {
+      width: '100%',
+      padding: '12px 15px',
+      fontSize: '16px',
+      border: '2px solid #ddd',
+      borderRadius: '8px',
+      boxSizing: 'border-box',
+      transition: 'border-color 0.3s'
+    },
+    inputFocus: {
+      borderColor: '#3498db',
+      outline: 'none',
+      boxShadow: '0 0 0 3px rgba(52, 152, 219, 0.2)'
+    },
+    mensaje: {
+      padding: '12px 15px',
+      borderRadius: '8px',
+      marginBottom: '20px',
+      textAlign: 'center',
+      fontWeight: '500'
+    },
+    mensajeExito: {
+      backgroundColor: '#d4edda',
+      color: '#155724',
+      border: '1px solid #c3e6cb'
+    },
+    mensajeError: {
+      backgroundColor: '#f8d7da',
+      color: '#721c24',
+      border: '1px solid #f5c6cb'
+    },
+    mensajeInfo: {
+      backgroundColor: '#d1ecf1',
+      color: '#0c5460',
+      border: '1px solid #bee5eb'
+    },
+    botonesContainer: {
+      display: 'flex',
+      gap: '12px',
+      marginTop: '25px'
+    },
+    boton: {
+      padding: '12px 20px',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '14px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      flex: 1
+    },
+    botonLimpiar: {
+      backgroundColor: '#95a5a6',
+      color: 'white'
+    },
+    botonGuardar: {
+      backgroundColor: '#27ae60',
+      color: 'white'
+    },
+    botonDeshabilitado: {
+      backgroundColor: '#bdc3c7',
+      cursor: 'not-allowed',
+      opacity: 0.7
+    },
+    loading: {
+      textAlign: 'center',
+      padding: '40px',
+      color: '#7f8c8d',
+      fontSize: '16px'
+    },
+    infoBox: {
+      marginTop: '25px',
+      padding: '15px',
+      backgroundColor: '#f8f9fa',
+      borderRadius: '8px',
+      fontSize: '13px',
+      color: '#6c757d',
+      borderLeft: '4px solid #3498db'
+    },
+    currentValue: {
+      textAlign: 'center',
+      padding: '15px',
+      backgroundColor: '#e8f4fc',
+      borderRadius: '8px',
+      marginBottom: '20px',
+      border: '1px solid #d6e9f9'
+    },
+    currentValueText: {
+      fontSize: '18px',
+      fontWeight: 'bold',
+      color: '#2c3e50'
+    },
+    currentValueLabel: {
+      fontSize: '12px',
+      color: '#7f8c8d',
+      marginTop: '5px'
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.loading}>
+          <div style={{ 
+            border: '4px solid #f3f3f3', 
+            borderTop: '4px solid #3498db', 
+            borderRadius: '50%', 
+            width: '40px', 
+            height: '40px', 
+            margin: '0 auto 20px',
+            animation: 'spin 1s linear infinite' 
+          }}></div>
+          Cargando costo de delivery...
+        </div>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.container}>
+      <h1 style={styles.titulo}>🚚 Costo de Delivery</h1>
+      
+      {/* Valor actual */}
+      <div style={styles.currentValue}>
+        <div style={styles.currentValueText}>
+          {costoDelivery ? `$${parseFloat(costoDelivery).toFixed(2)}` : 'No configurado'}
+        </div>
+        <div style={styles.currentValueLabel}>
+          Costo actual por servicio de delivery
+        </div>
+      </div>
+
+      <div style={styles.formContainer}>
+        {/* Mensajes */}
+        {mensaje && (
+          <div style={{
+            ...styles.mensaje,
+            ...(mensaje.includes('✅') ? styles.mensajeExito : 
+                 mensaje.includes('❌') ? styles.mensajeError : 
+                 styles.mensajeInfo)
+          }}>
+            {mensaje}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={styles.label}>
+              Costo del Delivery (USD) *
+            </label>
+            <input
+              type="text"
+              value={costoDelivery}
+              onChange={handleChange}
+              onFocus={(e) => e.target.style.borderColor = '#3498db'}
+              onBlur={(e) => e.target.style.borderColor = '#ddd'}
+              placeholder="Ej: 5.00"
+              style={styles.input}
+              disabled={guardando}
+            />
+            <div style={{ fontSize: '12px', color: '#6c757d', marginTop: '5px' }}>
+              Ingresa el costo del servicio de delivery en dólares
+            </div>
+          </div>
+          
+          {/* Botones */}
+          <div style={styles.botonesContainer}>
+            <button
+              type="button"
+              onClick={handleLimpiar}
+              style={{
+                ...styles.boton,
+                ...styles.botonLimpiar,
+                opacity: guardando ? 0.5 : 1
+              }}
+              disabled={guardando}
+            >
+              Limpiar
+            </button>
+            
+            <button
+              type="submit"
+              style={{
+                ...styles.boton,
+                ...styles.botonGuardar,
+                ...(guardando ? styles.botonDeshabilitado : {}),
+                opacity: guardando ? 0.7 : 1
+              }}
+              disabled={guardando}
+            >
+              {guardando ? '💾 Guardando...' : '💾 Guardar'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Información adicional */}
+      <div style={styles.infoBox}>
+        <div style={{ fontWeight: '500', marginBottom: '8px' }}>
+          💡 Información:
+        </div>
+        <div>• El costo de delivery se almacena en la tabla "config" con clave "delivery"</div>
+        <div>• Se guarda como número decimal (ej: 5.00 para $5.00 USD)</div>
+        <div>• Este costo se puede usar para agregar a los totales de los pedidos</div>
+        <div>• Para usarlo: <code>await db.getConfigValue('delivery')</code></div>
+      </div>
+    </div>
+  );
+};
+
+export default Delivery;
 **************************************************
 
 FILE: src/components/Footer.jsx
@@ -427,262 +782,233 @@ export default function Footer() {
 FILE: src/components/GestionPedido.jsx
 ------------------------------
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/db/database'; // Acceso a la base de datos dbTasaBCV [2, 4]
+import { db } from '../lib/db/database'; // Acceso a la base de datos dbTasaBCV [1]
 
 const GestionPedido = ({ pedido, onClose, onSave }) => {
-  const [formData, setFormData] = useState({
-    numero_pedido: '',
-    // Se inicializa con la fecha actual en formato string YYYY-MM-DD [1]
-    fecha_pedido: new Date().toISOString().split('T'),
-    tasa: '', 
-    estatus: 'Activo' 
-  });
-  
-  const [productos, setProductos] = useState([]);
-  const [listaGrupos, setListaGrupos] = useState([]);
-  const [cantidades, setCantidades] = useState({});
-  const [error, setError] = useState('');
-
-  // Modo visualización: true si el componente recibe un pedido por props [5]
-  const esVisualizacion = !!pedido; 
-
-  useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        // 1. Cargar la tasa BCV y datos maestros [5-7]
-        const tasaConfig = await db.getConfigValue('tasa');
-        const [todosLosProductos, todosLosGrupos] = await Promise.all([
-          db.getAll('productos'),
-          db.getAll('grupos')
-        ]);
-
-        setProductos(todosLosProductos);
-        setListaGrupos(todosLosGrupos);
-
-        // 2. Lógica de inicialización según el modo
-        if (pedido) {
-          // MODO VISUALIZACIÓN: Cargar datos del pedido seleccionado [5]
-          setFormData({
-            numero_pedido: pedido.numero_pedido || '',
-            fecha_pedido: pedido.fecha_pedido || '',
-            tasa: pedido.tasa || (tasaConfig ? tasaConfig.toString() : ''),
-            estatus: pedido.estatus || 'Activo'
-          });
-          if (pedido.items) setCantidades(pedido.items);
-        } else {
-          // MODO CREACIÓN: Fecha del día automática y estrategia de numeración [8, 9]
-          const hoy = new Date().toISOString().split('T');
-          
-          // Buscar el último pedido para incrementar el número [Estrategia Recomendada]
-          const ultimoPedido = await db.pedidos.orderBy('id').last();
-          const siguienteNumero = ultimoPedido 
-            ? (parseInt(ultimoPedido.numero_pedido) + 1).toString() 
-            : "1";
-          
-          setFormData(prev => ({
-            ...prev,
-            numero_pedido: siguienteNumero,
-            fecha_pedido: hoy, // Establece la fecha del día automáticamente
-            tasa: tasaConfig ? tasaConfig.toString() : ''
-          }));
-        }
-      } catch (err) {
-        console.error("Error al cargar datos iniciales:", err);
-      }
-    };
-    cargarDatos();
-  }, [pedido]);
-
-  // Cálculo de totales basado en costo_$ del grupo [3, 10, 11]
-  const calcularTotales = () => {
-    let totalUSD = 0;
-    Object.entries(cantidades).forEach(([prodId, qty]) => {
-      const producto = productos.find(p => p.id === parseInt(prodId));
-      if (producto && qty > 0) {
-        const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === producto.grupo.toLowerCase());
-        const costo = grupo ? (grupo.costo_$ || 0) : 0;
-        totalUSD += qty * costo;
-      }
+    const [formData, setFormData] = useState({
+        numero_pedido: '',
+        fecha_pedido: new Date().toISOString().split('T'), // [2]
+        tasa: '',
+        estatus: 'Activo'
     });
-    const tasaNum = parseFloat(formData.tasa) || 0;
-    return { usd: totalUSD, bs: totalUSD * tasaNum };
-  };
 
-  const { usd, bs } = calcularTotales();
+    const [productos, setProductos] = useState([]);
+    const [listaGrupos, setListaGrupos] = useState([]);
+    const [cantidades, setCantidades] = useState({});
+    const [error, setError] = useState('');
 
-  const handleIncrement = (id) => {
-    if (esVisualizacion) return;
-    setCantidades(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 })); // [11]
-  };
+    const esVisualizacion = !!pedido; // [2]
 
-  const handleDecrement = (id) => {
-    if (esVisualizacion) return;
-    setCantidades(prev => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) - 1) })); // [11]
-  };
+    useEffect(() => {
+        const cargarDatos = async () => {
+            try {
+                const tasaConfig = await db.getConfigValue('tasa'); // [2]
+                const [todosLosProductos, todosLosGrupos] = await Promise.all([
+                    db.getAll('productos'),
+                    db.getAll('grupos')
+                ]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (esVisualizacion) return;
-    try {
-      const pedidoData = { 
-        ...formData, 
-        items: cantidades, 
-        total_usd: usd, 
-        total_bs: bs 
-      };
-      // Persistencia en IndexedDB [12-14]
-      await db.add('pedidos', pedidoData);
-      onSave();
-      onClose();
-    } catch (err) {
-      setError('Error al grabar el pedido: ' + err.message);
-    }
-  };
+                setProductos(todosLosProductos);
+                setListaGrupos(todosLosGrupos);
 
-  const getCostoGrupo = (nombreGrupo) => {
-    const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === nombreGrupo.toLowerCase());
-    return grupo ? (grupo.costo_$ ? grupo.costo_$.toFixed(2) : "0.00") : "0.00"; // [15]
-  };
+                if (pedido) {
+                    // Sincronización: Actualiza el calendario con la fecha del pedido recibido [3]
+                    setFormData({
+                        numero_pedido: pedido.numero_pedido || '',
+                        fecha_pedido: pedido.fecha_pedido || '',
+                        tasa: pedido.tasa || (tasaConfig ? tasaConfig.toString() : ''),
+                        estatus: pedido.estatus || 'Activo'
+                    });
+                    if (pedido.items) setCantidades(pedido.items);
+                } else {
+                    const hoy = new Date().toISOString().split('T');
+                    const ultimoPedido = await db.pedidos.orderBy('id').last();
+                    const siguienteNumero = ultimoPedido 
+                        ? (parseInt(ultimoPedido.numero_pedido) + 1).toString() 
+                        : "1";
 
-  const productosAgrupados = productos.reduce((acc, prod) => {
-    const grupo = prod.grupo || 'Otros';
-    if (!acc[grupo]) acc[grupo] = [];
-    acc[grupo].push(prod);
-    return acc;
-  }, {}); // [15]
+                    setFormData(prev => ({
+                        ...prev,
+                        numero_pedido: siguienteNumero,
+                        fecha_pedido: hoy,
+                        tasa: tasaConfig ? tasaConfig.toString() : ''
+                    }));
+                }
+            } catch (err) {
+                console.error("Error al cargar datos iniciales:", err);
+            }
+        };
+        cargarDatos();
+    }, [pedido]);
 
-  return (
-    <div style={styles.overlay}>
-      <div style={styles.modal}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>GESTIÓN DE PEDIDOS</h2>
-          <button onClick={onClose} style={styles.closeButton}>×</button>
-        </div>
+    const calcularTotales = () => {
+        let totalUSD = 0;
+        Object.entries(cantidades).forEach(([prodId, qty]) => {
+            const producto = productos.find(p => p.id === parseInt(prodId));
+            if (producto && qty > 0) {
+                const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === producto.grupo.toLowerCase());
+                const costo = grupo ? (grupo.costo_$ || 0) : 0; // [6]
+                totalUSD += qty * costo;
+            }
+        });
+        const tasaNum = parseFloat(formData.tasa) || 0;
+        return { usd: totalUSD, bs: totalUSD * tasaNum };
+    };
 
-        <form onSubmit={handleSubmit} style={styles.content}>
-          <div style={styles.topRow}>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Pedido # (Auto)</label>
-              <input type="text" value={formData.numero_pedido} style={styles.inputReadOnly} readOnly />
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Fecha</label>
-              <input 
-                type="date" 
-                value={formData.fecha_pedido} 
-                onChange={(e) => setFormData({...formData, fecha_pedido: e.target.value})} 
-                style={esVisualizacion ? styles.inputReadOnly : styles.inputSmall} 
-                disabled={esVisualizacion} // Deshabilitado en modo visualización
-              />
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Tasa (BCV)</label>
-              <input type="text" value={formData.tasa} style={styles.inputReadOnly} readOnly />
-            </div>
-          </div>
+    const { usd, bs } = calcularTotales();
 
-          <div style={styles.totalsBar}>
-            <div style={styles.totalBox}>
-              <span style={styles.totalLabel}>Total $:</span>
-              <span style={styles.totalValue}>{usd.toFixed(2)}</span>
-            </div>
-            <div style={styles.totalBox}>
-              <span style={styles.totalLabel}>Total Bs:</span>
-              <span style={styles.totalValue}>{bs.toFixed(2)}</span>
-            </div>
-          </div>
+    const handleIncrement = (id) => {
+        if (esVisualizacion) return;
+        setCantidades(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+    };
 
-          <div style={styles.productListContainer}>
-            <div style={styles.productListHeader}>Lista de Productos</div>
-            <div style={styles.productList}>
-              {Object.entries(productosAgrupados).map(([grupo, items]) => (
-                <div key={grupo}>
-                  <div style={styles.groupTitle}>
-                    {grupo.toUpperCase()} 
-                    <span style={styles.groupPrice}> (${getCostoGrupo(grupo)})</span>
-                  </div>
-                  {items.map((prod) => (
-                    <div key={prod.id} style={styles.productItem}>
-                      <div style={styles.productName}>
-                        <strong>{prod.nombre}</strong> <small>(ID: {prod.id})</small>
-                      </div>
-                      <div style={styles.productDetails}>
-                        <span style={styles.stockText}>Stock: {prod.stock}</span>
-                        <div style={styles.quantityControl}>
-                          <button type="button" onClick={() => handleDecrement(prod.id)} style={styles.qtyBtn} disabled={esVisualizacion}>-</button>
-                          <input 
-                            type="number" 
-                            value={cantidades[prod.id] || 0}
-                            onChange={(e) => !esVisualizacion && setCantidades({...cantidades, [prod.id]: parseInt(e.target.value) || 0})}
-                            style={styles.qtyInput}
-                            disabled={esVisualizacion}
-                          />
-                          <button type="button" onClick={() => handleIncrement(prod.id)} style={styles.qtyBtn} disabled={esVisualizacion}>+</button>
+    const handleDecrement = (id) => {
+        if (esVisualizacion) return;
+        setCantidades(prev => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) - 1) }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (esVisualizacion) return;
+        try {
+            const pedidoData = { ...formData, items: cantidades, total_usd: usd, total_bs: bs };
+            await db.add('pedidos', pedidoData); // [7]
+            onSave();
+            onClose();
+        } catch (err) {
+            setError('Error al grabar el pedido: ' + err.message);
+        }
+    };
+
+    const getCostoGrupo = (nombreGrupo) => {
+        const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === nombreGrupo.toLowerCase());
+        return grupo ? (grupo.costo_$ ? grupo.costo_$.toFixed(2) : "0.00") : "0.00";
+    };
+
+    const productosAgrupados = productos.reduce((acc, prod) => {
+        const grupo = prod.grupo || 'Otros';
+        if (!acc[grupo]) acc[grupo] = [];
+        acc[grupo].push(prod);
+        return acc;
+    }, {});
+
+    return (
+        <div style={styles.overlay}>
+            <div style={styles.modal}>
+                <header style={styles.header}>
+                    <span style={styles.title}>GESTIÓN DE PEDIDOS</span>
+                    <button onClick={onClose} style={styles.closeButton}>×</button>
+                </header>
+
+                <form onSubmit={handleSubmit} style={styles.content}>
+                    <div style={styles.topRow}>
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>Pedido #</label>
+                            <input type="text" value={formData.numero_pedido} disabled style={styles.inputReadOnly} />
                         </div>
-                      </div>
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>Fecha</label>
+                            <input 
+                                type="date"
+                                value={formData.fecha_pedido}
+                                onChange={(e) => setFormData({...formData, fecha_pedido: e.target.value})}
+                                style={esVisualizacion ? styles.inputReadOnly : styles.inputSmall}
+                                disabled={esVisualizacion}
+                            />
+                        </div>
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>Tasa (BCV)</label>
+                            <input type="text" value={formData.tasa} disabled style={styles.inputReadOnly} />
+                        </div>
                     </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
 
-          <div style={styles.footer}>
-            <button 
-              type="button" 
-              onClick={() => setCantidades({})} 
-              style={{...styles.limpiarBtn, opacity: esVisualizacion ? 0.5 : 1}} 
-              disabled={esVisualizacion}
-            >
-              Limpiar
-            </button>
-            <button 
-              type="submit" 
-              style={{...styles.grabarBtn, opacity: esVisualizacion ? 0.5 : 1}} 
-              disabled={esVisualizacion}
-            >
-              Grabar
-            </button>
-          </div>
-          {error && <div style={styles.error}>{error}</div>}
-        </form>
-      </div>
-    </div>
-  );
+                    <div style={styles.totalsBar}>
+                        <div style={styles.totalBox}>
+                            <span style={styles.totalLabel}>Total $:</span>
+                            <span style={styles.totalValue}>{usd.toFixed(2)}</span>
+                        </div>
+                        <div style={styles.totalBox}>
+                            <span style={styles.totalLabel}>Total Bs:</span>
+                            <span style={styles.totalValue}>{bs.toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <div style={styles.productListContainer}>
+                        <div style={styles.productListHeader}>Lista de Productos</div>
+                        <div style={styles.productList}>
+                            {Object.entries(productosAgrupados).map(([grupo, items]) => (
+                                <div key={grupo}>
+                                    <div style={styles.groupTitle}>
+                                        <span>{grupo.toUpperCase()}</span>
+                                        <span style={styles.groupPrice}>(${getCostoGrupo(grupo)})</span>
+                                    </div>
+                                    {items.map((prod) => (
+                                        <div key={prod.id} style={styles.productItem}>
+                                            <div style={styles.productName}>{prod.nombre} (ID: {prod.id})</div>
+                                            <div style={styles.productDetails}>
+                                                <span style={styles.stockText}>Stock: {prod.stock}</span>
+                                                <div style={styles.quantityControl}>
+                                                    <button type="button" onClick={() => handleDecrement(prod.id)} style={styles.qtyBtn} disabled={esVisualizacion}>-</button>
+                                                    <input 
+                                                        type="number" 
+                                                        value={cantidades[prod.id] || 0} 
+                                                        onChange={(e) => !esVisualizacion && setCantidades({...cantidades, [prod.id]: parseInt(e.target.value) || 0})}
+                                                        style={styles.qtyInput}
+                                                        disabled={esVisualizacion}
+                                                    />
+                                                    <button type="button" onClick={() => handleIncrement(prod.id)} style={styles.qtyBtn} disabled={esVisualizacion}>+</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div style={styles.footer}>
+                        <button type="button" onClick={() => setCantidades({})} style={{...styles.limpiarBtn, opacity: esVisualizacion ? 0.5 : 1}} disabled={esVisualizacion}>Limpiar</button>
+                        <button type="submit" style={{...styles.grabarBtn, opacity: esVisualizacion ? 0.5 : 1}} disabled={esVisualizacion}>Grabar</button>
+                    </div>
+                    {error && <p style={styles.error}>{error}</p>}
+                </form>
+            </div>
+        </div>
+    );
 };
 
 const styles = {
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }, // [16]
-  modal: { backgroundColor: '#fff', width: '95%', maxWidth: '500px', maxHeight: '95vh', border: '1px solid #ccc', padding: '10px', borderRadius: '4px', display: 'flex', flexDirection: 'column' }, // [16]
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #00BFFF', marginBottom: '10px' }, // [17]
-  title: { fontSize: '16px', fontWeight: 'bold', color: '#000', margin: 0 }, // [17]
-  closeButton: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#000' }, // [17]
-  content: { display: 'flex', flexDirection: 'column', gap: '10px' }, // [17]
-  topRow: { display: 'flex', gap: '8px', justifyContent: 'space-between' }, // [17]
-  inputGroup: { display: 'flex', flexDirection: 'column', flex: 1, gap: '4px' }, // [18]
-  label: { fontSize: '12px', fontWeight: 'bold', color: '#000' }, // [18]
-  inputSmall: { padding: '6px', border: '1px solid #aaa', fontSize: '13px', color: '#000', backgroundColor: '#fff', width: '100%', boxSizing: 'border-box' }, // [18]
-  inputReadOnly: { padding: '6px', border: '1px solid #ccc', fontSize: '13px', color: '#555', backgroundColor: '#f0f0f0', width: '100%', boxSizing: 'border-box', cursor: 'not-allowed' }, // [18]
-  totalsBar: { display: 'flex', gap: '10px', justifyContent: 'space-between', padding: '5px 0' }, // [19]
-  totalBox: { flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#e1f5fe', padding: '8px', border: '1px solid #00BFFF', borderRadius: '4px' }, // [19]
-  totalLabel: { fontSize: '13px', fontWeight: 'bold', color: '#000' }, // [19]
-  totalValue: { fontSize: '14px', fontWeight: 'bold', color: '#007bff' }, // [19]
-  productListContainer: { border: '1px solid #aaa', borderRadius: '2px' }, // [19]
-  productListHeader: { textAlign: 'center', color: '#00BFFF', padding: '5px', borderBottom: '1px solid #aaa', fontWeight: 'bold' }, // [20]
-  productList: { height: '275px', overflowY: 'auto', backgroundColor: '#fff' }, // [20]
-  groupTitle: { fontSize: '18px', fontWeight: 'bold', backgroundColor: '#f1f1f1', padding: '8px 10px', color: '#000', display: 'flex', justifyContent: 'space-between' }, // [20]
-  groupPrice: { color: '#007bff', fontSize: '16px' }, // [20]
-  productItem: { padding: '8px 10px', borderBottom: '1px solid #eee' }, // [20]
-  productName: { fontSize: '14px', color: '#000' }, // [21]
-  productDetails: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }, // [21]
-  stockText: { fontSize: '12px', color: '#333' }, // [21]
-  quantityControl: { display: 'flex', alignItems: 'center', gap: '4px' }, // [21]
-  qtyBtn: { width: '30px', height: '30px', backgroundColor: '#eee', border: '1px solid #ccc', cursor: 'pointer', fontWeight: 'bold', fontSize: '18px', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }, // [21]
-  qtyInput: { width: '40px', textAlign: 'center', border: '1px solid #ccc', padding: '4px', color: '#000', backgroundColor: '#fff' }, // [22]
-  footer: { display: 'flex', gap: '15px', marginTop: '5px' }, // [22]
-  limpiarBtn: { backgroundColor: '#f44336', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', flex: 1 }, // [22]
-  grabarBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', flex: 1 }, // [22]
-  error: { color: 'red', fontSize: '12px', textAlign: 'center' }
+    overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 },
+    modal: { backgroundColor: '#fff', width: '95%', maxWidth: '500px', maxHeight: '95vh', border: '1px solid #ccc', padding: '10px', borderRadius: '4px', display: 'flex', flexDirection: 'column' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #00BFFF', marginBottom: '10px' },
+    title: { fontSize: '16px', fontWeight: 'bold', color: '#000', margin: 0 },
+    closeButton: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#000' },
+    content: { display: 'flex', flexDirection: 'column', gap: '10px' },
+    topRow: { display: 'flex', gap: '8px', justifyContent: 'space-between' },
+    inputGroup: { display: 'flex', flexDirection: 'column', flex: 1, gap: '4px' },
+    label: { fontSize: '12px', fontWeight: 'bold', color: '#000' },
+    inputSmall: { padding: '6px', border: '1px solid #aaa', fontSize: '13px', color: '#000', backgroundColor: '#fff', width: '100%', boxSizing: 'border-box' },
+    inputReadOnly: { padding: '6px', border: '1px solid #ccc', fontSize: '13px', color: '#555', backgroundColor: '#f0f0f0', width: '100%', boxSizing: 'border-box', cursor: 'not-allowed' },
+    totalsBar: { display: 'flex', gap: '10px', justifyContent: 'space-between', padding: '5px 0' },
+    totalBox: { flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#e1f5fe', padding: '8px', border: '1px solid #00BFFF', borderRadius: '4px' },
+    totalLabel: { fontSize: '13px', fontWeight: 'bold', color: '#000' },
+    totalValue: { fontSize: '14px', fontWeight: 'bold', color: '#007bff' },
+    productListContainer: { border: '1px solid #aaa', borderRadius: '2px' },
+    productListHeader: { textAlign: 'center', color: '#00BFFF', padding: '5px', borderBottom: '1px solid #aaa', fontWeight: 'bold' },
+    productList: { height: '275px', overflowY: 'auto', backgroundColor: '#fff' },
+    groupTitle: { fontSize: '18px', fontWeight: 'bold', backgroundColor: '#f1f1f1', padding: '8px 10px', color: '#000', display: 'flex', justifyContent: 'space-between' },
+    groupPrice: { color: '#007bff', fontSize: '16px' },
+    productItem: { padding: '8px 10px', borderBottom: '1px solid #eee' },
+    productName: { fontSize: '14px', color: '#000' },
+    productDetails: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    stockText: { fontSize: '12px', color: '#333' },
+    quantityControl: { display: 'flex', alignItems: 'center', gap: '4px' },
+    qtyBtn: { width: '30px', height: '30px', backgroundColor: '#eee', border: '1px solid #ccc', cursor: 'pointer', fontWeight: 'bold', fontSize: '18px', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    qtyInput: { width: '40px', textAlign: 'center', border: '1px solid #ccc', padding: '4px', color: '#000', backgroundColor: '#fff' },
+    footer: { display: 'flex', gap: '15px', marginTop: '5px' },
+    limpiarBtn: { backgroundColor: '#f44336', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', flex: 1 },
+    grabarBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', flex: 1 },
+    error: { color: 'red', fontSize: '12px', textAlign: 'center' }
 };
 
 export default GestionPedido;
@@ -1229,14 +1555,24 @@ const PedidosComponente = () => {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
+  const [hoveredRow, setHoveredRow] = useState(null);
 
+  // ==================== CARGAR DATOS ====================
+  
   const cargarRegistros = async () => {
     try {
       setLoading(true);
       const datos = await db.getAll('pedidos'); 
-      setListaPedidos(datos);
+      // Ordenar por número de pedido (más recientes primero)
+      const datosOrdenados = datos.sort((a, b) => {
+        const numA = parseInt(a.numero_pedido) || 0;
+        const numB = parseInt(b.numero_pedido) || 0;
+        return numB - numA;
+      });
+      setListaPedidos(datosOrdenados);
     } catch (error) {
       console.error("Error al cargar pedidos:", error);
+      alert("❌ Error al cargar los pedidos.");
     } finally {
       setLoading(false);
     }
@@ -1246,6 +1582,8 @@ const PedidosComponente = () => {
     cargarRegistros();
   }, []);
 
+  // ==================== FUNCIONES BÁSICAS ====================
+  
   const handleNuevoPedido = () => {
     setPedidoSeleccionado(null);
     setModalOpen(true);
@@ -1256,106 +1594,648 @@ const PedidosComponente = () => {
       setPedidoSeleccionado(pedido);
       setModalOpen(true);
     } else {
-      alert("Solo se permite editar pedidos en estado Activo.");
+      alert("ℹ️ Solo se permite editar pedidos en estado Activo.");
     }
   };
 
-  // Lógica actualizada para incrementar stock y cerrar pedido
+  // ==================== RECIBIR PEDIDO ====================
+  
   const handleRecibir = async (pedido, e) => {
     e.stopPropagation(); 
     
-    const confirmar = window.confirm(`¿Desea procesar el ingreso de mercancía del pedido ${pedido.numero_pedido}? Esto incrementará el stock actual.`);
+    const confirmar = window.confirm(
+      `¿Procesar ingreso del pedido #${pedido.numero_pedido}?\n\n` +
+      `✅ Esto incrementará el stock y marcará como "Cerrado".`
+    );
     
-    if (confirmar) {
-      try {
-        // 1. Recorrer los items del pedido para incrementar el stock
-        // El objeto pedido.items contiene { productoId: cantidad }
-        if (pedido.items && Object.keys(pedido.items).length > 0) {
-          for (const [prodId, qty] of Object.entries(pedido.items)) {
-            const cantidadNum = parseInt(qty);
-            if (cantidadNum > 0) {
-              // Incrementamos el stock usando el método de la base de datos
-              await db.updateStock(parseInt(prodId), cantidadNum);
-            }
+    if (!confirmar) return;
+    
+    try {
+      // Incrementar stock de cada producto
+      if (pedido.items && Object.keys(pedido.items).length > 0) {
+        for (const [prodId, qty] of Object.entries(pedido.items)) {
+          const cantidadNum = parseInt(qty);
+          if (cantidadNum > 0) {
+            await db.updateStock(parseInt(prodId), cantidadNum);
           }
         }
-
-        // 2. Una vez actualizado el stock, marcamos el pedido como 'Cerrado'
-        await db.put('pedidos', { ...pedido, estatus: 'Cerrado' });
-        
-        // 3. Notificar éxito al usuario
-        alert("✅ Pedido procesado exitosamente. El stock ha sido actualizado.");
-        
-        // 4. Refrescar la lista de pedidos en pantalla
-        cargarRegistros();
-      } catch (error) {
-        console.error("Error al procesar el pedido:", error);
-        alert("❌ Error crítico al procesar el pedido: " + error.message);
       }
+
+      // Marcar como 'Cerrado'
+      await db.put('pedidos', { 
+        ...pedido, 
+        estatus: 'Cerrado',
+        fechaRecepcion: new Date().toISOString()
+      });
+      
+      alert(`✅ Pedido #${pedido.numero_pedido} recibido. Stock actualizado.`);
+      cargarRegistros();
+    } catch (error) {
+      console.error("Error al recibir pedido:", error);
+      alert(`❌ Error: ${error.message}`);
     }
   };
 
-  const styles = {
-    container: { display: 'flex', flexDirection: 'column', width: '100%', minHeight: '100vh', backgroundColor: '#fff', margin: 0, padding: 0, boxSizing: 'border-box' },
-    header: { display: 'flex', alignItems: 'center', padding: '15px', backgroundColor: '#00BFFF', color: 'white', width: '100%', boxSizing: 'border-box' },
-    backArrow: { background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer', marginRight: '10px' },
-    title: { fontSize: '20px', fontWeight: 'bold', margin: 0 },
-    content: { padding: '20px', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box' },
-    addBtnCircle: { width: '55px', height: '55px', borderRadius: '50%', backgroundColor: '#28a745', color: 'white', border: 'none', fontSize: '35px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', marginBottom: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.2)', padding: 0, lineHeight: 0 },
-    headerRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', backgroundColor: '#f4f4f4', borderBottom: '2px solid #ddd', padding: '10px 5px' },
-    headerCell: { fontWeight: 'bold', fontSize: '13px', color: '#333', textAlign: 'left' },
-    listaContainer: { width: '100%' },
-    row: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', borderBottom: '1px solid #eee', cursor: 'pointer', alignItems: 'center' },
-    cell: { padding: '15px 5px', textAlign: 'left', color: '#000', fontSize: '14px' },
-    btnRecibir: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '8px 10px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' },
-    estatusCerrado: { color: '#666', fontStyle: 'italic', fontSize: '13px' }
+  // ==================== ELIMINAR PEDIDO ====================
+  
+  const handleEliminar = async (pedido, e) => {
+    e.stopPropagation(); 
+    
+    // Validar estado
+    if (pedido.estatus === 'Cerrado') {
+      alert("❌ Pedido ya procesado. No se puede eliminar.");
+      return;
+    }
+    
+    const totalItems = Object.keys(pedido.items || {}).length;
+    
+    const confirmar = window.confirm(
+      `⚠️ ¿ELIMINAR PEDIDO #${pedido.numero_pedido}?\n\n` +
+      `Items: ${totalItems} producto(s)\n` +
+      `Total: $${pedido.total_usd?.toFixed(2) || '0.00'}\n\n` +
+      `Esta acción NO se puede deshacer.`
+    );
+    
+    if (!confirmar) return;
+    
+    try {
+      await db.del('pedidos', pedido.id);
+      alert(`✅ Pedido #${pedido.numero_pedido} eliminado.`);
+      cargarRegistros();
+    } catch (error) {
+      console.error("Error eliminando:", error);
+      alert(`❌ Error: ${error.message}`);
+    }
   };
 
+  // ==================== EXPORTAR PEDIDO (MODIFICADA) ====================
+  
+  const exportarPedido = async (pedido) => {
+    try {
+      // 1. Obtener productos de la base de datos
+      const productos = await db.getAll('productos');
+      
+      // 2. Obtener el costo de delivery desde la configuración
+      const deliveryConfig = await db.get('config', 'delivery');
+      const deliveryCost = deliveryConfig ? parseFloat(deliveryConfig.valor) : 0;
+      
+      // 3. Preparar lista de productos del pedido
+      const items = pedido.items || {};
+      const listaProductos = [];
+      let totalUnidades = 0;
+      
+      // 4. Para cada item, buscar su nombre
+      for (const [productoId, cantidad] of Object.entries(items)) {
+        if (cantidad > 0) {
+          // Buscar el producto por ID
+          const producto = productos.find(p => p.id == productoId);
+          
+          // Usar nombre si existe, si no, usar "Producto X"
+          const nombre = producto?.nombre || `Producto ${productoId}`;
+          
+          listaProductos.push(`${cantidad} x ${nombre}`);
+          totalUnidades += parseInt(cantidad);
+        }
+      }
+      
+      // 5. Calcular subtotal USD (sin delivery)
+      const subtotalUSD = pedido.total_usd || 0;
+      
+      // 6. Calcular TOTAL GENERAL con delivery
+      const totalGeneralUSD = subtotalUSD + deliveryCost;
+      
+      // 7. Crear el contenido del archivo con Delivery en RESUMEN
+      const contenido = `
+PEDIDO NATURA ICE
+=====================
+
+Numero: #${pedido.numero_pedido}
+Fecha: ${new Date(pedido.fecha_pedido).toLocaleDateString('es-ES')}
+Tasa BCV: ${pedido.tasa || 'N/A'}
+
+=====================
+PRODUCTOS SOLICITADOS:
+=====================
+
+${listaProductos.join('\n')}
+
+=====================
+RESUMEN:
+=====================
+
+Total Unidades: ${totalUnidades}
+Subtotal USD: $${subtotalUSD.toFixed(2)}
+Delivery: $${deliveryCost.toFixed(2)}
+=====================
+TOTAL GENERAL: $${totalGeneralUSD.toFixed(2)}
+Total Bs: ${(totalGeneralUSD * pedido.tasa)?.toFixed(2) || '0.00'}
+
+=====================
+INFORMACION:
+=====================
+
+Contacto: Sra. Magali Hernandez (Corocito)
+
+=====================
+Generado: ${new Date().toLocaleDateString('es-ES')}
+=====================
+      `.trim();
+      
+      // 8. Crear y descargar archivo
+      const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Pedido_${pedido.numero_pedido}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // 9. Limpiar y confirmar
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      
+      alert(`✅ Pedido #${pedido.numero_pedido} exportado\n\nArchivo listo para enviar al proveedor.\n\nIncluye Delivery: $${deliveryCost.toFixed(2)}`);
+      
+    } catch (error) {
+      console.error('Error:', error);
+      alert(`❌ Error al exportar: ${error.message}`);
+    }
+  };
+
+  // ==================== UTILIDADES ====================
+  
+  const formatearFecha = (fechaString) => {
+    if (!fechaString) return 'N/A';
+    try {
+      return new Date(fechaString).toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return fechaString;
+    }
+  };
+
+  const calcularEstadisticas = () => {
+    const pedidosActivos = listaPedidos.filter(p => p.estatus === 'Activo' || !p.estatus).length;
+    const pedidosCerrados = listaPedidos.filter(p => p.estatus === 'Cerrado').length;
+    
+    return { pedidosActivos, pedidosCerrados };
+  };
+
+  const stats = calcularEstadisticas();
+
+  // ==================== ESTILOS ====================
+  
+  const styles = {
+    container: { 
+      display: 'flex', 
+      flexDirection: 'column', 
+      width: '100%', 
+      minHeight: '100vh', 
+      backgroundColor: '#f5f7fa', 
+      margin: 0, 
+      padding: 0, 
+      boxSizing: 'border-box' 
+    },
+    
+    header: { 
+      display: 'flex', 
+      alignItems: 'center', 
+      padding: '15px 20px', 
+      backgroundColor: '#2c3e50', 
+      color: 'white', 
+      width: '100%', 
+      boxSizing: 'border-box',
+      position: 'sticky',
+      top: 0,
+      zIndex: 100,
+      boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+    },
+    
+    backArrow: { 
+      background: 'none', 
+      border: 'none', 
+      color: 'white', 
+      fontSize: '24px', 
+      cursor: 'pointer', 
+      marginRight: '15px',
+      padding: '5px 10px',
+      borderRadius: '6px',
+      transition: 'all 0.2s'
+    },
+    
+    title: { 
+      fontSize: '20px', 
+      fontWeight: 'bold', 
+      margin: 0,
+      flex: 1
+    },
+    
+    statsBar: {
+      display: 'flex',
+      justifyContent: 'space-around',
+      padding: '15px 20px',
+      backgroundColor: 'white',
+      borderBottom: '1px solid #eaeaea',
+      marginBottom: '15px',
+      flexWrap: 'wrap',
+      gap: '15px'
+    },
+    
+    statCard: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: '12px 20px',
+      backgroundColor: '#f8f9fa',
+      borderRadius: '10px',
+      minWidth: '100px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+    },
+    
+    statNumber: {
+      fontSize: '24px',
+      fontWeight: 'bold',
+      marginBottom: '5px'
+    },
+    
+    statLabel: {
+      fontSize: '12px',
+      color: '#7f8c8d',
+      textAlign: 'center'
+    },
+    
+    content: { 
+      padding: '0 20px 20px', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      width: '100%', 
+      boxSizing: 'border-box' 
+    },
+    
+    addBtnCircle: { 
+      width: '60px', 
+      height: '60px', 
+      borderRadius: '50%', 
+      backgroundColor: '#27ae60', 
+      color: 'white', 
+      border: 'none', 
+      fontSize: '36px', 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      cursor: 'pointer', 
+      boxShadow: '0 4px 12px rgba(39, 174, 96, 0.3)', 
+      padding: 0, 
+      lineHeight: 0,
+      transition: 'all 0.3s',
+      margin: '0 auto 20px'
+    },
+    
+    headerRow: { 
+      display: 'grid', 
+      gridTemplateColumns: '100px 100px 120px 200px',
+      backgroundColor: '#34495e', 
+      borderBottom: '2px solid #2c3e50', 
+      padding: '14px 10px',
+      fontWeight: 'bold',
+      fontSize: '13px',
+      color: 'white',
+      borderRadius: '8px 8px 0 0'
+    },
+    
+    headerCell: { 
+      textAlign: 'left',
+      padding: '0 5px'
+    },
+    
+    listaContainer: { 
+      width: '100%',
+      minHeight: '200px',
+      backgroundColor: 'white',
+      borderRadius: '0 0 8px 8px',
+      overflow: 'hidden',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+    },
+    
+    row: { 
+      display: 'grid', 
+      gridTemplateColumns: '100px 100px 120px 200px',
+      borderBottom: '1px solid #f0f0f0', 
+      cursor: 'pointer', 
+      alignItems: 'center',
+      padding: '12px 10px',
+      transition: 'all 0.2s'
+    },
+    
+    rowHover: {
+      backgroundColor: '#f8f9ff'
+    },
+    
+    cell: { 
+      padding: '8px 5px', 
+      textAlign: 'left', 
+      color: '#2c3e50', 
+      fontSize: '14px',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center'
+    },
+    
+    pedidoNumero: {
+      fontWeight: 'bold',
+      fontSize: '15px',
+      color: '#2c3e50'
+    },
+    
+    pedidoEstatus: {
+      fontSize: '11px',
+      marginTop: '3px',
+      padding: '3px 8px',
+      borderRadius: '12px',
+      display: 'inline-block',
+      width: 'fit-content',
+      fontWeight: '500'
+    },
+    
+    estatusActivo: {
+      backgroundColor: '#d5f4e6',
+      color: '#27ae60',
+      border: '1px solid #27ae60'
+    },
+    
+    estatusCerrado: {
+      backgroundColor: '#e8f4fc',
+      color: '#3498db',
+      border: '1px solid #3498db'
+    },
+    
+    totalContainer: {
+      display: 'flex',
+      flexDirection: 'column'
+    },
+    
+    totalBS: {
+      fontWeight: 'bold',
+      fontSize: '14px',
+      color: '#2c3e50'
+    },
+    
+    totalUSD: {
+      fontSize: '12px',
+      color: '#7f8c8d',
+      marginTop: '2px'
+    },
+    
+    accionesContainer: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '6px'
+    },
+    
+    btnBase: {
+      border: 'none',
+      padding: '6px 10px',
+      borderRadius: '6px',
+      fontSize: '12px',
+      cursor: 'pointer',
+      fontWeight: 'bold',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '4px',
+      transition: 'all 0.2s',
+      minWidth: '70px'
+    },
+    
+    btnRecibir: {
+      backgroundColor: '#27ae60',
+      color: 'white'
+    },
+    
+    btnEliminar: {
+      backgroundColor: '#e74c3c',
+      color: 'white'
+    },
+    
+    btnExportar: {
+      backgroundColor: '#3498db',
+      color: 'white'
+    },
+    
+    loadingContainer: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '60px 20px',
+      color: '#7f8c8d'
+    },
+    
+    loadingSpinner: {
+      border: '4px solid #f3f3f3',
+      borderTop: '4px solid #3498db',
+      borderRadius: '50%',
+      width: '40px',
+      height: '40px',
+      animation: 'spin 1s linear infinite',
+      marginBottom: '20px'
+    },
+    
+    emptyState: {
+      textAlign: 'center',
+      padding: '60px 20px',
+      color: '#7f8c8d'
+    },
+    
+    emptyStateIcon: {
+      fontSize: '60px',
+      marginBottom: '20px',
+      opacity: 0.3
+    }
+  };
+
+  // ==================== RENDER ====================
+  
   return (
     <div style={styles.container}>
+      {/* Header */}
       <div style={styles.header}>
-        <button onClick={() => navigate(-1)} style={styles.backArrow}>←</button>
-        <h1 style={styles.title}>Pedidos</h1>
+        <button 
+          onClick={() => navigate(-1)} 
+          style={styles.backArrow}
+          onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+          title="Volver"
+        >
+          ←
+        </button>
+        <h1 style={styles.title}>📦 Gestión de Pedidos</h1>
       </div>
 
-      <div style={styles.content}>
-        <button style={styles.addBtnCircle} onClick={handleNuevoPedido}>+</button>
+      {/* Estadísticas */}
+      <div style={styles.statsBar}>
+        <div style={styles.statCard}>
+          <div style={{...styles.statNumber, color: '#2c3e50'}}>{listaPedidos.length}</div>
+          <div style={styles.statLabel}>TOTAL PEDIDOS</div>
+        </div>
+        
+        <div style={styles.statCard}>
+          <div style={{...styles.statNumber, color: '#27ae60'}}>{stats.pedidosActivos}</div>
+          <div style={styles.statLabel}>PENDIENTES</div>
+        </div>
+        
+        <div style={styles.statCard}>
+          <div style={{...styles.statNumber, color: '#3498db'}}>{stats.pedidosCerrados}</div>
+          <div style={styles.statLabel}>RECIBIDOS</div>
+        </div>
+      </div>
 
+      {/* Contenido principal */}
+      <div style={styles.content}>
+        {/* Botón nuevo pedido */}
+        <button 
+          style={styles.addBtnCircle}
+          onClick={handleNuevoPedido}
+          onMouseEnter={(e) => {
+            e.target.style.transform = 'scale(1.1)';
+            e.target.style.boxShadow = '0 6px 16px rgba(39, 174, 96, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'scale(1)';
+            e.target.style.boxShadow = '0 4px 12px rgba(39, 174, 96, 0.3)';
+          }}
+          title="Crear nuevo pedido"
+        >
+          +
+        </button>
+
+        {/* Cabecera de la tabla */}
         <div style={styles.headerRow}>
           <div style={styles.headerCell}>PEDIDO</div>
           <div style={styles.headerCell}>FECHA</div>
-          <div style={styles.headerCell}>TOTAL BS</div>
-          <div style={styles.headerCell}>ACCIÓN</div>
+          <div style={styles.headerCell}>TOTAL</div>
+          <div style={styles.headerCell}>ACCIONES</div>
         </div>
 
+        {/* Lista de pedidos */}
         <div style={styles.listaContainer}>
           {loading ? (
-            <div style={{ textAlign: 'center', color: '#666', marginTop: '20px' }}>Cargando registros...</div>
-          ) : (
-            listaPedidos.map((p) => (
-              <div key={p.id} style={styles.row} onClick={() => handleSeleccionarPedido(p)}>
-                <div style={styles.cell}><strong>{p.numero_pedido}</strong></div>
-                <div style={styles.cell}>{new Date(p.fecha_pedido).toLocaleDateString()}</div>
-                <div style={styles.cell}>Bs. {p.total_bs ? p.total_bs.toFixed(2) : "0.00"}</div>
-                
-                <div style={styles.cell}>
-                  {(p.estatus === 'Activo' || !p.estatus) ? (
-                    <button 
-                      style={styles.btnRecibir} 
-                      onClick={(e) => handleRecibir(p, e)}
-                    >
-                      Recibir
-                    </button>
-                  ) : (
-                    <span style={styles.estatusCerrado}>{p.estatus}</span>
-                  )}
-                </div>
+            <div style={styles.loadingContainer}>
+              <div style={styles.loadingSpinner}></div>
+              <div>Cargando pedidos...</div>
+            </div>
+          ) : listaPedidos.length === 0 ? (
+            <div style={styles.emptyState}>
+              <div style={styles.emptyStateIcon}>📭</div>
+              <div style={{ fontSize: '18px', marginBottom: '10px' }}>No hay pedidos registrados</div>
+              <div style={{ fontSize: '14px', color: '#95a5a6' }}>
+                Crea tu primer pedido usando el botón "+" verde
               </div>
-            ))
+            </div>
+          ) : (
+            listaPedidos.map((p) => {
+              const isActive = p.estatus === 'Activo' || !p.estatus;
+              const isHovered = hoveredRow === p.id;
+              const itemsCount = Object.keys(p.items || {}).length;
+              
+              return (
+                <div 
+                  key={p.id} 
+                  style={{
+                    ...styles.row,
+                    ...(isHovered ? styles.rowHover : {})
+                  }}
+                  onClick={() => handleSeleccionarPedido(p)}
+                  onMouseEnter={() => setHoveredRow(p.id)}
+                  onMouseLeave={() => setHoveredRow(null)}
+                >
+                  {/* Columna 1: Número de pedido y estado */}
+                  <div style={styles.cell}>
+                    <div style={styles.pedidoNumero}>#{p.numero_pedido}</div>
+                    <div style={{
+                      ...styles.pedidoEstatus,
+                      ...(isActive ? styles.estatusActivo : styles.estatusCerrado)
+                    }}>
+                      {isActive ? '🟢 Pendiente' : '✅ Recibido'}
+                    </div>
+                  </div>
+                  
+                  {/* Columna 2: Fecha */}
+                  <div style={styles.cell}>
+                    {formatearFecha(p.fecha_pedido)}
+                    <div style={{ fontSize: '11px', color: '#7f8c8d', marginTop: '2px' }}>
+                      {itemsCount} producto{itemsCount !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                  
+                  {/* Columna 3: Totales */}
+                  <div style={styles.cell}>
+                    <div style={styles.totalContainer}>
+                      <span style={styles.totalBS}>
+                        Bs. {p.total_bs ? p.total_bs.toFixed(2) : "0.00"}
+                      </span>
+                      <span style={styles.totalUSD}>
+                        $ {p.total_usd ? p.total_usd.toFixed(2) : "0.00"}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Columna 4: Botones de acción */}
+                  <div style={styles.cell}>
+                    <div style={styles.accionesContainer}>
+                      {/* Botón Recibir (solo para activos) */}
+                      {isActive && (
+                        <button 
+                          style={{...styles.btnBase, ...styles.btnRecibir}}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#219653'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#27ae60'}
+                          onClick={(e) => handleRecibir(p, e)}
+                          title="Marcar como recibido (incrementa stock)"
+                        >
+                          📥 Recibir
+                        </button>
+                      )}
+                      
+                      {/* Botón Eliminar (solo para activos) */}
+                      {isActive && (
+                        <button 
+                          style={{...styles.btnBase, ...styles.btnEliminar}}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#c0392b'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#e74c3c'}
+                          onClick={(e) => handleEliminar(p, e)}
+                          title="Eliminar pedido pendiente"
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      )}
+                      
+                      {/* Botón Exportar (siempre disponible) */}
+                      <button 
+                        style={{...styles.btnBase, ...styles.btnExportar}}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#2980b9'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#3498db'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          exportarPedido(p);
+                        }}
+                        title="Exportar pedido para enviar al proveedor"
+                      >
+                        📤 Exportar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
 
+      {/* Modal de gestión de pedidos */}
       {modalOpen && (
         <GestionPedido 
           pedido={pedidoSeleccionado} 
@@ -1366,6 +2246,14 @@ const PedidosComponente = () => {
           onSave={cargarRegistros} 
         />
       )}
+
+      {/* Estilos CSS para animaciones */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
@@ -2064,7 +2952,6 @@ export default ProductosCRUD;
 
 FILE: src/components/Sidebar.jsx
 ------------------------------
-
 import React from 'react';
 import { Link, useNavigate } from "react-router-dom";
 
@@ -2074,12 +2961,88 @@ export default function Sidebar({ isOpen, onClose }) {
     const handleAdminAccess = (e) => {
         e.preventDefault();
         const pin = window.prompt("Ingrese el PIN de acceso:");
-        // PIN definido en las fuentes [1]
         if (pin === "aaaaa") { 
             navigate("/Panel");
             onClose();
         } else {
             alert("Acceso denegado: PIN incorrecto.");
+        }
+    };
+
+    // Función para manejar hover
+    const handleMouseEnter = (e) => {
+        e.target.style.backgroundColor = '#f0f8ff';
+    };
+
+    const handleMouseLeave = (e) => {
+        e.target.style.backgroundColor = 'transparent';
+    };
+
+    // Estilos definidos como objeto
+    const styles = {
+        sidebar: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            height: '100vh',
+            width: '250px',
+            backgroundColor: '#ffffff',
+            boxShadow: '2px 0 10px rgba(0,0,0,0.2)',
+            zIndex: 1001,
+            transition: 'transform 0.3s ease-in-out',
+            display: 'flex',
+            flexDirection: 'column',
+        },
+        overlay: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 1000,
+        },
+        header: {
+            padding: '20px',
+            borderBottom: '1px solid #eee',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            backgroundColor: '#00BFFF',
+        },
+        title: { 
+            color: 'white', 
+            margin: 0, 
+            fontSize: '1.2rem' 
+        },
+        closeBtn: { 
+            background: 'none', 
+            border: 'none', 
+            color: 'white', 
+            fontSize: '2rem', 
+            cursor: 'pointer' 
+        },
+        nav: { 
+            display: 'flex', 
+            flexDirection: 'column', 
+            padding: '10px' 
+        },
+        link: {
+            padding: '15px',
+            textDecoration: 'none',
+            color: '#333',
+            fontSize: '1.1rem',
+            borderBottom: '1px solid #f5f5f5',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            transition: 'background-color 0.2s'
+        },
+        icon: {
+            fontSize: '1.2rem',
+            width: '24px',
+            textAlign: 'center'
         }
     };
 
@@ -2102,80 +3065,80 @@ export default function Sidebar({ isOpen, onClose }) {
 
                 <nav style={styles.nav}>
                     {/* Opción Inicio */}
-                    <Link to="/" onClick={onClose} style={styles.link}>🏠 Inicio</Link>
+                    <Link 
+                        to="/" 
+                        onClick={onClose} 
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>🏠</span>
+                        <span>Inicio</span>
+                    </Link>
                     
-                    {/* NUEVA OPCIÓN: Pedidos */}
-                    <Link to="/pedidos" onClick={onClose} style={styles.link}>📋 Pedidos</Link>
+                    {/* Opción Pedidos */}
+                    <Link 
+                        to="/pedidos" 
+                        onClick={onClose} 
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>📋</span>
+                        <span>Pedidos</span>
+                    </Link>
+                    
+                    {/* Opción Tasa Delivery */}
+                    <Link 
+                        to="/delivery" 
+                        onClick={onClose} 
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>🚚</span>
+                        <span>Tasa Delivery</span>
+                    </Link>
+                    
+                    {/* Opción Tasa BCV */}
+                    <Link 
+                        to="/tasabcv" 
+                        onClick={onClose} 
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>💰</span>
+                        <span>Tasa BCV</span>
+                    </Link>
                     
                     {/* Opción Acerca de */}
-                    <Link to="/about" onClick={onClose} style={styles.link}>ℹ️ Acerca de</Link>
+                    <Link 
+                        to="/about" 
+                        onClick={onClose} 
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>ℹ️</span>
+                        <span>Acerca de</span>
+                    </Link>
                     
                     {/* Acceso Administrativo */}
-                    <a onClick={handleAdminAccess} style={styles.link}>⚙️ Panel de Control</a>
+                    <a 
+                        onClick={handleAdminAccess} 
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>⚙️</span>
+                        <span>Panel de Control</span>
+                    </a>
                 </nav>
             </div>
         </>
     );
 }
-
-const styles = {
-    sidebar: {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        height: '100vh',
-        width: '250px',
-        backgroundColor: '#ffffff',
-        boxShadow: '2px 0 10px rgba(0,0,0,0.2)',
-        zIndex: 1001,
-        transition: 'transform 0.3s ease-in-out',
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    overlay: {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        zIndex: 1000,
-    },
-    header: {
-        padding: '20px',
-        borderBottom: '1px solid #eee',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#00BFFF', // Color coherente con la identidad visual [2]
-    },
-    title: { 
-        color: 'white', 
-        margin: 0, 
-        fontSize: '1.2rem' 
-    },
-    closeBtn: { 
-        background: 'none', 
-        border: 'none', 
-        color: 'white', 
-        fontSize: '2rem', 
-        cursor: 'pointer' 
-    },
-    nav: { 
-        display: 'flex', 
-        flexDirection: 'column', 
-        padding: '10px' 
-    },
-    link: {
-        padding: '15px',
-        textDecoration: 'none',
-        color: '#333',
-        fontSize: '1.1rem',
-        borderBottom: '1px solid #f5f5f5',
-        cursor: 'pointer',
-        display: 'block'
-    }
-};
 **************************************************
 
 FILE: src/components/TasaForm.jsx
@@ -3254,6 +4217,77 @@ export class NaturaDBClass {
 export const db = new NaturaDBClass();
 **************************************************
 
+FILE: src/lib/db/hooks/useDelivery.js
+------------------------------
+// src/lib/db/hooks/useDelivery.js
+import { useState, useEffect } from 'react';
+import { db } from '../database.js';
+
+export function useDelivery() {
+  const [delivery, setDelivery] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  // Cargar delivery al inicio
+  useEffect(() => {
+    async function loadDelivery() {
+      try {
+        // Buscar en la tabla 'config' donde clave = 'delivery'
+        const config = await db.config.get('delivery');
+        
+        if (config && config.valor) {
+          const valor = String(config.valor).replace(',', '.');
+          setDelivery(valor);
+        } else {
+          setDelivery('0'); // Cero si no existe
+        }
+      } catch (error) {
+        console.error('Error cargando delivery:', error);
+        setDelivery('0');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadDelivery();
+  }, []);
+
+  // Guardar delivery
+  const saveDelivery = async (valor) => {
+    try {
+      const deliveryNormalizado = String(valor).replace(',', '.');
+      const deliveryNumero = parseFloat(deliveryNormalizado);
+      
+      if (isNaN(deliveryNumero)) {
+        console.error('Valor no es un número:', valor);
+        return false;
+      }
+
+      await db.config.put({
+        clave: 'delivery',
+        valor: deliveryNumero,
+        fechaActualizacion: new Date(),
+        tipo: 'decimal'
+      });
+
+      console.log('Delivery guardado:', deliveryNumero);
+      setDelivery(deliveryNormalizado);
+      return true;
+
+    } catch (error) {
+      console.error('Error guardando delivery:', error);
+      return false;
+    }
+  };
+
+  return {
+    delivery,
+    setDelivery,
+    saveDelivery,
+    loading
+  };
+}
+**************************************************
+
 FILE: src/lib/db/hooks/useTasa.js
 ------------------------------
 // src/lib/db/hooks/useTasa.js
@@ -3471,6 +4505,35 @@ FILE: src/lib/db/index.js
 export { db } from './database.js';
 **************************************************
 
+FILE: src/lib/db/repositories/DeliveryRepository.js
+------------------------------
+// src/lib/db/repositories/DeliveryRepository.js
+import { db } from "../database";
+
+const DELIVERY_KEY = 'delivery';
+
+export const DeliveryRepository = {
+  async getDelivery() {
+    return await db.getConfigValue(DELIVERY_KEY);
+  },
+
+  async saveDelivery(valor) {
+    return await db.setConfigValue(DELIVERY_KEY, Number(valor));
+  },
+
+  async calcularTotalConDelivery(subtotal) {
+    const delivery = await db.getConfigValue(DELIVERY_KEY);
+    
+    if (!delivery || typeof delivery !== "number") {
+      console.warn("Delivery no configurado. Retornando solo subtotal.");
+      return subtotal;
+    }
+    
+    return Number(subtotal || 0) + delivery;
+  }
+};
+**************************************************
+
 FILE: src/lib/db/repositories/RepoRecommStructure.js
 ------------------------------
 // Ejemplo de repositorio completo para Tasa
@@ -3633,6 +4696,40 @@ const Importer = {
 };
 
 export default Importer;
+**************************************************
+
+FILE: src/lib/db/utils/deliveryUtil.js
+------------------------------
+// src/lib/db/utils/deliveryUtil.js
+import { db } from '../database.js';
+
+export async function getDeliveryCost() {
+  try {
+    const valor = await db.getConfigValue('delivery');
+    return valor ? parseFloat(valor) : 0;
+  } catch (error) {
+    console.error('Error obteniendo delivery desde utils:', error);
+    return 0;
+  }
+}
+
+export async function calcularConDelivery(subtotal, delivery = null) {
+  try {
+    if (!delivery) {
+      delivery = await getDeliveryCost();
+    }
+
+    if (!delivery || delivery <= 0) {
+      return subtotal; // Sin cargo de delivery
+    }
+
+    const total = parseFloat(subtotal) + parseFloat(delivery);
+    return Math.round(total * 100) / 100;
+  } catch (error) {
+    console.error('Error calculando con delivery:', error);
+    return subtotal;
+  }
+}
 **************************************************
 
 FILE: src/lib/db/utils/exportService.js
@@ -3864,6 +4961,31 @@ h2, h3 {
   color: #000; /* texto negro dentro del modal */
 }
 
+**************************************************
+
+FILE: src/pages/DeliveryPage.jsx
+------------------------------
+// src/pages/DeliveryPage.jsx
+import React from 'react';
+import Delivery from '../components/Delivery';
+
+const DeliveryPage = () => {
+  return (
+    <div style={styles.container}>
+      <Delivery />
+    </div>
+  );
+};
+
+const styles = {
+  container: {
+    width: '100%',
+    minHeight: '100vh',
+    backgroundColor: '#f5f7fa'
+  }
+};
+
+export default DeliveryPage;
 **************************************************
 
 FILE: src/pages/GruposPage.jsx

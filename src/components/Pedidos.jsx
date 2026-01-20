@@ -122,19 +122,23 @@ const PedidosComponente = () => {
     }
   };
 
-  // ==================== EXPORTAR PEDIDO ====================
+  // ==================== EXPORTAR PEDIDO (MODIFICADA) ====================
   
   const exportarPedido = async (pedido) => {
     try {
       // 1. Obtener productos de la base de datos
       const productos = await db.getAll('productos');
       
-      // 2. Preparar lista de productos del pedido
+      // 2. Obtener el costo de delivery desde la configuración
+      const deliveryConfig = await db.get('config', 'delivery');
+      const deliveryCost = deliveryConfig ? parseFloat(deliveryConfig.valor) : 0;
+      
+      // 3. Preparar lista de productos del pedido
       const items = pedido.items || {};
       const listaProductos = [];
       let totalUnidades = 0;
       
-      // 3. Para cada item, buscar su nombre
+      // 4. Para cada item, buscar su nombre
       for (const [productoId, cantidad] of Object.entries(items)) {
         if (cantidad > 0) {
           // Buscar el producto por ID
@@ -148,12 +152,18 @@ const PedidosComponente = () => {
         }
       }
       
-      // 4. Crear el contenido del archivo
+      // 5. Calcular subtotal USD (sin delivery)
+      const subtotalUSD = pedido.total_usd || 0;
+      
+      // 6. Calcular TOTAL GENERAL con delivery
+      const totalGeneralUSD = subtotalUSD + deliveryCost;
+      
+      // 7. Crear el contenido del archivo con Delivery en RESUMEN
       const contenido = `
 PEDIDO NATURA ICE
 =====================
 
-Número: #${pedido.numero_pedido}
+Numero: #${pedido.numero_pedido}
 Fecha: ${new Date(pedido.fecha_pedido).toLocaleDateString('es-ES')}
 Tasa BCV: ${pedido.tasa || 'N/A'}
 
@@ -168,23 +178,24 @@ RESUMEN:
 =====================
 
 Total Unidades: ${totalUnidades}
-Total USD: $${pedido.total_usd?.toFixed(2) || '0.00'}
-Total Bs: Bs. ${pedido.total_bs?.toFixed(2) || '0.00'}
+Subtotal USD: $${subtotalUSD.toFixed(2)}
+Delivery: $${deliveryCost.toFixed(2)}
+=====================
+TOTAL GENERAL: $${totalGeneralUSD.toFixed(2)}
+Total Bs: ${(totalGeneralUSD * pedido.tasa)?.toFixed(2) || '0.00'}
 
 =====================
-INFORMACIÓN:
+INFORMACION:
 =====================
 
-Distribuidor: Natura Ice
-Contacto: (Tu número aquí)
-Fecha requerida: Próxima semana
+Contacto: Sra. Magali Hernandez (Corocito)
 
 =====================
 Generado: ${new Date().toLocaleDateString('es-ES')}
 =====================
       `.trim();
       
-      // 5. Crear y descargar archivo
+      // 8. Crear y descargar archivo
       const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       
@@ -195,10 +206,10 @@ Generado: ${new Date().toLocaleDateString('es-ES')}
       link.click();
       document.body.removeChild(link);
       
-      // 6. Limpiar y confirmar
+      // 9. Limpiar y confirmar
       setTimeout(() => URL.revokeObjectURL(url), 100);
       
-      alert(`✅ Pedido #${pedido.numero_pedido} exportado\n\nArchivo listo para enviar al proveedor.`);
+      alert(`✅ Pedido #${pedido.numero_pedido} exportado\n\nArchivo listo para enviar al proveedor.\n\nIncluye Delivery: $${deliveryCost.toFixed(2)}`);
       
     } catch (error) {
       console.error('Error:', error);
