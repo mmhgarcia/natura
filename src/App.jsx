@@ -11,6 +11,8 @@ import GruposPage from './pages/GruposPage';
 import ProductosPage from './pages/ProductosPage';
 // Nueva importación de la página de Pedidos
 import PedidosPage from './pages/Pedidos'; 
+// Asegúrate de tener esto:
+import DeliveryPage from './pages/DeliveryPage';
 
 function App() {
   return (
@@ -24,6 +26,7 @@ function App() {
         <Route path="/tasabcv" element={<TasaBCV />} />
         <Route path="/admingrupos" element={<GruposPage />} />
         <Route path="/adminproductos" element={<ProductosPage />} />
+        <Route path="/delivery" element={<DeliveryPage />} />
         {/* Nueva ruta para Pedidos */}
         <Route path="/pedidos" element={<PedidosPage />} />
         <Route path="*" element={<NotFound />} />

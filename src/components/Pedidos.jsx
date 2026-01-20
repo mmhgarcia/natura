@@ -11,21 +11,22 @@ const PedidosComponente = () => {
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
   const [hoveredRow, setHoveredRow] = useState(null);
 
+  // ==================== CARGAR DATOS ====================
+  
   const cargarRegistros = async () => {
     try {
       setLoading(true);
       const datos = await db.getAll('pedidos'); 
-      // Ordenar por número de pedido descendente (más recientes primero)
+      // Ordenar por número de pedido (más recientes primero)
       const datosOrdenados = datos.sort((a, b) => {
-        if (a.numero_pedido && b.numero_pedido) {
-          return parseInt(b.numero_pedido) - parseInt(a.numero_pedido);
-        }
-        return b.id - a.id;
+        const numA = parseInt(a.numero_pedido) || 0;
+        const numB = parseInt(b.numero_pedido) || 0;
+        return numB - numA;
       });
       setListaPedidos(datosOrdenados);
     } catch (error) {
       console.error("Error al cargar pedidos:", error);
-      alert("❌ Error al cargar los pedidos. Revise la conexión.");
+      alert("❌ Error al cargar los pedidos.");
     } finally {
       setLoading(false);
     }
@@ -35,6 +36,8 @@ const PedidosComponente = () => {
     cargarRegistros();
   }, []);
 
+  // ==================== FUNCIONES BÁSICAS ====================
+  
   const handleNuevoPedido = () => {
     setPedidoSeleccionado(null);
     setModalOpen(true);
@@ -49,21 +52,20 @@ const PedidosComponente = () => {
     }
   };
 
-  // Lógica para recibir pedido (incrementar stock)
+  // ==================== RECIBIR PEDIDO ====================
+  
   const handleRecibir = async (pedido, e) => {
     e.stopPropagation(); 
     
     const confirmar = window.confirm(
-      `¿Desea procesar el ingreso de mercancía del pedido #${pedido.numero_pedido}?\n\n` +
-      `✅ Esto incrementará el stock de los productos:\n` +
-      `• ${Object.keys(pedido.items || {}).length} producto(s)\n` +
-      `• Estado cambiará a "Cerrado"`
+      `¿Procesar ingreso del pedido #${pedido.numero_pedido}?\n\n` +
+      `✅ Esto incrementará el stock y marcará como "Cerrado".`
     );
     
     if (!confirmar) return;
     
     try {
-      // 1. Recorrer items del pedido para incrementar stock
+      // Incrementar stock de cada producto
       if (pedido.items && Object.keys(pedido.items).length > 0) {
         for (const [prodId, qty] of Object.entries(pedido.items)) {
           const cantidadNum = parseInt(qty);
@@ -73,99 +75,143 @@ const PedidosComponente = () => {
         }
       }
 
-      // 2. Marcar pedido como 'Cerrado'
+      // Marcar como 'Cerrado'
       await db.put('pedidos', { 
         ...pedido, 
         estatus: 'Cerrado',
         fechaRecepcion: new Date().toISOString()
       });
       
-      // 3. Notificar éxito
-      alert(`✅ Pedido #${pedido.numero_pedido} procesado exitosamente.\nEl stock ha sido actualizado.`);
-      
-      // 4. Refrescar lista
+      alert(`✅ Pedido #${pedido.numero_pedido} recibido. Stock actualizado.`);
       cargarRegistros();
     } catch (error) {
-      console.error("Error al procesar el pedido:", error);
-      alert(`❌ Error crítico al procesar el pedido:\n${error.message}`);
+      console.error("Error al recibir pedido:", error);
+      alert(`❌ Error: ${error.message}`);
     }
   };
 
-  // NUEVA FUNCIÓN: Eliminar pedido activo
+  // ==================== ELIMINAR PEDIDO ====================
+  
   const handleEliminar = async (pedido, e) => {
     e.stopPropagation(); 
     
-    // Validar que el pedido esté activo
+    // Validar estado
     if (pedido.estatus === 'Cerrado') {
-      alert("❌ No se puede eliminar un pedido procesado.\n\n" +
-            "Este pedido está en estado 'Cerrado', lo que significa que:\n" +
-            "• El stock ya fue actualizado\n" +
-            "• Los productos están en inventario\n\n" +
-            "Para reversar, use la función 'Ajuste de inventario' en Productos.");
+      alert("❌ Pedido ya procesado. No se puede eliminar.");
       return;
     }
     
-    // Mostrar detalles de confirmación
     const totalItems = Object.keys(pedido.items || {}).length;
-    const totalUSD = pedido.total_usd ? `$${pedido.total_usd.toFixed(2)}` : "$0.00";
-    const totalBS = pedido.total_bs ? `Bs. ${pedido.total_bs.toFixed(2)}` : "Bs. 0.00";
     
     const confirmar = window.confirm(
-      `⚠️ ¿ELIMINAR PERMANENTEMENTE?\n\n` +
-      `Pedido #${pedido.numero_pedido}\n` +
-      `Fecha: ${new Date(pedido.fecha_pedido).toLocaleDateString()}\n` +
+      `⚠️ ¿ELIMINAR PEDIDO #${pedido.numero_pedido}?\n\n` +
       `Items: ${totalItems} producto(s)\n` +
-      `Total: ${totalUSD} | ${totalBS}\n` +
-      `Estado: ${pedido.estatus || 'Activo'}\n\n` +
+      `Total: $${pedido.total_usd?.toFixed(2) || '0.00'}\n\n` +
       `Esta acción NO se puede deshacer.`
     );
     
     if (!confirmar) return;
     
     try {
-      // Opcional: Registrar acción para auditoría
-      const registroAuditoria = {
-        tipo: 'ELIMINACION_PEDIDO',
-        pedidoId: pedido.id,
-        pedidoNumero: pedido.numero_pedido,
-        fechaEliminacion: new Date().toISOString(),
-        datos: JSON.stringify({
-          items: pedido.items,
-          total_usd: pedido.total_usd,
-          total_bs: pedido.total_bs,
-          tasa: pedido.tasa
-        })
-      };
-      
-      // Intentar guardar en tabla 'auditoria' si existe
-      try {
-        if (db.auditoria) {
-          await db.add('auditoria', registroAuditoria);
-        }
-      } catch (auditError) {
-        console.warn("No se pudo registrar auditoría:", auditError);
-      }
-      
-      // Eliminar el pedido principal
       await db.del('pedidos', pedido.id);
-      
-      // Feedback al usuario
-      alert(`✅ Pedido #${pedido.numero_pedido} eliminado exitosamente.`);
-      
-      // Recargar la lista
+      alert(`✅ Pedido #${pedido.numero_pedido} eliminado.`);
       cargarRegistros();
     } catch (error) {
-      console.error("Error eliminando pedido:", error);
-      alert(`❌ Error al eliminar el pedido:\n${error.message}`);
+      console.error("Error eliminando:", error);
+      alert(`❌ Error: ${error.message}`);
     }
   };
 
-  // Función para formatear fecha
+  // ==================== EXPORTAR PEDIDO ====================
+  
+  const exportarPedido = async (pedido) => {
+    try {
+      // 1. Obtener productos de la base de datos
+      const productos = await db.getAll('productos');
+      
+      // 2. Preparar lista de productos del pedido
+      const items = pedido.items || {};
+      const listaProductos = [];
+      let totalUnidades = 0;
+      
+      // 3. Para cada item, buscar su nombre
+      for (const [productoId, cantidad] of Object.entries(items)) {
+        if (cantidad > 0) {
+          // Buscar el producto por ID
+          const producto = productos.find(p => p.id == productoId);
+          
+          // Usar nombre si existe, si no, usar "Producto X"
+          const nombre = producto?.nombre || `Producto ${productoId}`;
+          
+          listaProductos.push(`${cantidad} x ${nombre}`);
+          totalUnidades += parseInt(cantidad);
+        }
+      }
+      
+      // 4. Crear el contenido del archivo
+      const contenido = `
+PEDIDO NATURA ICE
+=====================
+
+Número: #${pedido.numero_pedido}
+Fecha: ${new Date(pedido.fecha_pedido).toLocaleDateString('es-ES')}
+Tasa BCV: ${pedido.tasa || 'N/A'}
+
+=====================
+PRODUCTOS SOLICITADOS:
+=====================
+
+${listaProductos.join('\n')}
+
+=====================
+RESUMEN:
+=====================
+
+Total Unidades: ${totalUnidades}
+Total USD: $${pedido.total_usd?.toFixed(2) || '0.00'}
+Total Bs: Bs. ${pedido.total_bs?.toFixed(2) || '0.00'}
+
+=====================
+INFORMACIÓN:
+=====================
+
+Distribuidor: Natura Ice
+Contacto: (Tu número aquí)
+Fecha requerida: Próxima semana
+
+=====================
+Generado: ${new Date().toLocaleDateString('es-ES')}
+=====================
+      `.trim();
+      
+      // 5. Crear y descargar archivo
+      const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Pedido_${pedido.numero_pedido}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // 6. Limpiar y confirmar
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      
+      alert(`✅ Pedido #${pedido.numero_pedido} exportado\n\nArchivo listo para enviar al proveedor.`);
+      
+    } catch (error) {
+      console.error('Error:', error);
+      alert(`❌ Error al exportar: ${error.message}`);
+    }
+  };
+
+  // ==================== UTILIDADES ====================
+  
   const formatearFecha = (fechaString) => {
     if (!fechaString) return 'N/A';
     try {
-      const fecha = new Date(fechaString);
-      return fecha.toLocaleDateString('es-ES', {
+      return new Date(fechaString).toLocaleDateString('es-ES', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
@@ -175,17 +221,24 @@ const PedidosComponente = () => {
     }
   };
 
-  // Calcular estadísticas
-  const pedidosActivos = listaPedidos.filter(p => p.estatus === 'Activo' || !p.estatus).length;
-  const pedidosCerrados = listaPedidos.filter(p => p.estatus === 'Cerrado').length;
+  const calcularEstadisticas = () => {
+    const pedidosActivos = listaPedidos.filter(p => p.estatus === 'Activo' || !p.estatus).length;
+    const pedidosCerrados = listaPedidos.filter(p => p.estatus === 'Cerrado').length;
+    
+    return { pedidosActivos, pedidosCerrados };
+  };
 
+  const stats = calcularEstadisticas();
+
+  // ==================== ESTILOS ====================
+  
   const styles = {
     container: { 
       display: 'flex', 
       flexDirection: 'column', 
       width: '100%', 
       minHeight: '100vh', 
-      backgroundColor: '#fff', 
+      backgroundColor: '#f5f7fa', 
       margin: 0, 
       padding: 0, 
       boxSizing: 'border-box' 
@@ -194,15 +247,15 @@ const PedidosComponente = () => {
     header: { 
       display: 'flex', 
       alignItems: 'center', 
-      padding: '15px', 
-      backgroundColor: '#00BFFF', 
+      padding: '15px 20px', 
+      backgroundColor: '#2c3e50', 
       color: 'white', 
       width: '100%', 
       boxSizing: 'border-box',
       position: 'sticky',
       top: 0,
       zIndex: 100,
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
     },
     
     backArrow: { 
@@ -211,14 +264,10 @@ const PedidosComponente = () => {
       color: 'white', 
       fontSize: '24px', 
       cursor: 'pointer', 
-      marginRight: '10px',
+      marginRight: '15px',
       padding: '5px 10px',
-      borderRadius: '4px',
-      transition: 'background-color 0.2s'
-    },
-    
-    backArrowHover: {
-      backgroundColor: 'rgba(255,255,255,0.2)'
+      borderRadius: '6px',
+      transition: 'all 0.2s'
     },
     
     title: { 
@@ -230,32 +279,40 @@ const PedidosComponente = () => {
     
     statsBar: {
       display: 'flex',
-      justifyContent: 'space-between',
-      padding: '10px 20px',
-      backgroundColor: '#f8f9fa',
-      borderBottom: '1px solid #dee2e6',
-      fontSize: '13px',
-      color: '#495057'
+      justifyContent: 'space-around',
+      padding: '15px 20px',
+      backgroundColor: 'white',
+      borderBottom: '1px solid #eaeaea',
+      marginBottom: '15px',
+      flexWrap: 'wrap',
+      gap: '15px'
     },
     
-    statItem: {
+    statCard: {
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'center'
+      alignItems: 'center',
+      padding: '12px 20px',
+      backgroundColor: '#f8f9fa',
+      borderRadius: '10px',
+      minWidth: '100px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
     },
     
     statNumber: {
+      fontSize: '24px',
       fontWeight: 'bold',
-      fontSize: '16px'
+      marginBottom: '5px'
     },
     
     statLabel: {
-      fontSize: '11px',
-      color: '#6c757d'
+      fontSize: '12px',
+      color: '#7f8c8d',
+      textAlign: 'center'
     },
     
     content: { 
-      padding: '20px', 
+      padding: '0 20px 20px', 
       display: 'flex', 
       flexDirection: 'column', 
       width: '100%', 
@@ -263,76 +320,68 @@ const PedidosComponente = () => {
     },
     
     addBtnCircle: { 
-      width: '55px', 
-      height: '55px', 
+      width: '60px', 
+      height: '60px', 
       borderRadius: '50%', 
-      backgroundColor: '#28a745', 
+      backgroundColor: '#27ae60', 
       color: 'white', 
       border: 'none', 
-      fontSize: '35px', 
+      fontSize: '36px', 
       display: 'flex', 
       justifyContent: 'center', 
       alignItems: 'center', 
       cursor: 'pointer', 
-      marginBottom: '20px', 
-      boxShadow: '0 2px 8px rgba(0,0,0,0.2)', 
+      boxShadow: '0 4px 12px rgba(39, 174, 96, 0.3)', 
       padding: 0, 
       lineHeight: 0,
-      alignSelf: 'flex-end',
-      transition: 'transform 0.2s, box-shadow 0.2s'
-    },
-    
-    addBtnCircleHover: {
-      transform: 'scale(1.05)',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+      transition: 'all 0.3s',
+      margin: '0 auto 20px'
     },
     
     headerRow: { 
       display: 'grid', 
-      gridTemplateColumns: '0.8fr 0.8fr 1fr 1.4fr', 
-      backgroundColor: '#f4f4f4', 
-      borderBottom: '2px solid #ddd', 
-      padding: '12px 8px',
+      gridTemplateColumns: '100px 100px 120px 200px',
+      backgroundColor: '#34495e', 
+      borderBottom: '2px solid #2c3e50', 
+      padding: '14px 10px',
       fontWeight: 'bold',
       fontSize: '13px',
-      color: '#333',
-      position: 'sticky',
-      top: '60px',
-      zIndex: 50
+      color: 'white',
+      borderRadius: '8px 8px 0 0'
     },
     
     headerCell: { 
-      fontWeight: 'bold', 
-      fontSize: '13px', 
-      color: '#333', 
       textAlign: 'left',
       padding: '0 5px'
     },
     
     listaContainer: { 
       width: '100%',
-      minHeight: '200px'
+      minHeight: '200px',
+      backgroundColor: 'white',
+      borderRadius: '0 0 8px 8px',
+      overflow: 'hidden',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
     },
     
     row: { 
       display: 'grid', 
-      gridTemplateColumns: '0.8fr 0.8fr 1fr 1.4fr',
-      borderBottom: '1px solid #eee', 
+      gridTemplateColumns: '100px 100px 120px 200px',
+      borderBottom: '1px solid #f0f0f0', 
       cursor: 'pointer', 
       alignItems: 'center',
-      padding: '12px 8px',
-      transition: 'background-color 0.2s',
-      position: 'relative'
+      padding: '12px 10px',
+      transition: 'all 0.2s'
     },
     
     rowHover: {
-      backgroundColor: '#f8f9fa'
+      backgroundColor: '#f8f9ff'
     },
     
     cell: { 
       padding: '8px 5px', 
       textAlign: 'left', 
-      color: '#000', 
+      color: '#2c3e50', 
       fontSize: '14px',
       display: 'flex',
       flexDirection: 'column',
@@ -341,27 +390,30 @@ const PedidosComponente = () => {
     
     pedidoNumero: {
       fontWeight: 'bold',
-      fontSize: '15px'
+      fontSize: '15px',
+      color: '#2c3e50'
     },
     
     pedidoEstatus: {
       fontSize: '11px',
       marginTop: '3px',
-      padding: '2px 6px',
-      borderRadius: '10px',
+      padding: '3px 8px',
+      borderRadius: '12px',
       display: 'inline-block',
-      width: 'fit-content'
+      width: 'fit-content',
+      fontWeight: '500'
     },
     
     estatusActivo: {
-      backgroundColor: '#d4edda',
-      color: '#155724'
+      backgroundColor: '#d5f4e6',
+      color: '#27ae60',
+      border: '1px solid #27ae60'
     },
     
     estatusCerrado: {
-      backgroundColor: '#e2e3e5',
-      color: '#383d41',
-      fontStyle: 'italic'
+      backgroundColor: '#e8f4fc',
+      color: '#3498db',
+      border: '1px solid #3498db'
     },
     
     totalContainer: {
@@ -371,66 +423,50 @@ const PedidosComponente = () => {
     
     totalBS: {
       fontWeight: 'bold',
-      fontSize: '14px'
+      fontSize: '14px',
+      color: '#2c3e50'
     },
     
     totalUSD: {
-      fontSize: '11px',
-      color: '#007bff',
+      fontSize: '12px',
+      color: '#7f8c8d',
       marginTop: '2px'
     },
     
     accionesContainer: {
       display: 'flex',
-      gap: '8px',
-      flexWrap: 'wrap'
+      flexWrap: 'wrap',
+      gap: '6px'
     },
     
-    btnRecibir: { 
-      backgroundColor: '#28a745', 
-      color: 'white', 
-      border: 'none', 
-      padding: '6px 10px', 
-      borderRadius: '4px', 
-      fontSize: '12px', 
-      cursor: 'pointer', 
+    btnBase: {
+      border: 'none',
+      padding: '6px 10px',
+      borderRadius: '6px',
+      fontSize: '12px',
+      cursor: 'pointer',
       fontWeight: 'bold',
-      minWidth: '70px',
-      transition: 'background-color 0.2s',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: '4px'
+      gap: '4px',
+      transition: 'all 0.2s',
+      minWidth: '70px'
     },
     
-    btnRecibirHover: {
-      backgroundColor: '#218838'
+    btnRecibir: {
+      backgroundColor: '#27ae60',
+      color: 'white'
     },
     
-    btnEliminar: { 
-      backgroundColor: '#dc3545', 
-      color: 'white', 
-      border: 'none', 
-      padding: '6px 10px', 
-      borderRadius: '4px', 
-      fontSize: '12px', 
-      cursor: 'pointer', 
-      fontWeight: 'bold',
-      minWidth: '36px',
-      transition: 'background-color 0.2s',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
+    btnEliminar: {
+      backgroundColor: '#e74c3c',
+      color: 'white'
     },
     
-    btnEliminarHover: {
-      backgroundColor: '#c82333'
-    },
-    
-    btnEliminarDisabled: {
-      backgroundColor: '#6c757d',
-      opacity: 0.5,
-      cursor: 'not-allowed'
+    btnExportar: {
+      backgroundColor: '#3498db',
+      color: 'white'
     },
     
     loadingContainer: {
@@ -438,40 +474,35 @@ const PedidosComponente = () => {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '40px 20px',
-      color: '#666'
+      padding: '60px 20px',
+      color: '#7f8c8d'
     },
     
     loadingSpinner: {
-      border: '3px solid #f3f3f3',
-      borderTop: '3px solid #00BFFF',
+      border: '4px solid #f3f3f3',
+      borderTop: '4px solid #3498db',
       borderRadius: '50%',
-      width: '30px',
-      height: '30px',
+      width: '40px',
+      height: '40px',
       animation: 'spin 1s linear infinite',
-      marginBottom: '15px'
+      marginBottom: '20px'
     },
     
     emptyState: {
       textAlign: 'center',
-      padding: '40px 20px',
-      color: '#6c757d',
-      fontSize: '16px'
+      padding: '60px 20px',
+      color: '#7f8c8d'
     },
     
     emptyStateIcon: {
-      fontSize: '48px',
-      marginBottom: '15px',
-      opacity: 0.5
-    },
-    
-    // Estilos para animación de eliminación
-    '@keyframes spin': {
-      '0%': { transform: 'rotate(0deg)' },
-      '100%': { transform: 'rotate(360deg)' }
+      fontSize: '60px',
+      marginBottom: '20px',
+      opacity: 0.3
     }
   };
 
+  // ==================== RENDER ====================
+  
   return (
     <div style={styles.container}>
       {/* Header */}
@@ -479,43 +510,46 @@ const PedidosComponente = () => {
         <button 
           onClick={() => navigate(-1)} 
           style={styles.backArrow}
-          onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.2)'}
+          onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.1)'}
           onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
           title="Volver"
         >
           ←
         </button>
-        <h1 style={styles.title}>📋 Gestión de Pedidos</h1>
+        <h1 style={styles.title}>📦 Gestión de Pedidos</h1>
       </div>
 
-      {/* Barra de estadísticas */}
+      {/* Estadísticas */}
       <div style={styles.statsBar}>
-        <div style={styles.statItem}>
-          <span style={{...styles.statNumber, color: '#00BFFF'}}>{listaPedidos.length}</span>
-          <span style={styles.statLabel}>TOTAL</span>
+        <div style={styles.statCard}>
+          <div style={{...styles.statNumber, color: '#2c3e50'}}>{listaPedidos.length}</div>
+          <div style={styles.statLabel}>TOTAL PEDIDOS</div>
         </div>
-        <div style={styles.statItem}>
-          <span style={{...styles.statNumber, color: '#28a745'}}>{pedidosActivos}</span>
-          <span style={styles.statLabel}>ACTIVOS</span>
+        
+        <div style={styles.statCard}>
+          <div style={{...styles.statNumber, color: '#27ae60'}}>{stats.pedidosActivos}</div>
+          <div style={styles.statLabel}>PENDIENTES</div>
         </div>
-        <div style={styles.statItem}>
-          <span style={{...styles.statNumber, color: '#6c757d'}}>{pedidosCerrados}</span>
-          <span style={styles.statLabel}>CERRADOS</span>
+        
+        <div style={styles.statCard}>
+          <div style={{...styles.statNumber, color: '#3498db'}}>{stats.pedidosCerrados}</div>
+          <div style={styles.statLabel}>RECIBIDOS</div>
         </div>
       </div>
 
       {/* Contenido principal */}
       <div style={styles.content}>
+        {/* Botón nuevo pedido */}
         <button 
           style={styles.addBtnCircle}
           onClick={handleNuevoPedido}
           onMouseEnter={(e) => {
-            e.target.style.transform = 'scale(1.05)';
-            e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+            e.target.style.transform = 'scale(1.1)';
+            e.target.style.boxShadow = '0 6px 16px rgba(39, 174, 96, 0.4)';
           }}
           onMouseLeave={(e) => {
             e.target.style.transform = 'scale(1)';
-            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+            e.target.style.boxShadow = '0 4px 12px rgba(39, 174, 96, 0.3)';
           }}
           title="Crear nuevo pedido"
         >
@@ -540,8 +574,8 @@ const PedidosComponente = () => {
           ) : listaPedidos.length === 0 ? (
             <div style={styles.emptyState}>
               <div style={styles.emptyStateIcon}>📭</div>
-              <div>No hay pedidos registrados</div>
-              <div style={{ fontSize: '14px', marginTop: '10px' }}>
+              <div style={{ fontSize: '18px', marginBottom: '10px' }}>No hay pedidos registrados</div>
+              <div style={{ fontSize: '14px', color: '#95a5a6' }}>
                 Crea tu primer pedido usando el botón "+" verde
               </div>
             </div>
@@ -549,6 +583,7 @@ const PedidosComponente = () => {
             listaPedidos.map((p) => {
               const isActive = p.estatus === 'Activo' || !p.estatus;
               const isHovered = hoveredRow === p.id;
+              const itemsCount = Object.keys(p.items || {}).length;
               
               return (
                 <div 
@@ -568,13 +603,16 @@ const PedidosComponente = () => {
                       ...styles.pedidoEstatus,
                       ...(isActive ? styles.estatusActivo : styles.estatusCerrado)
                     }}>
-                      {isActive ? '🟢 Activo' : '✅ Cerrado'}
+                      {isActive ? '🟢 Pendiente' : '✅ Recibido'}
                     </div>
                   </div>
                   
                   {/* Columna 2: Fecha */}
                   <div style={styles.cell}>
                     {formatearFecha(p.fecha_pedido)}
+                    <div style={{ fontSize: '11px', color: '#7f8c8d', marginTop: '2px' }}>
+                      {itemsCount} producto{itemsCount !== 1 ? 's' : ''}
+                    </div>
                   </div>
                   
                   {/* Columna 3: Totales */}
@@ -592,40 +630,45 @@ const PedidosComponente = () => {
                   {/* Columna 4: Botones de acción */}
                   <div style={styles.cell}>
                     <div style={styles.accionesContainer}>
-                      {isActive ? (
-                        <>
-                          <button 
-                            style={styles.btnRecibir}
-                            onClick={(e) => handleRecibir(p, e)}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
-                            title="Recibir pedido e incrementar stock"
-                          >
-                            📥 Recibir
-                          </button>
-                          
-                          <button 
-                            style={styles.btnEliminar}
-                            onClick={(e) => handleEliminar(p, e)}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
-                            title="Eliminar pedido activo"
-                          >
-                            🗑️ Eliminar
-                          </button>
-                        </>
-                      ) : (
-                        <span style={{...styles.estatusCerrado, padding: '6px 10px'}}>
-                          Procesado
-                          <button 
-                            style={{...styles.btnEliminar, ...styles.btnEliminarDisabled}}
-                            title="Pedido ya procesado - No se puede eliminar"
-                            disabled
-                          >
-                            🗑️
-                          </button>
-                        </span>
+                      {/* Botón Recibir (solo para activos) */}
+                      {isActive && (
+                        <button 
+                          style={{...styles.btnBase, ...styles.btnRecibir}}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#219653'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#27ae60'}
+                          onClick={(e) => handleRecibir(p, e)}
+                          title="Marcar como recibido (incrementa stock)"
+                        >
+                          📥 Recibir
+                        </button>
                       )}
+                      
+                      {/* Botón Eliminar (solo para activos) */}
+                      {isActive && (
+                        <button 
+                          style={{...styles.btnBase, ...styles.btnEliminar}}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#c0392b'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#e74c3c'}
+                          onClick={(e) => handleEliminar(p, e)}
+                          title="Eliminar pedido pendiente"
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      )}
+                      
+                      {/* Botón Exportar (siempre disponible) */}
+                      <button 
+                        style={{...styles.btnBase, ...styles.btnExportar}}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#2980b9'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#3498db'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          exportarPedido(p);
+                        }}
+                        title="Exportar pedido para enviar al proveedor"
+                      >
+                        📤 Exportar
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -647,7 +690,7 @@ const PedidosComponente = () => {
         />
       )}
 
-      {/* Estilos CSS en línea para animaciones */}
+      {/* Estilos CSS para animaciones */}
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
