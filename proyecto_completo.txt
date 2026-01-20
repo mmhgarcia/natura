@@ -427,28 +427,30 @@ export default function Footer() {
 FILE: src/components/GestionPedido.jsx
 ------------------------------
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/db/database'; // Acceso a la base de datos dbTasaBCV [5]
+import { db } from '../lib/db/database'; // Acceso a la base de datos dbTasaBCV [2, 4]
 
 const GestionPedido = ({ pedido, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     numero_pedido: '',
+    // Se inicializa con la fecha actual en formato string YYYY-MM-DD [1]
     fecha_pedido: new Date().toISOString().split('T'),
-    tasa: '' // Se llenará desde la tabla config [2]
+    tasa: '', 
+    estatus: 'Activo' 
   });
   
   const [productos, setProductos] = useState([]);
   const [listaGrupos, setListaGrupos] = useState([]);
-  const [filtro, setFiltro] = useState('');
   const [cantidades, setCantidades] = useState({});
   const [error, setError] = useState('');
+
+  // Modo visualización: true si el componente recibe un pedido por props [5]
+  const esVisualizacion = !!pedido; 
 
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        // 1. Cargar la tasa BCV desde la tabla config [3, 4, 6]
+        // 1. Cargar la tasa BCV y datos maestros [5-7]
         const tasaConfig = await db.getConfigValue('tasa');
-        
-        // 2. Cargar productos y grupos de la base de datos [7]
         const [todosLosProductos, todosLosGrupos] = await Promise.all([
           db.getAll('productos'),
           db.getAll('grupos')
@@ -457,15 +459,32 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
         setProductos(todosLosProductos);
         setListaGrupos(todosLosGrupos);
 
-        // 3. Inicializar formulario
+        // 2. Lógica de inicialización según el modo
         if (pedido) {
+          // MODO VISUALIZACIÓN: Cargar datos del pedido seleccionado [5]
           setFormData({
             numero_pedido: pedido.numero_pedido || '',
             fecha_pedido: pedido.fecha_pedido || '',
-            tasa: pedido.tasa || (tasaConfig ? tasaConfig.toString() : '')
+            tasa: pedido.tasa || (tasaConfig ? tasaConfig.toString() : ''),
+            estatus: pedido.estatus || 'Activo'
           });
-        } else if (tasaConfig) {
-          setFormData(prev => ({ ...prev, tasa: tasaConfig.toString() }));
+          if (pedido.items) setCantidades(pedido.items);
+        } else {
+          // MODO CREACIÓN: Fecha del día automática y estrategia de numeración [8, 9]
+          const hoy = new Date().toISOString().split('T');
+          
+          // Buscar el último pedido para incrementar el número [Estrategia Recomendada]
+          const ultimoPedido = await db.pedidos.orderBy('id').last();
+          const siguienteNumero = ultimoPedido 
+            ? (parseInt(ultimoPedido.numero_pedido) + 1).toString() 
+            : "1";
+          
+          setFormData(prev => ({
+            ...prev,
+            numero_pedido: siguienteNumero,
+            fecha_pedido: hoy, // Establece la fecha del día automáticamente
+            tasa: tasaConfig ? tasaConfig.toString() : ''
+          }));
         }
       } catch (err) {
         console.error("Error al cargar datos iniciales:", err);
@@ -474,28 +493,45 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     cargarDatos();
   }, [pedido]);
 
+  // Cálculo de totales basado en costo_$ del grupo [3, 10, 11]
+  const calcularTotales = () => {
+    let totalUSD = 0;
+    Object.entries(cantidades).forEach(([prodId, qty]) => {
+      const producto = productos.find(p => p.id === parseInt(prodId));
+      if (producto && qty > 0) {
+        const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === producto.grupo.toLowerCase());
+        const costo = grupo ? (grupo.costo_$ || 0) : 0;
+        totalUSD += qty * costo;
+      }
+    });
+    const tasaNum = parseFloat(formData.tasa) || 0;
+    return { usd: totalUSD, bs: totalUSD * tasaNum };
+  };
+
+  const { usd, bs } = calcularTotales();
+
   const handleIncrement = (id) => {
-    setCantidades(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+    if (esVisualizacion) return;
+    setCantidades(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 })); // [11]
   };
 
   const handleDecrement = (id) => {
-    setCantidades(prev => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) - 1) }));
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    if (esVisualizacion) return;
+    setCantidades(prev => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) - 1) })); // [11]
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (esVisualizacion) return;
     try {
-      const pedidoData = { ...formData, items: cantidades };
-      if (pedido) {
-        await db.put('pedidos', { id: pedido.id, ...pedidoData });
-      } else {
-        await db.add('pedidos', pedidoData);
-      }
+      const pedidoData = { 
+        ...formData, 
+        items: cantidades, 
+        total_usd: usd, 
+        total_bs: bs 
+      };
+      // Persistencia en IndexedDB [12-14]
+      await db.add('pedidos', pedidoData);
       onSave();
       onClose();
     } catch (err) {
@@ -503,74 +539,57 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     }
   };
 
-  const getPrecioGrupo = (nombreGrupo) => {
+  const getCostoGrupo = (nombreGrupo) => {
     const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === nombreGrupo.toLowerCase());
-    return grupo ? grupo.precio.toFixed(2) : "0.00";
+    return grupo ? (grupo.costo_$ ? grupo.costo_$.toFixed(2) : "0.00") : "0.00"; // [15]
   };
 
-  const productosFiltrados = productos.filter(p => 
-    p.nombre.toLowerCase().includes(filtro.toLowerCase())
-  );
-
-  const productosAgrupados = productosFiltrados.reduce((acc, prod) => {
+  const productosAgrupados = productos.reduce((acc, prod) => {
     const grupo = prod.grupo || 'Otros';
     if (!acc[grupo]) acc[grupo] = [];
     acc[grupo].push(prod);
     return acc;
-  }, {});
+  }, {}); // [15]
 
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
         <div style={styles.header}>
-          <h2 style={styles.title}>GESTION DE PEDIDOS</h2>
+          <h2 style={styles.title}>GESTIÓN DE PEDIDOS</h2>
           <button onClick={onClose} style={styles.closeButton}>×</button>
         </div>
 
         <form onSubmit={handleSubmit} style={styles.content}>
           <div style={styles.topRow}>
             <div style={styles.inputGroup}>
-              <label style={styles.label}>Pedido #</label>
-              <input 
-                type="text" 
-                name="numero_pedido" 
-                value={formData.numero_pedido} 
-                onChange={handleChange} 
-                style={styles.inputSmall} 
-                required 
-              />
+              <label style={styles.label}>Pedido # (Auto)</label>
+              <input type="text" value={formData.numero_pedido} style={styles.inputReadOnly} readOnly />
             </div>
             <div style={styles.inputGroup}>
               <label style={styles.label}>Fecha</label>
               <input 
                 type="date" 
-                name="fecha_pedido" 
                 value={formData.fecha_pedido} 
-                onChange={handleChange} 
-                style={styles.inputSmall} 
+                onChange={(e) => setFormData({...formData, fecha_pedido: e.target.value})} 
+                style={esVisualizacion ? styles.inputReadOnly : styles.inputSmall} 
+                disabled={esVisualizacion} // Deshabilitado en modo visualización
               />
             </div>
             <div style={styles.inputGroup}>
               <label style={styles.label}>Tasa (BCV)</label>
-              <input 
-                type="text" 
-                name="tasa" 
-                value={formData.tasa} 
-                style={styles.inputReadOnly} 
-                readOnly // Campo de solo lectura solicitado
-              />
+              <input type="text" value={formData.tasa} style={styles.inputReadOnly} readOnly />
             </div>
           </div>
 
-          <div style={styles.filterBar}>
-            <input 
-              type="text" 
-              placeholder="Filtro de productos" 
-              value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
-              style={styles.filterInput}
-            />
-            <div style={styles.filterIcon}>▼</div>
+          <div style={styles.totalsBar}>
+            <div style={styles.totalBox}>
+              <span style={styles.totalLabel}>Total $:</span>
+              <span style={styles.totalValue}>{usd.toFixed(2)}</span>
+            </div>
+            <div style={styles.totalBox}>
+              <span style={styles.totalLabel}>Total Bs:</span>
+              <span style={styles.totalValue}>{bs.toFixed(2)}</span>
+            </div>
           </div>
 
           <div style={styles.productListContainer}>
@@ -580,7 +599,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                 <div key={grupo}>
                   <div style={styles.groupTitle}>
                     {grupo.toUpperCase()} 
-                    <span style={styles.groupPrice}> (${getPrecioGrupo(grupo)})</span>
+                    <span style={styles.groupPrice}> (${getCostoGrupo(grupo)})</span>
                   </div>
                   {items.map((prod) => (
                     <div key={prod.id} style={styles.productItem}>
@@ -590,14 +609,15 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                       <div style={styles.productDetails}>
                         <span style={styles.stockText}>Stock: {prod.stock}</span>
                         <div style={styles.quantityControl}>
-                          <button type="button" onClick={() => handleDecrement(prod.id)} style={styles.qtyBtn}>-</button>
+                          <button type="button" onClick={() => handleDecrement(prod.id)} style={styles.qtyBtn} disabled={esVisualizacion}>-</button>
                           <input 
                             type="number" 
                             value={cantidades[prod.id] || 0}
-                            onChange={(e) => setCantidades({...cantidades, [prod.id]: parseInt(e.target.value) || 0})}
+                            onChange={(e) => !esVisualizacion && setCantidades({...cantidades, [prod.id]: parseInt(e.target.value) || 0})}
                             style={styles.qtyInput}
+                            disabled={esVisualizacion}
                           />
-                          <button type="button" onClick={() => handleIncrement(prod.id)} style={styles.qtyBtn}>+</button>
+                          <button type="button" onClick={() => handleIncrement(prod.id)} style={styles.qtyBtn} disabled={esVisualizacion}>+</button>
                         </div>
                       </div>
                     </div>
@@ -608,8 +628,21 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
           </div>
 
           <div style={styles.footer}>
-            <button type="button" onClick={() => setCantidades({})} style={styles.blueBtn}>Vaciar</button>
-            <button type="submit" style={styles.blueBtn}>Grabar</button>
+            <button 
+              type="button" 
+              onClick={() => setCantidades({})} 
+              style={{...styles.limpiarBtn, opacity: esVisualizacion ? 0.5 : 1}} 
+              disabled={esVisualizacion}
+            >
+              Limpiar
+            </button>
+            <button 
+              type="submit" 
+              style={{...styles.grabarBtn, opacity: esVisualizacion ? 0.5 : 1}} 
+              disabled={esVisualizacion}
+            >
+              Grabar
+            </button>
           </div>
           {error && <div style={styles.error}>{error}</div>}
         </form>
@@ -619,38 +652,36 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 };
 
 const styles = {
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 },
-  modal: { backgroundColor: '#fff', width: '95%', maxWidth: '500px', maxHeight: '95vh', border: '1px solid #ccc', padding: '10px', borderRadius: '4px', display: 'flex', flexDirection: 'column' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #00BFFF', marginBottom: '10px' },
-  title: { fontSize: '16px', fontWeight: 'bold', color: '#000', margin: 0 },
-  closeButton: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#000' },
-  content: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  topRow: { display: 'flex', gap: '8px', justifyContent: 'space-between' },
-  inputGroup: { display: 'flex', flexDirection: 'column', flex: 1, gap: '4px' },
-  label: { fontSize: '12px', fontWeight: 'bold', color: '#000' }, 
-  inputSmall: { padding: '6px', border: '1px solid #aaa', fontSize: '13px', color: '#000', backgroundColor: '#fff', width: '100%', boxSizing: 'border-box' },
-  // Estilo específico para el campo de solo lectura
-  inputReadOnly: { padding: '6px', border: '1px solid #ccc', fontSize: '13px', color: '#555', backgroundColor: '#f0f0f0', width: '100%', boxSizing: 'border-box', cursor: 'not-allowed' },
-  filterBar: { display: 'flex' },
-  filterInput: { flex: 1, padding: '8px', border: '1px solid #aaa', color: '#000', backgroundColor: '#fff' },
-  filterIcon: { padding: '8px', backgroundColor: '#e1f5fe', border: '1px solid #aaa', color: '#00BFFF' },
-  productListContainer: { border: '1px solid #aaa', borderRadius: '2px' },
-  productListHeader: { textAlign: 'center', color: '#00BFFF', padding: '5px', borderBottom: '1px solid #aaa', fontWeight: 'bold' },
-  productList: { height: '275px', overflowY: 'auto', backgroundColor: '#fff' }, 
-  groupTitle: { fontSize: '18px', fontWeight: 'bold', backgroundColor: '#f1f1f1', padding: '8px 10px', color: '#000', display: 'flex', justifyContent: 'space-between' },
-  groupPrice: { color: '#007bff', fontSize: '16px' },
-  productItem: { padding: '8px 10px', borderBottom: '1px solid #eee' },
-  productName: { fontSize: '14px', color: '#000' }, 
-  productDetails: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  stockText: { fontSize: '12px', color: '#333' },
-  quantityControl: { display: 'flex', alignItems: 'center', gap: '4px' },
-  qtyBtn: { 
-    width: '30px', height: '30px', backgroundColor: '#eee', border: '1px solid #ccc', cursor: 'pointer', 
-    fontWeight: 'bold', fontSize: '18px', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center'
-  },
-  qtyInput: { width: '40px', textAlign: 'center', border: '1px solid #ccc', padding: '4px', color: '#000', backgroundColor: '#fff' },
-  footer: { display: 'flex', gap: '15px', marginTop: '5px' },
-  blueBtn: { backgroundColor: '#7ecbff', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' },
+  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }, // [16]
+  modal: { backgroundColor: '#fff', width: '95%', maxWidth: '500px', maxHeight: '95vh', border: '1px solid #ccc', padding: '10px', borderRadius: '4px', display: 'flex', flexDirection: 'column' }, // [16]
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #00BFFF', marginBottom: '10px' }, // [17]
+  title: { fontSize: '16px', fontWeight: 'bold', color: '#000', margin: 0 }, // [17]
+  closeButton: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#000' }, // [17]
+  content: { display: 'flex', flexDirection: 'column', gap: '10px' }, // [17]
+  topRow: { display: 'flex', gap: '8px', justifyContent: 'space-between' }, // [17]
+  inputGroup: { display: 'flex', flexDirection: 'column', flex: 1, gap: '4px' }, // [18]
+  label: { fontSize: '12px', fontWeight: 'bold', color: '#000' }, // [18]
+  inputSmall: { padding: '6px', border: '1px solid #aaa', fontSize: '13px', color: '#000', backgroundColor: '#fff', width: '100%', boxSizing: 'border-box' }, // [18]
+  inputReadOnly: { padding: '6px', border: '1px solid #ccc', fontSize: '13px', color: '#555', backgroundColor: '#f0f0f0', width: '100%', boxSizing: 'border-box', cursor: 'not-allowed' }, // [18]
+  totalsBar: { display: 'flex', gap: '10px', justifyContent: 'space-between', padding: '5px 0' }, // [19]
+  totalBox: { flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#e1f5fe', padding: '8px', border: '1px solid #00BFFF', borderRadius: '4px' }, // [19]
+  totalLabel: { fontSize: '13px', fontWeight: 'bold', color: '#000' }, // [19]
+  totalValue: { fontSize: '14px', fontWeight: 'bold', color: '#007bff' }, // [19]
+  productListContainer: { border: '1px solid #aaa', borderRadius: '2px' }, // [19]
+  productListHeader: { textAlign: 'center', color: '#00BFFF', padding: '5px', borderBottom: '1px solid #aaa', fontWeight: 'bold' }, // [20]
+  productList: { height: '275px', overflowY: 'auto', backgroundColor: '#fff' }, // [20]
+  groupTitle: { fontSize: '18px', fontWeight: 'bold', backgroundColor: '#f1f1f1', padding: '8px 10px', color: '#000', display: 'flex', justifyContent: 'space-between' }, // [20]
+  groupPrice: { color: '#007bff', fontSize: '16px' }, // [20]
+  productItem: { padding: '8px 10px', borderBottom: '1px solid #eee' }, // [20]
+  productName: { fontSize: '14px', color: '#000' }, // [21]
+  productDetails: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }, // [21]
+  stockText: { fontSize: '12px', color: '#333' }, // [21]
+  quantityControl: { display: 'flex', alignItems: 'center', gap: '4px' }, // [21]
+  qtyBtn: { width: '30px', height: '30px', backgroundColor: '#eee', border: '1px solid #ccc', cursor: 'pointer', fontWeight: 'bold', fontSize: '18px', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }, // [21]
+  qtyInput: { width: '40px', textAlign: 'center', border: '1px solid #ccc', padding: '4px', color: '#000', backgroundColor: '#fff' }, // [22]
+  footer: { display: 'flex', gap: '15px', marginTop: '5px' }, // [22]
+  limpiarBtn: { backgroundColor: '#f44336', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', flex: 1 }, // [22]
+  grabarBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', flex: 1 }, // [22]
   error: { color: 'red', fontSize: '12px', textAlign: 'center' }
 };
 
@@ -659,9 +690,8 @@ export default GestionPedido;
 
 FILE: src/components/GruposCRUD/GruposCRUD.jsx
 ------------------------------
-// src/components/GruposCRUD/GruposCRUD.jsx (partes actualizadas)
 import React, { useState, useEffect } from 'react';
-import { db } from '../../lib/db/database';
+import { db } from '../../lib/db/database'; // Acceso a la instancia dbTasaBCV [4]
 import ModalGrupo from './ModalGrupo';
 
 const GruposCRUD = () => {
@@ -671,7 +701,7 @@ const GruposCRUD = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [grupoEditando, setGrupoEditando] = useState(null);
 
-  // Cargar grupos al montar el componente
+  // Carga inicial de los grupos desde IndexedDB [5, 6]
   useEffect(() => {
     cargarGrupos();
   }, []);
@@ -679,6 +709,7 @@ const GruposCRUD = () => {
   const cargarGrupos = async () => {
     try {
       setLoading(true);
+      // Obtiene todos los registros de la tabla 'grupos' [7, 8]
       const datos = await db.getAll('grupos');
       setGrupos(datos);
     } catch (err) {
@@ -691,22 +722,20 @@ const GruposCRUD = () => {
 
   const handleEditar = (grupo) => {
     setGrupoEditando(grupo);
-    setModalOpen(true);
+    setModalOpen(true); // Abre el modal para edición [7, 8]
   };
 
   const handleEliminar = async (grupo) => {
     if (window.confirm(`¿Estás seguro de eliminar el grupo "${grupo.nombre}"?`)) {
       try {
-        // Verificar si hay productos usando este grupo
+        // Verifica integridad referencial antes de eliminar [8, 9]
         const productosConGrupo = await db.getAll('productos', { grupo: grupo.nombre });
-        
         if (productosConGrupo.length > 0) {
           alert(`No se puede eliminar. Hay ${productosConGrupo.length} producto(s) usando este grupo.`);
           return;
         }
-        
         await db.del('grupos', grupo.id);
-        cargarGrupos(); // Recargar la lista
+        cargarGrupos(); // Refresca la lista tras eliminar [1, 9]
       } catch (err) {
         setError('Error al eliminar: ' + err.message);
       }
@@ -715,166 +744,82 @@ const GruposCRUD = () => {
 
   const handleNuevoGrupo = () => {
     setGrupoEditando(null);
-    setModalOpen(true);
+    setModalOpen(true); // Abre el modal para nuevo registro [1, 9]
   };
 
-  const handleGuardarExitoso = () => {
-    cargarGrupos(); // Recargar lista después de guardar
-  };
-
-  if (loading) {
-    return <div style={styles.loading}>Cargando grupos...</div>;
-  }
+  if (loading) return <div style={styles.loading}>Cargando grupos...</div>;
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>Administración de Grupos</h1>
-      
-      {error && (
-        <div style={styles.errorAlert}>
-          {error}
-        </div>
-      )}
+      {/* Título actualizado y color blanco para visibilidad [1, 2] */}
+      <h1 style={styles.title}>Panel de Grupos</h1>
 
-      {/* Botón para nuevo grupo */}
-      <button 
-        onClick={handleNuevoGrupo}
-        style={styles.nuevoButton}
-      >
+      {error && <div style={styles.errorAlert}>{error}</div>}
+
+      <button onClick={handleNuevoGrupo} style={styles.nuevoButton}>
         + Agregar Nuevo Grupo
       </button>
 
-      {/* Lista de grupos */}
       <div style={styles.lista}>
         {grupos.length === 0 ? (
-          <div style={styles.vacio}>
-            No hay grupos registrados. ¡Crea el primero!
-          </div>
+          <div style={styles.vacio}>No hay grupos registrados.</div>
         ) : (
           grupos.map(grupo => (
             <div key={grupo.id} style={styles.item}>
               <div style={styles.itemInfo}>
                 <div style={styles.itemNombre}>{grupo.nombre}</div>
-                <div style={styles.itemPrecio}>
-                  Precio: ${grupo.precio.toFixed(2)}
+                {/* Visualización de Precio y nuevo campo Costo [10, 11] */}
+                <div style={styles.itemPrecio}>Precio: ${grupo.precio.toFixed(2)}</div>
+                <div style={styles.itemCosto}>
+                  Costo: ${grupo.costo_$ ? grupo.costo_$.toFixed(2) : "0.00"}
                 </div>
                 <div style={styles.itemId}>ID: {grupo.id}</div>
               </div>
-
               <div style={styles.itemActions}>
-                <button
-                  onClick={() => handleEditar(grupo)}
-                  style={styles.btnEditar}
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => handleEliminar(grupo)}
-                  style={styles.btnEliminar}
-                >
-                  Eliminar
-                </button>
+                <button onClick={() => handleEditar(grupo)} style={styles.btnEditar}>Editar</button>
+                <button onClick={() => handleEliminar(grupo)} style={styles.btnEliminar}>Eliminar</button>
               </div>
             </div>
           ))
         )}
       </div>
 
-      {/* Resumen */}
       <div style={styles.resumen}>
         Total: {grupos.length} grupo{grupos.length !== 1 ? 's' : ''}
       </div>
 
-      {/* Modal */}
+      {/* Renderizado condicional del Modal para evitar duplicidad [10, 12] */}
       {modalOpen && (
-        <ModalGrupo
-          grupo={grupoEditando}
-          onClose={() => setModalOpen(false)}
-          onSave={handleGuardarExitoso}
+        <ModalGrupo 
+          grupo={grupoEditando} 
+          onClose={() => setModalOpen(false)} 
+          onSave={cargarGrupos} 
         />
       )}
     </div>
   );
 };
 
-// Agrega estos estilos al componente principal
 const styles = {
   container: { padding: '20px', maxWidth: '800px', margin: '0 auto' },
-  title: { marginBottom: '20px', color: '#333' },
-  loading: { padding: '40px', textAlign: 'center' },
-  errorAlert: { 
-    backgroundColor: '#fee', 
-    color: '#c33', 
-    padding: '10px', 
-    borderRadius: '4px',
-    marginBottom: '20px'
-  },
-  nuevoButton: {
-    marginBottom: '20px',
-    padding: '10px 15px',
-    backgroundColor: '#4CAF50',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500'
-  },
-  lista: { 
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    overflow: 'hidden',
-    marginBottom: '20px'
-  },
-  vacio: { 
-    padding: '40px', 
-    textAlign: 'center', 
-    color: '#666' 
-  },
-  item: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '15px',
-    borderBottom: '1px solid #eee',
-    backgroundColor: 'white'
-  },
+  // Estilo corregido: Blanco para contrastar con el fondo oscuro #242424 [2, 13]
+  title: { marginBottom: '20px', color: '#ffffff', fontWeight: 'bold', textAlign: 'center' },
+  loading: { padding: '40px', textAlign: 'center', color: '#fff' },
+  errorAlert: { backgroundColor: '#fee', color: '#c33', padding: '10px', borderRadius: '4px', marginBottom: '20px' },
+  nuevoButton: { marginBottom: '20px', padding: '10px 15px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '500' },
+  lista: { border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden', marginBottom: '20px' },
+  vacio: { padding: '40px', textAlign: 'center', color: '#666' },
+  item: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', borderBottom: '1px solid #eee', backgroundColor: 'white' },
   itemInfo: { flex: 1 },
-  itemNombre: { 
-    fontWeight: 'bold', 
-    fontSize: '16px', 
-    marginBottom: '5px',
-    color: '#333' 
-  },
-  itemPrecio: { color: '#666', marginBottom: '3px' },
+  itemNombre: { fontWeight: 'bold', fontSize: '18px', marginBottom: '5px', color: '#333' },
+  itemPrecio: { color: '#007bff', marginBottom: '3px', fontWeight: '500' },
+  // Estilo específico para el campo de costo en rojo [11]
+  itemCosto: { color: '#dc3545', marginBottom: '3px', fontWeight: '500' },
   itemId: { fontSize: '12px', color: '#999' },
   itemActions: { display: 'flex', gap: '10px' },
-  btnEditar: {
-    padding: '8px 12px',
-    backgroundColor: '#2196F3',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px'
-  },
-  btnEliminar: {
-    padding: '8px 12px',
-    backgroundColor: '#f44336',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px'
-  },
-  resumen: { 
-    marginTop: '20px', 
-    padding: '10px',
-    backgroundColor: '#f5f5f5',
-    borderRadius: '4px',
-    fontSize: '14px',
-    textAlign: 'center'
-  },
+  btnEditar: { padding: '8px 12px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
+  btnEliminar: { padding: '8px 12px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
+  resumen: { marginTop: '20px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px', fontSize: '14px', textAlign: 'center', color: '#333' }
 };
 
 export default GruposCRUD;
@@ -882,146 +827,76 @@ export default GruposCRUD;
 
 FILE: src/components/GruposCRUD/ModalGrupo.jsx
 ------------------------------
-// src/components/GruposCRUD/ModalGrupo.jsx
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/db/database';
 
 const ModalGrupo = ({ grupo, onClose, onSave }) => {
   const [formData, setFormData] = useState({
-    id: '',
     nombre: '',
-    precio: 0
+    precio: 0,
+    costo_$: 0
   });
-  const [error, setError] = useState('');
 
-  // Inicializar formulario cuando cambia el grupo
   useEffect(() => {
     if (grupo) {
       setFormData({
         nombre: grupo.nombre || '',
-        precio: grupo.precio || 0
+        precio: grupo.precio || 0,
+        costo_$: grupo.costo_$ || 0
       });
-    } else {
-      setFormData({ nombre: '', precio: 0 });
     }
   }, [grupo]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-
-    // Validaciones
-    if (!formData.nombre.trim()) {
-      setError('El nombre es requerido');
-      return;
-    }
-
-    if (formData.precio < 0) {
-      setError('El precio no puede ser negativo');
-      return;
-    }
-
     try {
-      // Guardar en la base de datos
       if (grupo) {
-        // Editar grupo existente
-        await db.put('grupos', {
-          id: grupo.id,
-          ...formData
-        });
+        await db.put('grupos', { id: grupo.id, ...formData });
       } else {
-        // Crear nuevo grupo
         await db.add('grupos', formData);
       }
-
-      // Notificar al componente padre y cerrar
       onSave();
       onClose();
     } catch (err) {
-      setError('Error al guardar: ' + err.message);
-      console.error(err);
+      alert('Error al guardar: ' + err.message);
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'precio' ? parseFloat(value) || 0 : value
-    }));
-  };
-
   return (
-    <div style={styles.overlay}>
-      <div style={styles.modal}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>
-            {grupo ? 'Editar Grupo' : 'Nuevo Grupo'}
-          </h2>
-          <button onClick={onClose} style={styles.closeButton}>
-            ×
-          </button>
-        </div>
-
+    <div style={modalStyles.overlay}>
+      <div style={modalStyles.modal}>
+        <h2 style={{color: '#000'}}>GESTIÓN DE GRUPO</h2>
         <form onSubmit={handleSubmit}>
-          <div style={styles.content}>
-            {error && (
-              <div style={styles.error}>
-                {error}
-              </div>
-            )}
-
-            <div style={styles.formGroup}>
-              <label htmlFor="nombre" style={styles.label}>
-                Nombre del Grupo *
-              </label>
-              <input
-                type="text"
-                id="nombre"
-                name="nombre"
-                value={formData.nombre}
-                onChange={handleChange}
-                style={styles.input}
-                placeholder="Ej: Premium, Básico, etc."
-                autoFocus
-              />
-            </div>
-
-            <div style={styles.formGroup}>
-              <label htmlFor="precio" style={styles.label}>
-                Precio ($)
-              </label>
-              <input
-                type="number"
-                id="precio"
-                name="precio"
-                value={formData.precio}
-                onChange={handleChange}
-                style={styles.input}
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-              />
-              <div style={styles.helpText}>
-                Precio adicional para productos de este grupo
-              </div>
-            </div>
+          <div style={modalStyles.field}>
+            <label style={{color: '#000'}}>Nombre:</label>
+            <input 
+              type="text" 
+              value={formData.nombre} 
+              onChange={e => setFormData({...formData, nombre: e.target.value})}
+              required 
+            />
           </div>
-
-          <div style={styles.footer}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={styles.cancelButton}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              style={styles.saveButton}
-            >
-              {grupo ? 'Guardar Cambios' : 'Crear Grupo'}
-            </button>
+          <div style={modalStyles.field}>
+            <label style={{color: '#000'}}>Precio ($):</label>
+            <input 
+              type="number" 
+              step="0.01"
+              value={formData.precio} 
+              onChange={e => setFormData({...formData, precio: parseFloat(e.target.value)})}
+            />
+          </div>
+          <div style={modalStyles.field}>
+            <label style={{color: '#000'}}>Costo ($):</label>
+            <input 
+              type="number" 
+              step="0.01"
+              value={formData.costo_$} 
+              onChange={e => setFormData({...formData, costo_$: parseFloat(e.target.value)})}
+            />
+          </div>
+          <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
+            <button type="submit" style={{backgroundColor: '#28a745', color: '#fff'}}>Guardar</button>
+            <button type="button" onClick={onClose} style={{backgroundColor: '#ccc'}}>Cancelar</button>
           </div>
         </form>
       </div>
@@ -1029,117 +904,10 @@ const ModalGrupo = ({ grupo, onClose, onSave }) => {
   );
 };
 
-// Estilos en línea para simplicidad
-const styles = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: '20px'
-  },
-  modal: {
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    width: '100%',
-    maxWidth: '500px',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-    maxHeight: '90vh',
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '20px',
-    borderBottom: '1px solid #eee'
-  },
-  title: {
-    margin: 0,
-    fontSize: '18px',
-    color: '#333'
-  },
-  closeButton: {
-    background: 'none',
-    border: 'none',
-    fontSize: '24px',
-    cursor: 'pointer',
-    color: '#666',
-    padding: '0',
-    width: '30px',
-    height: '30px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  content: {
-    padding: '20px',
-    overflowY: 'auto'
-  },
-  error: {
-    backgroundColor: '#fee',
-    color: '#c33',
-    padding: '10px',
-    borderRadius: '4px',
-    marginBottom: '15px',
-    fontSize: '14px'
-  },
-  formGroup: {
-    marginBottom: '20px'
-  },
-  label: {
-    display: 'block',
-    marginBottom: '8px',
-    fontWeight: '500',
-    color: '#333'
-  },
-  input: {
-    width: '100%',
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '16px',
-    boxSizing: 'border-box'
-  },
-  helpText: {
-    fontSize: '12px',
-    color: '#666',
-    marginTop: '5px'
-  },
-  footer: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '10px',
-    padding: '20px',
-    borderTop: '1px solid #eee'
-  },
-  cancelButton: {
-    padding: '10px 20px',
-    backgroundColor: '#f5f5f5',
-    color: '#333',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px'
-  },
-  saveButton: {
-    padding: '10px 20px',
-    backgroundColor: '#4CAF50',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500'
-  }
+const modalStyles = {
+  overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 },
+  modal: { backgroundColor: '#fff', padding: '20px', borderRadius: '8px', width: '90%', maxWidth: '400px' },
+  field: { display: 'flex', flexDirection: 'column', marginBottom: '10px' }
 };
 
 export default ModalGrupo;
@@ -1459,14 +1227,13 @@ const PedidosComponente = () => {
   const navigate = useNavigate();
   const [listaPedidos, setListaPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
-  
   const [modalOpen, setModalOpen] = useState(false);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
 
   const cargarRegistros = async () => {
     try {
       setLoading(true);
-      const datos = await db.getAll('pedidos'); // Fuente [4, 5]
+      const datos = await db.getAll('pedidos'); 
       setListaPedidos(datos);
     } catch (error) {
       console.error("Error al cargar pedidos:", error);
@@ -1481,12 +1248,11 @@ const PedidosComponente = () => {
 
   const handleNuevoPedido = () => {
     setPedidoSeleccionado(null);
-    setModalOpen(true); // Fuente [6, 7]
+    setModalOpen(true);
   };
 
   const handleSeleccionarPedido = (pedido) => {
-    // Solo permite editar Pedidos Activos [7, 8]
-    if (pedido.estado === 'Activo' || !pedido.estado) {
+    if (pedido.estatus === 'Activo' || !pedido.estatus) {
       setPedidoSeleccionado(pedido);
       setModalOpen(true);
     } else {
@@ -1494,141 +1260,110 @@ const PedidosComponente = () => {
     }
   };
 
-  const styles = {
-    // Ajuste para ocupar el 100% real y evitar la franja gris de fondo [3, 9]
-    container: {
-      display: 'flex',
-      flexDirection: 'column',
-      width: '100%',
-      minHeight: '100vh',
-      backgroundColor: '#fff',
-      margin: 0,
-      padding: 0,
-      boxSizing: 'border-box'
-    },
-    // Header con alineación a la izquierda [3, 10]
-    header: {
-      display: 'flex',
-      alignItems: 'center',
-      padding: '15px',
-      backgroundColor: '#00BFFF', 
-      color: 'white',
-      width: '100%',
-      boxSizing: 'border-box'
-    },
-    backArrow: {
-      background: 'none',
-      border: 'none',
-      color: 'white',
-      fontSize: '24px',
-      cursor: 'pointer',
-      marginRight: '10px',
-      padding: 0 // Elimina padding heredado para alineación precisa
-    },
-    title: {
-      fontSize: '20px',
-      fontWeight: 'bold',
-      margin: 0
-    },
-    content: {
-      padding: '20px',
-      display: 'flex',
-      flexDirection: 'column',
-      width: '100%',
-      boxSizing: 'border-box'
-    },
-    // CORRECCIÓN: Se añade 'padding: 0' para que sea un círculo perfecto y no una elipse [1, 6]
-    addBtnCircle: {
-      width: '55px',
-      height: '55px',
-      borderRadius: '50%',
-      backgroundColor: '#28a745',
-      color: 'white',
-      border: 'none',
-      fontSize: '35px',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      cursor: 'pointer',
-      marginBottom: '20px',
-      boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-      padding: 0, // Fundamental para evitar la forma de elipse
-      lineHeight: 0
-    },
-    listaContainer: {
-      width: '100%'
-    },
-    table: {
-      width: '100%',
-      borderCollapse: 'collapse'
-    },
-    row: {
-      borderBottom: '1px solid #eee',
-      cursor: 'pointer'
-    },
-    cell: {
-      padding: '15px 5px',
-      textAlign: 'left',
-      color: '#000'
+  // Lógica actualizada para incrementar stock y cerrar pedido
+  const handleRecibir = async (pedido, e) => {
+    e.stopPropagation(); 
+    
+    const confirmar = window.confirm(`¿Desea procesar el ingreso de mercancía del pedido ${pedido.numero_pedido}? Esto incrementará el stock actual.`);
+    
+    if (confirmar) {
+      try {
+        // 1. Recorrer los items del pedido para incrementar el stock
+        // El objeto pedido.items contiene { productoId: cantidad }
+        if (pedido.items && Object.keys(pedido.items).length > 0) {
+          for (const [prodId, qty] of Object.entries(pedido.items)) {
+            const cantidadNum = parseInt(qty);
+            if (cantidadNum > 0) {
+              // Incrementamos el stock usando el método de la base de datos
+              await db.updateStock(parseInt(prodId), cantidadNum);
+            }
+          }
+        }
+
+        // 2. Una vez actualizado el stock, marcamos el pedido como 'Cerrado'
+        await db.put('pedidos', { ...pedido, estatus: 'Cerrado' });
+        
+        // 3. Notificar éxito al usuario
+        alert("✅ Pedido procesado exitosamente. El stock ha sido actualizado.");
+        
+        // 4. Refrescar la lista de pedidos en pantalla
+        cargarRegistros();
+      } catch (error) {
+        console.error("Error al procesar el pedido:", error);
+        alert("❌ Error crítico al procesar el pedido: " + error.message);
+      }
     }
+  };
+
+  const styles = {
+    container: { display: 'flex', flexDirection: 'column', width: '100%', minHeight: '100vh', backgroundColor: '#fff', margin: 0, padding: 0, boxSizing: 'border-box' },
+    header: { display: 'flex', alignItems: 'center', padding: '15px', backgroundColor: '#00BFFF', color: 'white', width: '100%', boxSizing: 'border-box' },
+    backArrow: { background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer', marginRight: '10px' },
+    title: { fontSize: '20px', fontWeight: 'bold', margin: 0 },
+    content: { padding: '20px', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box' },
+    addBtnCircle: { width: '55px', height: '55px', borderRadius: '50%', backgroundColor: '#28a745', color: 'white', border: 'none', fontSize: '35px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', marginBottom: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.2)', padding: 0, lineHeight: 0 },
+    headerRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', backgroundColor: '#f4f4f4', borderBottom: '2px solid #ddd', padding: '10px 5px' },
+    headerCell: { fontWeight: 'bold', fontSize: '13px', color: '#333', textAlign: 'left' },
+    listaContainer: { width: '100%' },
+    row: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', borderBottom: '1px solid #eee', cursor: 'pointer', alignItems: 'center' },
+    cell: { padding: '15px 5px', textAlign: 'left', color: '#000', fontSize: '14px' },
+    btnRecibir: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '8px 10px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' },
+    estatusCerrado: { color: '#666', fontStyle: 'italic', fontSize: '13px' }
   };
 
   return (
     <div style={styles.container}>
-      {/* Header: Flecha y Título alineados a la izquierda [3] */}
-      <header style={styles.header}>
+      <div style={styles.header}>
         <button onClick={() => navigate(-1)} style={styles.backArrow}>←</button>
         <h1 style={styles.title}>Pedidos</h1>
-      </header>
+      </div>
 
       <div style={styles.content}>
-        {/* Botón circular verde con signo + blanco [6] */}
-        <button 
-          style={styles.addBtnCircle} 
-          onClick={handleNuevoPedido}
-        >
-          +
-        </button>
+        <button style={styles.addBtnCircle} onClick={handleNuevoPedido}>+</button>
+
+        <div style={styles.headerRow}>
+          <div style={styles.headerCell}>PEDIDO</div>
+          <div style={styles.headerCell}>FECHA</div>
+          <div style={styles.headerCell}>TOTAL BS</div>
+          <div style={styles.headerCell}>ACCIÓN</div>
+        </div>
 
         <div style={styles.listaContainer}>
           {loading ? (
-            <p>Cargando registros...</p>
+            <div style={{ textAlign: 'center', color: '#666', marginTop: '20px' }}>Cargando registros...</div>
           ) : (
-            <table style={styles.table}>
-              <tbody>
-                {listaPedidos.length === 0 ? (
-                  <tr>
-                    <td style={styles.cell}>No hay pedidos registrados en dbTasaBCV.</td>
-                  </tr>
-                ) : (
-                  listaPedidos.map((p) => (
-                    <tr 
-                      key={p.id} 
-                      style={styles.row} 
-                      onClick={() => handleSeleccionarPedido(p)}
+            listaPedidos.map((p) => (
+              <div key={p.id} style={styles.row} onClick={() => handleSeleccionarPedido(p)}>
+                <div style={styles.cell}><strong>{p.numero_pedido}</strong></div>
+                <div style={styles.cell}>{new Date(p.fecha_pedido).toLocaleDateString()}</div>
+                <div style={styles.cell}>Bs. {p.total_bs ? p.total_bs.toFixed(2) : "0.00"}</div>
+                
+                <div style={styles.cell}>
+                  {(p.estatus === 'Activo' || !p.estatus) ? (
+                    <button 
+                      style={styles.btnRecibir} 
+                      onClick={(e) => handleRecibir(p, e)}
                     >
-                      <td style={styles.cell}>
-                        <strong>{p.numero_pedido}</strong><br/>
-                        <small>{new Date(p.fecha_pedido).toLocaleDateString()}</small>
-                      </td>
-                      <td style={{...styles.cell, textAlign: 'right'}}>
-                        Bs. {p.tasa}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                      Recibir
+                    </button>
+                  ) : (
+                    <span style={styles.estatusCerrado}>{p.estatus}</span>
+                  )}
+                </div>
+              </div>
+            ))
           )}
         </div>
       </div>
 
-      {/* Modal de Gestión [6, 11] */}
       {modalOpen && (
         <GestionPedido 
-          pedido={pedidoSeleccionado}
-          onClose={() => setModalOpen(false)}
-          onSave={cargarRegistros}
+          pedido={pedidoSeleccionado} 
+          onClose={() => {
+            setModalOpen(false);
+            cargarRegistros();
+          }} 
+          onSave={cargarRegistros} 
         />
       )}
     </div>
@@ -3389,30 +3124,28 @@ button:focus-visible {
 
 FILE: src/lib/db/database.js
 ------------------------------
-// src/lib/db/database.js
-
 import Dexie from 'dexie';
-import 'dexie-export-import';
+import 'dexie-export-import'; // Required for database backup functionality [1, 4]
 
 export class NaturaDBClass {
     constructor() {
-        // La base de datos se mantiene como dbTasaBCV [4]
+        // The database is named dbTasaBCV as per project requirements [1, 5]
         this.db = new Dexie('dbTasaBCV');
 
-        // Versión 1 - Esquema inicial [2]
+        // Version 1 - Initial schema [1]
         this.db.version(1).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt',
             grupos: '++id, nombre, precio'
         });
 
-        // Versión 2 - Agrega tabla config [2]
+        // Version 2 - Added configuration table [2]
         this.db.version(2).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt',
             grupos: '++id, nombre, precio',
             config: 'clave'
         });
 
-        // Versión 3 - Agrega tabla ventas [3]
+        // Version 3 - Added sales table for real-time tracking [2]
         this.db.version(3).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt',
             grupos: '++id, nombre, precio',
@@ -3420,32 +3153,52 @@ export class NaturaDBClass {
             ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad'
         });
 
-        // NUEVA Versión 4 - Agrega tabla pedidos con ID AUTONUMÉRICO
-        // El prefijo '++' define el campo como autoincremental en Dexie [1].
+        // Version 4 - Added orders table with autoincremental ID [3]
         this.db.version(4).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt',
             grupos: '++id, nombre, precio',
             config: 'clave',
             ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
-            pedidos: '++id, numero_pedido, fecha_pedido, tasa' 
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa'
         });
 
-        // Referencias para acceso directo [5]
+        // Version 5 - Added cost field (costo_$) to groups for price management [3]
+        this.db.version(5).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio, costo_$', 
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa'
+        });
+
+        // NEW Version 6 - Added status field (estatus) to orders for workflow management
+        // Note: 'items' and totals are stored in the object but not indexed [History]
+        this.db.version(6).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio, costo_$',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus'
+        });
+
+        // Direct access references for components [6]
         this.productos = this.db.productos;
         this.grupos = this.db.grupos;
         this.config = this.db.config;
         this.ventas = this.db.ventas;
-        this.pedidos = this.db.pedidos; // Referencia a la nueva tabla
+        this.pedidos = this.db.pedidos;
     }
 
-    // Métodos de inicialización [5]
+    // Initialisation method called by the app entry points [6]
     async init() {
-        await this.db.open();
-        console.log("db open.");
+        if (!this.db.isOpen()) {
+            await this.db.open();
+            console.log("Database dbTasaBCV opened successfully.");
+        }
         return this;
     }
 
-    // Métodos CRUD genéricos [5, 6]
+    // Generic CRUD methods used across the application [6, 7]
     async add(table, data) {
         return await this.db[table].add(data);
     }
@@ -3470,7 +3223,7 @@ export class NaturaDBClass {
         await this.db[table].delete(id);
     }
 
-    // Métodos específicos del negocio [7]
+    // Business specific logic for inventory management [7, 8]
     async updateStock(productoId, cantidad) {
         const producto = await this.get('productos', productoId);
         if (producto) {
@@ -3483,6 +3236,7 @@ export class NaturaDBClass {
         return null;
     }
 
+    // Configuration helpers for BCV rate and settings [8, 9]
     async getConfigValue(clave) {
         const config = await this.get('config', clave);
         return config ? config.valor : null;
@@ -3492,12 +3246,11 @@ export class NaturaDBClass {
         return await this.put('config', {
             clave,
             valor,
-            updatedAt: new Date()
+            updatedAt: new Date().toISOString()
         });
     }
 }
 
-// Exportar instancia global [7]
 export const db = new NaturaDBClass();
 **************************************************
 
@@ -3711,11 +3464,11 @@ export function useTasaBCV() {
 
 FILE: src/lib/db/index.js
 ------------------------------
-export {default as db} from './db';
+//export {default as db} from './db';
 // export * from './hooks';
 // export * from './repositories';
 
-
+export { db } from './database.js';
 **************************************************
 
 FILE: src/lib/db/repositories/RepoRecommStructure.js
@@ -3923,7 +3676,7 @@ export const exportDatabase = async () => {
 FILE: src/lib/db/utils/tasaUtil.js
 ------------------------------
 // src/lib/db/utils/tasaUtil.js
-import { db } from '../database.js';
+import { db } from '../database.js'; // This is correct if the file is in /utils/ [1]
 
 export async function getTasaBCV() {
   try {

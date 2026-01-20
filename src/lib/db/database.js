@@ -1,27 +1,25 @@
-// src/lib/db/database.js
-
 import Dexie from 'dexie';
-import 'dexie-export-import';
+import 'dexie-export-import'; // Required for database backup functionality [1, 4]
 
 export class NaturaDBClass {
     constructor() {
-        // La base de datos se mantiene como dbTasaBCV [4]
+        // The database is named dbTasaBCV as per project requirements [1, 5]
         this.db = new Dexie('dbTasaBCV');
 
-        // Versión 1 - Esquema inicial [2]
+        // Version 1 - Initial schema [1]
         this.db.version(1).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt',
             grupos: '++id, nombre, precio'
         });
 
-        // Versión 2 - Agrega tabla config [2]
+        // Version 2 - Added configuration table [2]
         this.db.version(2).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt',
             grupos: '++id, nombre, precio',
             config: 'clave'
         });
 
-        // Versión 3 - Agrega tabla ventas [3]
+        // Version 3 - Added sales table for real-time tracking [2]
         this.db.version(3).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt',
             grupos: '++id, nombre, precio',
@@ -29,32 +27,52 @@ export class NaturaDBClass {
             ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad'
         });
 
-        // NUEVA Versión 4 - Agrega tabla pedidos con ID AUTONUMÉRICO
-        // El prefijo '++' define el campo como autoincremental en Dexie [1].
+        // Version 4 - Added orders table with autoincremental ID [3]
         this.db.version(4).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt',
             grupos: '++id, nombre, precio',
             config: 'clave',
             ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
-            pedidos: '++id, numero_pedido, fecha_pedido, tasa' 
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa'
         });
 
-        // Referencias para acceso directo [5]
+        // Version 5 - Added cost field (costo_$) to groups for price management [3]
+        this.db.version(5).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio, costo_$', 
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa'
+        });
+
+        // NEW Version 6 - Added status field (estatus) to orders for workflow management
+        // Note: 'items' and totals are stored in the object but not indexed [History]
+        this.db.version(6).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio, costo_$',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus'
+        });
+
+        // Direct access references for components [6]
         this.productos = this.db.productos;
         this.grupos = this.db.grupos;
         this.config = this.db.config;
         this.ventas = this.db.ventas;
-        this.pedidos = this.db.pedidos; // Referencia a la nueva tabla
+        this.pedidos = this.db.pedidos;
     }
 
-    // Métodos de inicialización [5]
+    // Initialisation method called by the app entry points [6]
     async init() {
-        await this.db.open();
-        console.log("db open.");
+        if (!this.db.isOpen()) {
+            await this.db.open();
+            console.log("Database dbTasaBCV opened successfully.");
+        }
         return this;
     }
 
-    // Métodos CRUD genéricos [5, 6]
+    // Generic CRUD methods used across the application [6, 7]
     async add(table, data) {
         return await this.db[table].add(data);
     }
@@ -79,7 +97,7 @@ export class NaturaDBClass {
         await this.db[table].delete(id);
     }
 
-    // Métodos específicos del negocio [7]
+    // Business specific logic for inventory management [7, 8]
     async updateStock(productoId, cantidad) {
         const producto = await this.get('productos', productoId);
         if (producto) {
@@ -92,6 +110,7 @@ export class NaturaDBClass {
         return null;
     }
 
+    // Configuration helpers for BCV rate and settings [8, 9]
     async getConfigValue(clave) {
         const config = await this.get('config', clave);
         return config ? config.valor : null;
@@ -101,10 +120,9 @@ export class NaturaDBClass {
         return await this.put('config', {
             clave,
             valor,
-            updatedAt: new Date()
+            updatedAt: new Date().toISOString()
         });
     }
 }
 
-// Exportar instancia global [7]
 export const db = new NaturaDBClass();
