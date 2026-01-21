@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/db/database'; 
 import GestionPedido from './GestionPedido';
+import styles from './Pedidos.module.css';
 
 const PedidosComponente = () => {
   const navigate = useNavigate();
@@ -10,6 +11,12 @@ const PedidosComponente = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
   const [hoveredRow, setHoveredRow] = useState(null);
+  const [dropdownAbierto, setDropdownAbierto] = useState(null);
+  const [stats, setStats] = useState({
+    pedidosActivos: 0,
+    pedidosCerrados: 0
+  });
+  const dropdownRefs = useRef({});
 
   // ==================== CARGAR DATOS ====================
   
@@ -17,13 +24,17 @@ const PedidosComponente = () => {
     try {
       setLoading(true);
       const datos = await db.getAll('pedidos'); 
-      // Ordenar por número de pedido (más recientes primero)
       const datosOrdenados = datos.sort((a, b) => {
         const numA = parseInt(a.numero_pedido) || 0;
         const numB = parseInt(b.numero_pedido) || 0;
         return numB - numA;
       });
       setListaPedidos(datosOrdenados);
+      
+      const pedidosActivos = datosOrdenados.filter(p => p.estatus === 'Activo' || !p.estatus).length;
+      const pedidosCerrados = datosOrdenados.filter(p => p.estatus === 'Cerrado').length;
+      
+      setStats({ pedidosActivos, pedidosCerrados });
     } catch (error) {
       console.error("Error al cargar pedidos:", error);
       alert("❌ Error al cargar los pedidos.");
@@ -34,9 +45,28 @@ const PedidosComponente = () => {
 
   useEffect(() => {
     cargarRegistros();
+    
+    const handleClickOutside = (event) => {
+      const isDropdownClick = Object.values(dropdownRefs.current).some(
+        ref => ref && ref.contains(event.target)
+      );
+      if (!isDropdownClick) {
+        setDropdownAbierto(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ==================== FUNCIONES BÁSICAS ====================
+  // ==================== MANEJO DROPDOWN ====================
+  
+  const toggleDropdown = (pedidoId, e) => {
+    if (e) e.stopPropagation();
+    setDropdownAbierto(dropdownAbierto === pedidoId ? null : pedidoId);
+  };
+
+  // ==================== FUNCIONES DE ACCIÓN ====================
   
   const handleNuevoPedido = () => {
     setPedidoSeleccionado(null);
@@ -44,18 +74,32 @@ const PedidosComponente = () => {
   };
 
   const handleSeleccionarPedido = (pedido) => {
-    if (pedido.estatus === 'Activo' || !pedido.estatus) {
-      setPedidoSeleccionado(pedido);
-      setModalOpen(true);
-    } else {
-      alert("ℹ️ Solo se permite editar pedidos en estado Activo.");
-    }
+    setPedidoSeleccionado(pedido);
+    setModalOpen(true);
   };
 
-  // ==================== RECIBIR PEDIDO ====================
-  
+  const handleEditar = (pedido, e) => {
+    e.stopPropagation();
+    setDropdownAbierto(null);
+    
+    if (pedido.estatus === 'Cerrado') {
+      alert("ℹ️ Solo se pueden editar pedidos en estado Activo.");
+      return;
+    }
+    
+    console.log('Editando pedido:', pedido.id, pedido.numero_pedido);
+    setPedidoSeleccionado(pedido);
+    setModalOpen(true);
+  };
+
   const handleRecibir = async (pedido, e) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
+    setDropdownAbierto(null);
+    
+    if (pedido.estatus === 'Cerrado') {
+      alert("ℹ️ Este pedido ya fue recibido.");
+      return;
+    }
     
     const confirmar = window.confirm(
       `¿Procesar ingreso del pedido #${pedido.numero_pedido}?\n\n` +
@@ -65,7 +109,6 @@ const PedidosComponente = () => {
     if (!confirmar) return;
     
     try {
-      // Incrementar stock de cada producto
       if (pedido.items && Object.keys(pedido.items).length > 0) {
         for (const [prodId, qty] of Object.entries(pedido.items)) {
           const cantidadNum = parseInt(qty);
@@ -75,7 +118,6 @@ const PedidosComponente = () => {
         }
       }
 
-      // Marcar como 'Cerrado'
       await db.put('pedidos', { 
         ...pedido, 
         estatus: 'Cerrado',
@@ -90,12 +132,10 @@ const PedidosComponente = () => {
     }
   };
 
-  // ==================== ELIMINAR PEDIDO ====================
-  
   const handleEliminar = async (pedido, e) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
+    setDropdownAbierto(null);
     
-    // Validar estado
     if (pedido.estatus === 'Cerrado') {
       alert("❌ Pedido ya procesado. No se puede eliminar.");
       return;
@@ -122,43 +162,31 @@ const PedidosComponente = () => {
     }
   };
 
-  // ==================== EXPORTAR PEDIDO (MODIFICADA) ====================
-  
-  const exportarPedido = async (pedido) => {
+  const exportarPedido = async (pedido, e) => {
+    if (e) e.stopPropagation();
+    setDropdownAbierto(null);
+    
     try {
-      // 1. Obtener productos de la base de datos
       const productos = await db.getAll('productos');
-      
-      // 2. Obtener el costo de delivery desde la configuración
       const deliveryConfig = await db.get('config', 'delivery');
       const deliveryCost = deliveryConfig ? parseFloat(deliveryConfig.valor) : 0;
       
-      // 3. Preparar lista de productos del pedido
       const items = pedido.items || {};
       const listaProductos = [];
       let totalUnidades = 0;
       
-      // 4. Para cada item, buscar su nombre
       for (const [productoId, cantidad] of Object.entries(items)) {
         if (cantidad > 0) {
-          // Buscar el producto por ID
           const producto = productos.find(p => p.id == productoId);
-          
-          // Usar nombre si existe, si no, usar "Producto X"
           const nombre = producto?.nombre || `Producto ${productoId}`;
-          
           listaProductos.push(`${cantidad} x ${nombre}`);
           totalUnidades += parseInt(cantidad);
         }
       }
       
-      // 5. Calcular subtotal USD (sin delivery)
       const subtotalUSD = pedido.total_usd || 0;
-      
-      // 6. Calcular TOTAL GENERAL con delivery
       const totalGeneralUSD = subtotalUSD + deliveryCost;
       
-      // 7. Crear el contenido del archivo con Delivery en RESUMEN
       const contenido = `
 PEDIDO NATURA ICE
 =====================
@@ -195,7 +223,6 @@ Generado: ${new Date().toLocaleDateString('es-ES')}
 =====================
       `.trim();
       
-      // 8. Crear y descargar archivo
       const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       
@@ -206,7 +233,6 @@ Generado: ${new Date().toLocaleDateString('es-ES')}
       link.click();
       document.body.removeChild(link);
       
-      // 9. Limpiar y confirmar
       setTimeout(() => URL.revokeObjectURL(url), 100);
       
       alert(`✅ Pedido #${pedido.numero_pedido} exportado\n\nArchivo listo para enviar al proveedor.\n\nIncluye Delivery: $${deliveryCost.toFixed(2)}`);
@@ -232,359 +258,145 @@ Generado: ${new Date().toLocaleDateString('es-ES')}
     }
   };
 
-  const calcularEstadisticas = () => {
-    const pedidosActivos = listaPedidos.filter(p => p.estatus === 'Activo' || !p.estatus).length;
-    const pedidosCerrados = listaPedidos.filter(p => p.estatus === 'Cerrado').length;
-    
-    return { pedidosActivos, pedidosCerrados };
-  };
-
-  const stats = calcularEstadisticas();
-
-  // ==================== ESTILOS ====================
+  // ==================== COMPONENTE DROPDOWN ====================
   
-  const styles = {
-    container: { 
-      display: 'flex', 
-      flexDirection: 'column', 
-      width: '100%', 
-      minHeight: '100vh', 
-      backgroundColor: '#f5f7fa', 
-      margin: 0, 
-      padding: 0, 
-      boxSizing: 'border-box' 
-    },
+  const DropdownAcciones = ({ pedido }) => {
+    const isActive = pedido.estatus === 'Activo' || !pedido.estatus;
+    const isOpen = dropdownAbierto === pedido.id;
     
-    header: { 
-      display: 'flex', 
-      alignItems: 'center', 
-      padding: '15px 20px', 
-      backgroundColor: '#2c3e50', 
-      color: 'white', 
-      width: '100%', 
-      boxSizing: 'border-box',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-    },
-    
-    backArrow: { 
-      background: 'none', 
-      border: 'none', 
-      color: 'white', 
-      fontSize: '24px', 
-      cursor: 'pointer', 
-      marginRight: '15px',
-      padding: '5px 10px',
-      borderRadius: '6px',
-      transition: 'all 0.2s'
-    },
-    
-    title: { 
-      fontSize: '20px', 
-      fontWeight: 'bold', 
-      margin: 0,
-      flex: 1
-    },
-    
-    statsBar: {
-      display: 'flex',
-      justifyContent: 'space-around',
-      padding: '15px 20px',
-      backgroundColor: 'white',
-      borderBottom: '1px solid #eaeaea',
-      marginBottom: '15px',
-      flexWrap: 'wrap',
-      gap: '15px'
-    },
-    
-    statCard: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      padding: '12px 20px',
-      backgroundColor: '#f8f9fa',
-      borderRadius: '10px',
-      minWidth: '100px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-    },
-    
-    statNumber: {
-      fontSize: '24px',
-      fontWeight: 'bold',
-      marginBottom: '5px'
-    },
-    
-    statLabel: {
-      fontSize: '12px',
-      color: '#7f8c8d',
-      textAlign: 'center'
-    },
-    
-    content: { 
-      padding: '0 20px 20px', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      width: '100%', 
-      boxSizing: 'border-box' 
-    },
-    
-    addBtnCircle: { 
-      width: '60px', 
-      height: '60px', 
-      borderRadius: '50%', 
-      backgroundColor: '#27ae60', 
-      color: 'white', 
-      border: 'none', 
-      fontSize: '36px', 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      cursor: 'pointer', 
-      boxShadow: '0 4px 12px rgba(39, 174, 96, 0.3)', 
-      padding: 0, 
-      lineHeight: 0,
-      transition: 'all 0.3s',
-      margin: '0 auto 20px'
-    },
-    
-    headerRow: { 
-      display: 'grid', 
-      gridTemplateColumns: '100px 100px 120px 200px',
-      backgroundColor: '#34495e', 
-      borderBottom: '2px solid #2c3e50', 
-      padding: '14px 10px',
-      fontWeight: 'bold',
-      fontSize: '13px',
-      color: 'white',
-      borderRadius: '8px 8px 0 0'
-    },
-    
-    headerCell: { 
-      textAlign: 'left',
-      padding: '0 5px'
-    },
-    
-    listaContainer: { 
-      width: '100%',
-      minHeight: '200px',
-      backgroundColor: 'white',
-      borderRadius: '0 0 8px 8px',
-      overflow: 'hidden',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-    },
-    
-    row: { 
-      display: 'grid', 
-      gridTemplateColumns: '100px 100px 120px 200px',
-      borderBottom: '1px solid #f0f0f0', 
-      cursor: 'pointer', 
-      alignItems: 'center',
-      padding: '12px 10px',
-      transition: 'all 0.2s'
-    },
-    
-    rowHover: {
-      backgroundColor: '#f8f9ff'
-    },
-    
-    cell: { 
-      padding: '8px 5px', 
-      textAlign: 'left', 
-      color: '#2c3e50', 
-      fontSize: '14px',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center'
-    },
-    
-    pedidoNumero: {
-      fontWeight: 'bold',
-      fontSize: '15px',
-      color: '#2c3e50'
-    },
-    
-    pedidoEstatus: {
-      fontSize: '11px',
-      marginTop: '3px',
-      padding: '3px 8px',
-      borderRadius: '12px',
-      display: 'inline-block',
-      width: 'fit-content',
-      fontWeight: '500'
-    },
-    
-    estatusActivo: {
-      backgroundColor: '#d5f4e6',
-      color: '#27ae60',
-      border: '1px solid #27ae60'
-    },
-    
-    estatusCerrado: {
-      backgroundColor: '#e8f4fc',
-      color: '#3498db',
-      border: '1px solid #3498db'
-    },
-    
-    totalContainer: {
-      display: 'flex',
-      flexDirection: 'column'
-    },
-    
-    totalBS: {
-      fontWeight: 'bold',
-      fontSize: '14px',
-      color: '#2c3e50'
-    },
-    
-    totalUSD: {
-      fontSize: '12px',
-      color: '#7f8c8d',
-      marginTop: '2px'
-    },
-    
-    accionesContainer: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '6px'
-    },
-    
-    btnBase: {
-      border: 'none',
-      padding: '6px 10px',
-      borderRadius: '6px',
-      fontSize: '12px',
-      cursor: 'pointer',
-      fontWeight: 'bold',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '4px',
-      transition: 'all 0.2s',
-      minWidth: '70px'
-    },
-    
-    btnRecibir: {
-      backgroundColor: '#27ae60',
-      color: 'white'
-    },
-    
-    btnEliminar: {
-      backgroundColor: '#e74c3c',
-      color: 'white'
-    },
-    
-    btnExportar: {
-      backgroundColor: '#3498db',
-      color: 'white'
-    },
-    
-    loadingContainer: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '60px 20px',
-      color: '#7f8c8d'
-    },
-    
-    loadingSpinner: {
-      border: '4px solid #f3f3f3',
-      borderTop: '4px solid #3498db',
-      borderRadius: '50%',
-      width: '40px',
-      height: '40px',
-      animation: 'spin 1s linear infinite',
-      marginBottom: '20px'
-    },
-    
-    emptyState: {
-      textAlign: 'center',
-      padding: '60px 20px',
-      color: '#7f8c8d'
-    },
-    
-    emptyStateIcon: {
-      fontSize: '60px',
-      marginBottom: '20px',
-      opacity: 0.3
-    }
+    return (
+      <div 
+        ref={el => dropdownRefs.current[pedido.id] = el}
+        className={styles.dropdownContainer}
+      >
+        <button 
+          onClick={(e) => toggleDropdown(pedido.id, e)}
+          className={styles.dropdownButton}
+          title="Acciones"
+        >
+          ⋮
+        </button>
+        
+        {isOpen && (
+          <div className={styles.dropdownMenu}>
+            <button
+              onClick={(e) => handleEditar(pedido, e)}
+              className={`${styles.dropdownItem} ${!isActive ? styles.disabled : ''}`}
+              disabled={!isActive}
+              title={isActive ? "Editar pedido" : "Solo para pedidos pendientes"}
+            >
+              <span className={styles.dropdownIcon}>✏️</span>
+              <span>Editar</span>
+            </button>
+            
+            <button
+              onClick={(e) => handleRecibir(pedido, e)}
+              className={`${styles.dropdownItem} ${!isActive ? styles.disabled : ''}`}
+              disabled={!isActive}
+              title={isActive ? "Marcar como recibido" : "Ya recibido"}
+            >
+              <span className={styles.dropdownIcon}>📥</span>
+              <span>Recibir</span>
+            </button>
+            
+            <button
+              onClick={(e) => handleEliminar(pedido, e)}
+              className={`${styles.dropdownItem} ${!isActive ? styles.disabled : ''}`}
+              disabled={!isActive}
+              title={isActive ? "Eliminar pedido" : "No se puede eliminar pedidos recibidos"}
+            >
+              <span className={styles.dropdownIcon}>🗑️</span>
+              <span>Eliminar</span>
+            </button>
+            
+            <button
+              onClick={(e) => exportarPedido(pedido, e)}
+              className={styles.dropdownItem}
+              title="Exportar pedido para proveedor"
+            >
+              <span className={styles.dropdownIcon}>📤</span>
+              <span>Exportar</span>
+            </button>
+            
+            <div className={styles.dropdownSeparator}></div>
+            
+            <button
+              onClick={() => handleSeleccionarPedido(pedido)}
+              className={styles.dropdownItem}
+              title="Ver detalles del pedido"
+            >
+              <span className={styles.dropdownIcon}>👁️</span>
+              <span>Ver detalles</span>
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   // ==================== RENDER ====================
   
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.header}>
+    <div className={styles.container}>
+      <div className={styles.header}>
         <button 
           onClick={() => navigate(-1)} 
-          style={styles.backArrow}
-          onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.1)'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+          className={styles.backArrow}
           title="Volver"
         >
           ←
         </button>
-        <h1 style={styles.title}>📦 Gestión de Pedidos</h1>
+        <h1 className={styles.title}>📦 Gestión de Pedidos</h1>
       </div>
 
-      {/* Estadísticas */}
-      <div style={styles.statsBar}>
-        <div style={styles.statCard}>
-          <div style={{...styles.statNumber, color: '#2c3e50'}}>{listaPedidos.length}</div>
-          <div style={styles.statLabel}>TOTAL PEDIDOS</div>
+      <div className={styles.statsBar}>
+        <div className={styles.statCard}>
+          <div className={`${styles.statNumber} ${styles.statNumberTotal}`}>
+            {listaPedidos.length}
+          </div>
+          <div className={styles.statLabel}>TOTAL PEDIDOS</div>
         </div>
         
-        <div style={styles.statCard}>
-          <div style={{...styles.statNumber, color: '#27ae60'}}>{stats.pedidosActivos}</div>
-          <div style={styles.statLabel}>PENDIENTES</div>
+        <div className={styles.statCard}>
+          <div className={`${styles.statNumber} ${styles.statNumberActive}`}>
+            {stats.pedidosActivos}
+          </div>
+          <div className={styles.statLabel}>PENDIENTES</div>
         </div>
         
-        <div style={styles.statCard}>
-          <div style={{...styles.statNumber, color: '#3498db'}}>{stats.pedidosCerrados}</div>
-          <div style={styles.statLabel}>RECIBIDOS</div>
+        <div className={styles.statCard}>
+          <div className={`${styles.statNumber} ${styles.statNumberClosed}`}>
+            {stats.pedidosCerrados}
+          </div>
+          <div className={styles.statLabel}>RECIBIDOS</div>
         </div>
       </div>
 
-      {/* Contenido principal */}
-      <div style={styles.content}>
-        {/* Botón nuevo pedido */}
+      <div className={styles.content}>
         <button 
-          style={styles.addBtnCircle}
+          className={styles.addBtnCircle}
           onClick={handleNuevoPedido}
-          onMouseEnter={(e) => {
-            e.target.style.transform = 'scale(1.1)';
-            e.target.style.boxShadow = '0 6px 16px rgba(39, 174, 96, 0.4)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.transform = 'scale(1)';
-            e.target.style.boxShadow = '0 4px 12px rgba(39, 174, 96, 0.3)';
-          }}
           title="Crear nuevo pedido"
         >
           +
         </button>
 
-        {/* Cabecera de la tabla */}
-        <div style={styles.headerRow}>
-          <div style={styles.headerCell}>PEDIDO</div>
-          <div style={styles.headerCell}>FECHA</div>
-          <div style={styles.headerCell}>TOTAL</div>
-          <div style={styles.headerCell}>ACCIONES</div>
+        <div className={styles.headerRow}>
+          <div className={styles.headerCell}>PEDIDO</div>
+          <div className={styles.headerCell}>FECHA</div>
+          <div className={styles.headerCell}>TOTAL</div>
+          <div className={styles.headerCell}>ACCIONES</div>
         </div>
 
-        {/* Lista de pedidos */}
-        <div style={styles.listaContainer}>
+        <div className={styles.listaContainer}>
           {loading ? (
-            <div style={styles.loadingContainer}>
-              <div style={styles.loadingSpinner}></div>
+            <div className={styles.loadingContainer}>
+              <div className={styles.loadingSpinner}></div>
               <div>Cargando pedidos...</div>
             </div>
           ) : listaPedidos.length === 0 ? (
-            <div style={styles.emptyState}>
-              <div style={styles.emptyStateIcon}>📭</div>
+            <div className={styles.emptyState}>
+              <div className={styles.emptyStateIcon}>📭</div>
               <div style={{ fontSize: '18px', marginBottom: '10px' }}>No hay pedidos registrados</div>
               <div style={{ fontSize: '14px', color: '#95a5a6' }}>
                 Crea tu primer pedido usando el botón "+" verde
@@ -599,88 +411,39 @@ Generado: ${new Date().toLocaleDateString('es-ES')}
               return (
                 <div 
                   key={p.id} 
-                  style={{
-                    ...styles.row,
-                    ...(isHovered ? styles.rowHover : {})
-                  }}
-                  onClick={() => handleSeleccionarPedido(p)}
+                  className={`${styles.row} ${isHovered ? styles.rowHover : ''}`}
                   onMouseEnter={() => setHoveredRow(p.id)}
                   onMouseLeave={() => setHoveredRow(null)}
                 >
-                  {/* Columna 1: Número de pedido y estado */}
-                  <div style={styles.cell}>
-                    <div style={styles.pedidoNumero}>#{p.numero_pedido}</div>
-                    <div style={{
-                      ...styles.pedidoEstatus,
-                      ...(isActive ? styles.estatusActivo : styles.estatusCerrado)
-                    }}>
+                  <div className={styles.cell}>
+                    <div className={styles.pedidoNumero}>#{p.numero_pedido}</div>
+                    <div className={`${styles.pedidoEstatus} ${
+                      isActive ? styles.estatusActivo : styles.estatusCerrado
+                    }`}>
                       {isActive ? '🟢 Pendiente' : '✅ Recibido'}
                     </div>
                   </div>
                   
-                  {/* Columna 2: Fecha */}
-                  <div style={styles.cell}>
+                  <div className={styles.cell}>
                     {formatearFecha(p.fecha_pedido)}
                     <div style={{ fontSize: '11px', color: '#7f8c8d', marginTop: '2px' }}>
                       {itemsCount} producto{itemsCount !== 1 ? 's' : ''}
                     </div>
                   </div>
                   
-                  {/* Columna 3: Totales */}
-                  <div style={styles.cell}>
-                    <div style={styles.totalContainer}>
-                      <span style={styles.totalBS}>
+                  <div className={styles.cell}>
+                    <div className={styles.totalContainer}>
+                      <span className={styles.totalBS}>
                         Bs. {p.total_bs ? p.total_bs.toFixed(2) : "0.00"}
                       </span>
-                      <span style={styles.totalUSD}>
+                      <span className={styles.totalUSD}>
                         $ {p.total_usd ? p.total_usd.toFixed(2) : "0.00"}
                       </span>
                     </div>
                   </div>
                   
-                  {/* Columna 4: Botones de acción */}
-                  <div style={styles.cell}>
-                    <div style={styles.accionesContainer}>
-                      {/* Botón Recibir (solo para activos) */}
-                      {isActive && (
-                        <button 
-                          style={{...styles.btnBase, ...styles.btnRecibir}}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#219653'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = '#27ae60'}
-                          onClick={(e) => handleRecibir(p, e)}
-                          title="Marcar como recibido (incrementa stock)"
-                        >
-                          📥 Recibir
-                        </button>
-                      )}
-                      
-                      {/* Botón Eliminar (solo para activos) */}
-                      {isActive && (
-                        <button 
-                          style={{...styles.btnBase, ...styles.btnEliminar}}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#c0392b'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = '#e74c3c'}
-                          onClick={(e) => handleEliminar(p, e)}
-                          title="Eliminar pedido pendiente"
-                        >
-                          🗑️ Eliminar
-                        </button>
-                      )}
-                      
-                      {/* Botón Exportar (siempre disponible) */}
-                      <button 
-                        style={{...styles.btnBase, ...styles.btnExportar}}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#2980b9'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = '#3498db'}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          exportarPedido(p);
-                        }}
-                        title="Exportar pedido para enviar al proveedor"
-                      >
-                        📤 Exportar
-                      </button>
-                    </div>
+                  <div className={styles.cell}>
+                    <DropdownAcciones pedido={p} />
                   </div>
                 </div>
               );
@@ -689,7 +452,6 @@ Generado: ${new Date().toLocaleDateString('es-ES')}
         </div>
       </div>
 
-      {/* Modal de gestión de pedidos */}
       {modalOpen && (
         <GestionPedido 
           pedido={pedidoSeleccionado} 
@@ -700,14 +462,6 @@ Generado: ${new Date().toLocaleDateString('es-ES')}
           onSave={cargarRegistros} 
         />
       )}
-
-      {/* Estilos CSS para animaciones */}
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };
