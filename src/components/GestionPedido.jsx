@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/db/database'; // Persistent IndexedDB: dbTasaBCV [1, 7]
+import { db } from '../lib/db/database'; // Acceso a dbTasaBCV [4, 5]
 
 const GestionPedido = ({ pedido, onClose, onSave }) => {
-    // Prevents the "day minus one" bug by using local ISO string format [History]
+    // Evita el error de zona horaria en Android [Conversación previa]
     const getLocalToday = () => new Date().toLocaleDateString('en-CA');
 
     const [formData, setFormData] = useState({
@@ -16,6 +16,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     const [productos, setProductos] = useState([]);
     const [listaGrupos, setListaGrupos] = useState([]);
     const [cantidades, setCantidades] = useState({});
+    const [aplicarDelivery, setAplicarDelivery] = useState(true);
     const [error, setError] = useState('');
     const [totales, setTotales] = useState({ usd: 0, bs: 0 });
 
@@ -24,8 +25,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     useEffect(() => {
         const cargarDatos = async () => {
             try {
-                // Fetch settings from the 'config' table [8]
-                const tasaConfig = await db.getConfigValue('tasa');
+                const tasaConfig = await db.getConfigValue('tasa'); // [6]
                 const deliveryValor = await db.getConfigValue('delivery');
 
                 const [todosLosProductos, todosLosGrupos] = await Promise.all([
@@ -37,7 +37,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                 setListaGrupos(todosLosGrupos);
 
                 if (pedido) {
-                    // EDIT MODE logic [4]
                     setFormData({
                         numero_pedido: pedido.numero_pedido || '',
                         fecha_pedido: pedido.fecha_pedido || '',
@@ -46,8 +45,8 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                         delivery_tasa: pedido.delivery_tasa !== undefined ? pedido.delivery_tasa : (deliveryValor || 0)
                     });
                     if (pedido.items) setCantidades(pedido.items);
+                    setAplicarDelivery(pedido.delivery_aplicado ?? true);
                 } else {
-                    // NEW ORDER MODE logic [9]
                     const ultimoPedido = await db.pedidos.orderBy('id').last();
                     const siguienteNumero = ultimoPedido ? (parseInt(ultimoPedido.numero_pedido) + 1).toString() : "1";
 
@@ -60,13 +59,12 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                     }));
                 }
             } catch (err) {
-                console.error("Error loading initial data:", err);
+                console.error("Error cargando datos:", err);
             }
         };
         cargarDatos();
     }, [pedido]);
 
-    // Recalculates totals in real-time when selections or costs change [10, 11]
     useEffect(() => {
         const calcular = () => {
             let subtotalUSD = 0;
@@ -74,22 +72,20 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                 const producto = productos.find(p => p.id === parseInt(prodId));
                 if (producto && qty > 0) {
                     const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === producto.grupo.toLowerCase());
-                    const costo = grupo ? (grupo.costo_$ || 0) : 0;
+                    const costo = grupo ? (grupo.costo_$ || 0) : 0; // [7]
                     subtotalUSD += qty * costo;
                 }
             });
 
-            const totalUSD = subtotalUSD + (parseFloat(formData.delivery_tasa) || 0);
+            const cargoDelivery = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
+            const totalUSD = subtotalUSD + cargoDelivery;
             const tasaNum = parseFloat(formData.tasa) || 0;
             
-            setTotales({
-                usd: totalUSD,
-                bs: totalUSD * tasaNum
-            });
+            setTotales({ usd: totalUSD, bs: totalUSD * tasaNum });
         };
 
         if (productos.length > 0) calcular();
-    }, [cantidades, productos, listaGrupos, formData.tasa, formData.delivery_tasa]);
+    }, [cantidades, productos, listaGrupos, formData.tasa, formData.delivery_tasa, aplicarDelivery]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -101,14 +97,13 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                 items: cantidades,
                 total_usd: totales.usd,
                 total_bs: totales.bs,
+                delivery_aplicado: aplicarDelivery,
                 updatedAt: new Date().toISOString()
             };
 
             if (pedido && pedido.id) {
-                // UPDATE RECORD in dbTasaBCV [12]
                 await db.put('pedidos', { ...pedidoData, id: pedido.id, createdAt: pedido.createdAt });
             } else {
-                // ADD NEW RECORD in dbTasaBCV [13]
                 pedidoData.createdAt = new Date().toISOString();
                 await db.add('pedidos', pedidoData);
             }
@@ -135,10 +130,10 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                 </header>
 
                 <form onSubmit={handleSubmit} style={styles.content}>
+                    {/* Fila superior: Pedido y Fecha con anchos uniformes */}
                     <div style={styles.topRow}>
                         <div style={styles.inputGroup}>
                             <label style={styles.label}>Pedido #</label>
-                            {/* Order # styled at 18px and Bold [History] */}
                             <input type="text" value={formData.numero_pedido} disabled style={styles.inputReadOnly} />
                         </div>
                         <div style={styles.inputGroup}>
@@ -164,10 +159,18 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                         </div>
                     </div>
 
-                    {/* BCV Rate on left and Delivery aligned RIGHT in BLACK [History] */}
-                    <div style={styles.tasaIzquierda}>
-                        <span>💰 Tasa BCV: {formData.tasa ? parseFloat(formData.tasa).toFixed(2) : '---'}</span>
-                        <span style={styles.deliveryInline}>🚚 Delivery $: {formData.delivery_tasa ? parseFloat(formData.delivery_tasa).toFixed(2) : '0.00'}</span>
+                    <div style={styles.infoBar}>
+                        <span>💰 Tasa: {formData.tasa ? parseFloat(formData.tasa).toFixed(2) : '---'}</span>
+                        <div style={styles.deliveryGroup}>
+                            <input 
+                                type="checkbox" 
+                                checked={aplicarDelivery} 
+                                onChange={(e) => setAplicarDelivery(e.target.checked)}
+                                disabled={esVisualizacion}
+                                style={styles.checkbox}
+                            />
+                            <span style={styles.deliveryText}>🚚 Delivery: ${formData.delivery_tasa}</span>
+                        </div>
                     </div>
 
                     <div style={styles.productListContainer}>
@@ -181,7 +184,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                                             <div style={styles.productName}>{prod.nombre}</div>
                                             <div style={styles.quantityControl}>
                                                 <button type="button" onClick={() => !esVisualizacion && setCantidades({...cantidades, [prod.id]: Math.max(0, (cantidades[prod.id] || 0) - 1)})} style={styles.qtyBtn} disabled={esVisualizacion}>-</button>
-                                                {/* Qty Input with Light Grey background and Black text [History] */}
                                                 <input type="number" value={cantidades[prod.id] || 0} readOnly style={styles.qtyInput} />
                                                 <button type="button" onClick={() => !esVisualizacion && setCantidades({...cantidades, [prod.id]: (cantidades[prod.id] || 0) + 1})} style={styles.qtyBtn} disabled={esVisualizacion}>+</button>
                                             </div>
@@ -198,7 +200,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                             {pedido ? "💾 Actualizar" : "💾 Grabar"}
                         </button>
                     </div>
-                    {error && <p style={styles.error}>{error}</p>}
                 </form>
             </div>
         </div>
@@ -208,57 +209,63 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 const styles = {
     overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 },
     modal: { backgroundColor: '#fff', width: '95%', maxWidth: '500px', maxHeight: '95vh', padding: '15px', borderRadius: '8px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #00BFFF', marginBottom: '10px', width: '100%' },
-    title: { fontSize: '16px', fontWeight: 'bold', color: '#000', margin: 0 },
-    // Permanent visibility fix for mobile "X" [History]
-    closeButton: { 
-        background: 'none', border: 'none', fontSize: '32px', cursor: 'pointer', color: '#000', 
-        padding: '0 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-        minWidth: '44px', height: '44px', flexShrink: 0, marginLeft: '10px' 
-    },
-    content: { display: 'flex', flexDirection: 'column', gap: '10px' },
-    topRow: { display: 'flex', flexDirection: 'row', gap: '10px', width: '100%' },
-    inputGroup: { display: 'flex', flexDirection: 'column', flex: 1, gap: '4px' },
-    label: { fontSize: '14px', fontWeight: 'bold', color: '#333', display: 'block', flexShrink: 0 },
-    inputSmall: { padding: '8px', border: '1px solid #aaa', borderRadius: '4px', fontSize: '14px', width: '100%', boxSizing: 'border-box' },
-    inputReadOnly: { padding: '8px', backgroundColor: '#f0f0f0', border: '1px solid #ccc', borderRadius: '4px', width: '100%', boxSizing: 'border-box', cursor: 'not-allowed', fontSize: '18px', fontWeight: 'bold', color: '#000' },
-    totalsBar: { display: 'flex', flexDirection: 'row', gap: '8px', justifyContent: 'space-between', width: '100%' },
-    totalBox: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#e1f5fe', padding: '8px', border: '1px solid #00BFFF', borderRadius: '4px' },
-    totalLabel: { fontSize: '12px', fontWeight: 'bold', color: '#000' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #00BFFF', marginBottom: '8px' },
+    title: { fontSize: '16px', fontWeight: 'bold', color: '#000' },
+    closeButton: { background: 'none', border: 'none', fontSize: '32px', cursor: 'pointer', minWidth: '44px', color: '#000' },
+    content: { display: 'flex', flexDirection: 'column', gap: '8px' },
+    // AJUSTE: topRow asegura que los hijos crezcan por igual con flex: 1
+    topRow: { display: 'flex', flexDirection: 'row', gap: '10px', width: '100%', boxSizing: 'border-box' },
+    inputGroup: { display: 'flex', flexDirection: 'column', flex: 1, gap: '2px' },
+    // AJUSTE: Todas las etiquetas en color negro sólido
+    label: { fontSize: '14px', fontWeight: 'bold', color: '#000', display: 'block' },
+    // AJUSTE: inputSmall e inputReadOnly con anchos idénticos y box-sizing
+    totalsBar: { display: 'flex', gap: '8px', justifyContent: 'space-between' },
+    totalBox: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#e1f5fe', padding: '6px', border: '1px solid #00BFFF', borderRadius: '4px' },
+    totalLabel: { fontSize: '11px', fontWeight: 'bold', color: '#000' },
     totalValue: { fontSize: '14px', fontWeight: 'bold', color: '#007bff' },
-    // UPDATED: space-between aligns Delivery to the RIGHT [History]
-    
-    tasaIzquierda: { 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        width: '100%', 
-        fontSize: '14px', 
-        fontWeight: 'bold', 
-        color: '#2c3e50', 
-        marginBottom: '5px', 
-        paddingLeft: '5px',
-        paddingRight: '5px',
-        boxSizing: 'border-box'
-    },
-    // UPDATED: Text color changed to BLACK [History]
-    deliveryInline: { color: '#000' },
-    productListContainer: { border: '1px solid #aaa', borderRadius: '4px', overflow: 'hidden' },
-    productListHeader: { textAlign: 'center', backgroundColor: '#00BFFF', color: 'white', padding: '5px', fontWeight: 'bold' },
-    productList: { height: '280px', overflowY: 'auto' },
-    groupTitle: { fontSize: '14px', fontWeight: 'bold', backgroundColor: '#f1f1f1', padding: '8px 10px' },
-    productItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderBottom: '1px solid #eee' },
-    productName: { fontSize: '13px', color: '#333' },
+    infoBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: 'bold', color: '#000', padding: '0 5px' },
+    deliveryGroup: { display: 'flex', alignItems: 'center', gap: '5px' },
+    checkbox: { width: '18px', height: '18px' },
+    deliveryText: { color: '#000' },
+    productListContainer: { border: '1px solid #aaa', borderRadius: '4px', overflow: 'hidden', marginTop: '5px' },
+    productListHeader: { textAlign: 'center', backgroundColor: '#00BFFF', color: 'white', padding: '4px', fontSize: '13px', fontWeight: 'bold' },
+    productList: { height: '260px', overflowY: 'auto', backgroundColor: '#fff' },
+    groupTitle: { fontSize: '14px', fontWeight: 'bold', backgroundColor: '#f1f1f1', padding: '6px 10px', color: '#000' },
+    productItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #eee' },
+    productName: { fontSize: '13px', color: '#000' },
     quantityControl: { display: 'flex', alignItems: 'center', gap: '5px' },
-    qtyBtn: { 
-        width: '32px', height: '32px', backgroundColor: '#eee', border: '1px solid #ccc', 
-        cursor: 'pointer', fontWeight: 'bold', fontSize: '20px', display: 'flex', 
-        alignItems: 'center', justifyContent: 'center', padding: 0, lineHeight: 0, color: '#000' 
-    },
-    qtyInput: { width: '40px', textAlign: 'center', border: '1px solid #ccc', padding: '4px', backgroundColor: '#f0f0f0', color: '#000', fontSize: '14px', fontWeight: 'bold' },
-    footer: { display: 'flex', gap: '10px', marginTop: '10px' },
+    qtyBtn: { width: '32px', height: '32px', backgroundColor: '#eee', border: '1px solid #ccc', fontWeight: 'bold', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' },
+    qtyInput: { width: '40px', textAlign: 'center', border: '1px solid #ccc', padding: '4px', backgroundColor: '#f0f0f0', color: '#000', fontWeight: 'bold' },
+    footer: { display: 'flex', gap: '10px', marginTop: '5px' },
     limpiarBtn: { backgroundColor: '#f44336', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', flex: 1, fontWeight: 'bold' },
     grabarBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', flex: 1, fontWeight: 'bold' },
-    error: { color: 'red', textAlign: 'center', fontSize: '12px' }
+inputSmall: { 
+        padding: '8px', 
+        border: '1px solid #aaa', 
+        borderRadius: '4px', 
+        width: '100%', 
+        boxSizing: 'border-box', 
+        // UPDATED: Calendar input requirements
+        fontSize: '18px',          // 18px size as requested
+        color: '#fff',             // White text as requested
+        textAlign: 'center',       // Centered as requested
+        backgroundColor: '#00BFFF' // Dark blue background for visibility
+    },
+
+    inputReadOnly: { 
+        padding: '8px', 
+        border: '1px solid #ccc', 
+        borderRadius: '4px', 
+        width: '100%', 
+        boxSizing: 'border-box', 
+        cursor: 'not-allowed',
+        // UPDATED: Matches uniform style for order number and read-only date
+        fontSize: '18px', 
+        fontWeight: 'bold', 
+        color: '#fff',             // White text as requested
+        textAlign: 'center',       // Centered as requested
+        backgroundColor: '#555'    // Dark grey background for visibility
+    },
 };
 
 export default GestionPedido;
