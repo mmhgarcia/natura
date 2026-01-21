@@ -1,56 +1,27 @@
 
-.container {
-    padding: 20px;
-    padding-bottom: 280px; /* Space for fixed footer */
-    background-color: #fafafa;
-    min-height: 100vh;
-}
-
-
-.select {
-  padding: 8px;
-  border: 1px solid #aaa;
-  border-radius: 4px;
-  width: 100%; /* Matches the full-width layout of the date input */
-  box-sizing: border-box;
-  
-  /* These are the core styles from the date selector in GestionPedido.jsx */
-  font-size: 18px; 
-  color: #fff;
-  text-align: center;
-  text-align-last: center; /* Essential for centering text inside a <select> */
-  background-color: #00BFFF; /* The specific light blue used in your app */
-  font-weight: bold;
-}
-
-/* Optional: Ensure the filter bar doesn't look too cramped */
-.filterBar {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding: 0 12px;
+.filterLabel {
+    color: #333;
+    font-weight: bold;
+    font-size: 0.9rem;
 }
 
 
 .grid {
     display: grid;
-    grid-template-columns: 1fr; /* Optimized for Android mobile [1] */
+    grid-template-columns: 1fr; 
     gap: 16px;
     padding: 0 12px;
 }
 
 .card {
-    position: relative; /* Necessary for absolute badge positioning */
+    position: relative;
     background-color: #fff;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     padding: 15px;
     cursor: pointer;
-    transition: transform 0.2s;
 }
 
-/* STOCK BADGE STYLES */
 .stockBadge {
     position: absolute;
     top: -8px;
@@ -69,7 +40,6 @@
     z-index: 10;
 }
 
-/* OUT OF STOCK STYLE */
 .cardDisabled {
     opacity: 0.6;
     filter: grayscale(1);
@@ -77,6 +47,35 @@
 }
 
 .productImage {
+.container {
+  padding: 20px;
+  padding-bottom: 280px;
+  background-color: #fafafa;
+  min-height: 100vh;
+  /* Add this to ensure general text is visible */
+  color: #333; 
+}
+
+.filterBar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 0 12px;
+  /* Specifically ensure the label text is dark */
+  color: #2c3e50; 
+  font-weight: bold;
+}
+
+.select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  background-color: #fff;
+  /* CRITICAL: Force the text colour to be dark */
+  color: #333; 
+}
     width: 100%;
     height: auto;
     border-radius: 8px;
@@ -93,10 +92,6 @@
     font-weight: bold;
     color: #555;
     margin-bottom: 10px;
-}
-
-.cardInfo {
-    text-align: left;
 }
 
 .productTitle {
@@ -118,7 +113,6 @@
     font-weight: bold;
 }
 
-/* FOOTER PANEL */
 .selectedContainer {
     position: fixed;
     bottom: 0;
@@ -127,7 +121,6 @@
     background-color: #fff;
     padding: 15px;
     border-top: 2px solid #00BFFF;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
     z-index: 1000;
 }
 
@@ -163,7 +156,6 @@
     border: none;
     padding: 2px 8px;
     border-radius: 4px;
-    font-size: 0.8rem;
 }
 
 .totalRow {
@@ -179,29 +171,51 @@
     gap: 10px;
 }
 
-.vaciarBtn {
-    flex: 1;
+.vaciarBtn, .grabarBtn {
     padding: 12px;
-    background-color: #6c757d;
-    color: white;
     border: none;
     border-radius: 8px;
     font-weight: bold;
+    cursor: pointer;
 }
 
-.grabarBtn {
-    flex: 2;
-    padding: 12px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-}
+.vaciarBtn { background-color: #6c757d; color: white; flex: 1; }
+.grabarBtn { background-color: #28a745; color: white; flex: 2; }
+.grabarBtn:disabled { background-color: #ccc; cursor: not-allowed; }
 
 .loading {
     text-align: center;
     padding: 50px;
-    font-size: 1.2rem;
     color: #666;
+}
+
+
+.container {
+  padding: 20px;
+  padding-bottom: 280px;
+  background-color: red;
+  min-height: 100vh;
+  /* Add this to ensure general text is visible */
+  color: #333; 
+}
+
+.filterBar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 0 12px;
+  /* Specifically ensure the label text is dark */
+  color: #2c3e50; 
+  font-weight: bold;
+}
+
+.select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid blue;
+  font-size: 1rem;
+  background-color: #fff;
+  /* CRITICAL: Force the text colour to be dark */
+  color: #333; 
 }

@@ -157,6 +157,10 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>💰</span>
                         <span>Tasa BCV</span>
                     </Link>
+
+                    <Link to="/estadisticas" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Estadísticas
+                    </Link>
                     
                     {/* Opción Acerca de */}
                     <Link 

@@ -13,6 +13,7 @@ import ProductosPage from './pages/ProductosPage';
 import PedidosPage from './pages/Pedidos'; 
 // Asegúrate de tener esto:
 import DeliveryPage from './pages/DeliveryPage';
+import Estadisticas from "./pages/Estadisticas";
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         <Route path="/admingrupos" element={<GruposPage />} />
         <Route path="/adminproductos" element={<ProductosPage />} />
         <Route path="/delivery" element={<DeliveryPage />} />
+         <Route path="/estadisticas" element={<Estadisticas />} />
         {/* Nueva ruta para Pedidos */}
         <Route path="/pedidos" element={<PedidosPage />} />
         <Route path="*" element={<NotFound />} />

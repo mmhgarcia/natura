@@ -783,30 +783,35 @@ export default function Footer() {
 FILE: src/components/GestionPedido.jsx
 ------------------------------
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/db/database';
+import { db } from '../lib/db/database'; // Acceso a dbTasaBCV [4, 5]
 
 const GestionPedido = ({ pedido, onClose, onSave }) => {
+    // Evita el error de zona horaria en Android [Conversación previa]
+    const getLocalToday = () => new Date().toLocaleDateString('en-CA');
+
     const [formData, setFormData] = useState({
         numero_pedido: '',
-        fecha_pedido: new Date().toISOString().split('T')[0],
+        fecha_pedido: getLocalToday(),
         tasa: '',
-        estatus: 'Activo'
+        estatus: 'Activo',
+        delivery_tasa: 0
     });
 
     const [productos, setProductos] = useState([]);
     const [listaGrupos, setListaGrupos] = useState([]);
     const [cantidades, setCantidades] = useState({});
+    const [aplicarDelivery, setAplicarDelivery] = useState(true);
     const [error, setError] = useState('');
-    const [totales, setTotales] = useState({ usd: 0, bs: 0 }); // ✅ Estado para totales
+    const [totales, setTotales] = useState({ usd: 0, bs: 0 });
 
     const esVisualizacion = !!pedido && pedido.estatus === 'Cerrado';
 
     useEffect(() => {
         const cargarDatos = async () => {
             try {
-                const tasaConfig = await db.getConfigValue('tasa');
-                const deliveryConfig = await db.getConfigValue('delivery');
-                
+                const tasaConfig = await db.getConfigValue('tasa'); // [6]
+                const deliveryValor = await db.getConfigValue('delivery');
+
                 const [todosLosProductos, todosLosGrupos] = await Promise.all([
                     db.getAll('productos'),
                     db.getAll('grupos')
@@ -821,120 +826,76 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                         fecha_pedido: pedido.fecha_pedido || '',
                         tasa: pedido.tasa || (tasaConfig ? tasaConfig.toString() : ''),
                         estatus: pedido.estatus || 'Activo',
-                        delivery_tasa: pedido.delivery_tasa || (deliveryConfig ? deliveryConfig.valor : 0)
+                        delivery_tasa: pedido.delivery_tasa !== undefined ? pedido.delivery_tasa : (deliveryValor || 0)
                     });
                     if (pedido.items) setCantidades(pedido.items);
+                    setAplicarDelivery(pedido.delivery_aplicado ?? true);
                 } else {
-                    const hoy = new Date().toISOString().split('T')[0];
                     const ultimoPedido = await db.pedidos.orderBy('id').last();
-                    const siguienteNumero = ultimoPedido 
-                        ? (parseInt(ultimoPedido.numero_pedido) + 1).toString() 
-                        : "1";
+                    const siguienteNumero = ultimoPedido ? (parseInt(ultimoPedido.numero_pedido) + 1).toString() : "1";
 
                     setFormData(prev => ({
                         ...prev,
                         numero_pedido: siguienteNumero,
-                        fecha_pedido: hoy,
+                        fecha_pedido: getLocalToday(),
                         tasa: tasaConfig ? tasaConfig.toString() : '',
-                        delivery_tasa: deliveryConfig ? deliveryConfig.valor : 0
+                        delivery_tasa: deliveryValor || 0
                     }));
                 }
             } catch (err) {
-                console.error("Error al cargar datos iniciales:", err);
+                console.error("Error cargando datos:", err);
             }
         };
         cargarDatos();
     }, [pedido]);
 
-    // ✅ NUEVO: useEffect para recalcular totales cuando cambian las cantidades
     useEffect(() => {
-        const calcularTotales = () => {
-            let totalUSD = 0;
+        const calcular = () => {
+            let subtotalUSD = 0;
             Object.entries(cantidades).forEach(([prodId, qty]) => {
                 const producto = productos.find(p => p.id === parseInt(prodId));
                 if (producto && qty > 0) {
                     const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === producto.grupo.toLowerCase());
-                    const costo = grupo ? (grupo.costo_$ || 0) : 0;
-                    totalUSD += qty * costo;
+                    const costo = grupo ? (grupo.costo_$ || 0) : 0; // [7]
+                    subtotalUSD += qty * costo;
                 }
             });
+
+            const cargoDelivery = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
+            const totalUSD = subtotalUSD + cargoDelivery;
             const tasaNum = parseFloat(formData.tasa) || 0;
-            return { usd: totalUSD, bs: totalUSD * tasaNum };
+            
+            setTotales({ usd: totalUSD, bs: totalUSD * tasaNum });
         };
 
-        if (productos.length > 0 && listaGrupos.length > 0) {
-            const nuevosTotales = calcularTotales();
-            setTotales(nuevosTotales);
-        }
-    }, [cantidades, productos, listaGrupos, formData.tasa]); // ✅ Dependencias
-
-    const handleIncrement = (id) => {
-        if (esVisualizacion) return;
-        setCantidades(prev => ({ 
-            ...prev, 
-            [id]: (prev[id] || 0) + 1 
-        }));
-    };
-
-    const handleDecrement = (id) => {
-        if (esVisualizacion) return;
-        setCantidades(prev => ({ 
-            ...prev, 
-            [id]: Math.max(0, (prev[id] || 0) - 1) 
-        }));
-    };
+        if (productos.length > 0) calcular();
+    }, [cantidades, productos, listaGrupos, formData.tasa, formData.delivery_tasa, aplicarDelivery]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (esVisualizacion) return;
-        
+
         try {
-            console.log('=== DEBUG handleSubmit ===');
-            console.log('¿Es edición?', !!pedido);
-            console.log('ID del pedido:', pedido?.id);
-            console.log('Número de pedido:', pedido?.numero_pedido);
-            
-            const pedidoData = { 
-                ...formData, 
-                items: cantidades, 
-                total_usd: totales.usd, // ✅ Usar totales actualizados
-                total_bs: totales.bs,   // ✅ Usar totales actualizados
-                delivery_tasa: formData.delivery_tasa || 0,
+            const pedidoData = {
+                ...formData,
+                items: cantidades,
+                total_usd: totales.usd,
+                total_bs: totales.bs,
+                delivery_aplicado: aplicarDelivery,
                 updatedAt: new Date().toISOString()
             };
-            
+
             if (pedido && pedido.id) {
-                // ✅ EDITAR PEDIDO EXISTENTE - ACTUALIZAR
-                console.log('📝 ACTUALIZANDO pedido existente ID:', pedido.id);
-                await db.put('pedidos', { 
-                    ...pedidoData,
-                    id: pedido.id,
-                    numero_pedido: pedido.numero_pedido,
-                    createdAt: pedido.createdAt || new Date().toISOString(),
-                    estatus: pedido.estatus || 'Activo'
-                });
-                console.log(`✅ Pedido #${pedido.numero_pedido} ACTUALIZADO (ID: ${pedido.id})`);
+                await db.put('pedidos', { ...pedidoData, id: pedido.id, createdAt: pedido.createdAt });
             } else {
-                // ✅ CREAR NUEVO PEDIDO
-                console.log('🆕 CREANDO nuevo pedido');
                 pedidoData.createdAt = new Date().toISOString();
-                pedidoData.estatus = 'Activo';
                 await db.add('pedidos', pedidoData);
-                console.log(`🆕 Nuevo pedido #${pedidoData.numero_pedido} CREADO`);
             }
-            
             onSave();
             onClose();
         } catch (err) {
-            console.error('Error al guardar pedido:', err);
             setError(`Error: ${err.message}`);
-            alert(`❌ Error al guardar: ${err.message}`);
         }
-    };
-
-    const getCostoGrupo = (nombreGrupo) => {
-        const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === nombreGrupo.toLowerCase());
-        return grupo ? (grupo.costo_$ ? grupo.costo_$.toFixed(2) : "0.00") : "0.00";
     };
 
     const productosAgrupados = productos.reduce((acc, prod) => {
@@ -948,23 +909,12 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
         <div style={styles.overlay}>
             <div style={styles.modal}>
                 <header style={styles.header}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={styles.title}>GESTIÓN DE PEDIDOS</span>
-                        {esVisualizacion && (
-                            <span style={styles.soloLecturaBadge}>
-                                SOLO LECTURA
-                            </span>
-                        )}
-                        {pedido && !esVisualizacion && (
-                            <span style={styles.edicionBadge}>
-                                EDITANDO #{pedido.numero_pedido}
-                            </span>
-                        )}
-                    </div>
+                    <span style={styles.title}>GESTIÓN DE PEDIDOS</span>
                     <button onClick={onClose} style={styles.closeButton}>×</button>
                 </header>
 
                 <form onSubmit={handleSubmit} style={styles.content}>
+                    {/* Fila superior: Pedido y Fecha con anchos uniformes */}
                     <div style={styles.topRow}>
                         <div style={styles.inputGroup}>
                             <label style={styles.label}>Pedido #</label>
@@ -980,16 +930,11 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                                 disabled={esVisualizacion}
                             />
                         </div>
-                        <div style={styles.inputGroup}>
-                            <label style={styles.label}>Tasa (BCV)</label>
-                            <input type="text" value={formData.tasa} disabled style={styles.inputReadOnly} />
-                        </div>
                     </div>
 
-                    {/* ✅ TOTALES ACTUALIZADOS EN TIEMPO REAL */}
                     <div style={styles.totalsBar}>
                         <div style={styles.totalBox}>
-                            <span style={styles.totalLabel}>Total $:</span>
+                            <span style={styles.totalLabel}>Total US$:</span>
                             <span style={styles.totalValue}>{totales.usd.toFixed(2)}</span>
                         </div>
                         <div style={styles.totalBox}>
@@ -998,61 +943,33 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                         </div>
                     </div>
 
+                    <div style={styles.infoBar}>
+                        <span>💰 Tasa: {formData.tasa ? parseFloat(formData.tasa).toFixed(2) : '---'}</span>
+                        <div style={styles.deliveryGroup}>
+                            <input 
+                                type="checkbox" 
+                                checked={aplicarDelivery} 
+                                onChange={(e) => setAplicarDelivery(e.target.checked)}
+                                disabled={esVisualizacion}
+                                style={styles.checkbox}
+                            />
+                            <span style={styles.deliveryText}>🚚 Delivery: ${formData.delivery_tasa}</span>
+                        </div>
+                    </div>
+
                     <div style={styles.productListContainer}>
                         <div style={styles.productListHeader}>Lista de Productos</div>
                         <div style={styles.productList}>
                             {Object.entries(productosAgrupados).map(([grupo, items]) => (
                                 <div key={grupo}>
-                                    <div style={styles.groupTitle}>
-                                        <span>{grupo.toUpperCase()}</span>
-                                        <span style={styles.groupPrice}>(${getCostoGrupo(grupo)})</span>
-                                    </div>
+                                    <div style={styles.groupTitle}>{grupo.toUpperCase()}</div>
                                     {items.map((prod) => (
                                         <div key={prod.id} style={styles.productItem}>
-                                            <div style={styles.productName}>{prod.nombre} (ID: {prod.id})</div>
-                                            <div style={styles.productDetails}>
-                                                <span style={styles.stockText}>Stock: {prod.stock}</span>
-                                                <div style={styles.quantityControl}>
-                                                    <button 
-                                                        type="button" 
-                                                        onClick={() => handleDecrement(prod.id)} 
-                                                        style={{
-                                                            ...styles.qtyBtn,
-                                                            opacity: esVisualizacion ? 0.5 : 1,
-                                                            cursor: esVisualizacion ? 'not-allowed' : 'pointer'
-                                                        }} 
-                                                        disabled={esVisualizacion}
-                                                    >-</button>
-                                                    <input 
-                                                        type="number" 
-                                                        value={cantidades[prod.id] || 0} 
-                                                        onChange={(e) => {
-                                                            if (!esVisualizacion) {
-                                                                const nuevaCantidad = parseInt(e.target.value) || 0;
-                                                                setCantidades(prev => ({
-                                                                    ...prev,
-                                                                    [prod.id]: Math.max(0, nuevaCantidad)
-                                                                }));
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            ...styles.qtyInput,
-                                                            opacity: esVisualizacion ? 0.5 : 1,
-                                                            cursor: esVisualizacion ? 'not-allowed' : 'text'
-                                                        }}
-                                                        disabled={esVisualizacion}
-                                                    />
-                                                    <button 
-                                                        type="button" 
-                                                        onClick={() => handleIncrement(prod.id)} 
-                                                        style={{
-                                                            ...styles.qtyBtn,
-                                                            opacity: esVisualizacion ? 0.5 : 1,
-                                                            cursor: esVisualizacion ? 'not-allowed' : 'pointer'
-                                                        }} 
-                                                        disabled={esVisualizacion}
-                                                    >+</button>
-                                                </div>
+                                            <div style={styles.productName}>{prod.nombre}</div>
+                                            <div style={styles.quantityControl}>
+                                                <button type="button" onClick={() => !esVisualizacion && setCantidades({...cantidades, [prod.id]: Math.max(0, (cantidades[prod.id] || 0) - 1)})} style={styles.qtyBtn} disabled={esVisualizacion}>-</button>
+                                                <input type="number" value={cantidades[prod.id] || 0} readOnly style={styles.qtyInput} />
+                                                <button type="button" onClick={() => !esVisualizacion && setCantidades({...cantidades, [prod.id]: (cantidades[prod.id] || 0) + 1})} style={styles.qtyBtn} disabled={esVisualizacion}>+</button>
                                             </div>
                                         </div>
                                     ))}
@@ -1062,37 +979,11 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                     </div>
 
                     <div style={styles.footer}>
-                        <button 
-                            type="button" 
-                            onClick={() => {
-                                setCantidades({});
-                                setTotales({ usd: 0, bs: 0 }); // ✅ Limpiar totales también
-                            }} 
-                            style={{
-                                ...styles.limpiarBtn, 
-                                opacity: esVisualizacion ? 0.5 : 1,
-                                cursor: esVisualizacion ? 'not-allowed' : 'pointer'
-                            }} 
-                            disabled={esVisualizacion}
-                            title={esVisualizacion ? "Pedido cerrado - No editable" : "Limpiar selección"}
-                        >
-                            Limpiar
-                        </button>
-                        
-                        <button 
-                            type="submit" 
-                            style={{
-                                ...styles.grabarBtn, 
-                                opacity: esVisualizacion ? 0.5 : 1,
-                                cursor: esVisualizacion ? 'not-allowed' : 'pointer'
-                            }} 
-                            disabled={esVisualizacion}
-                            title={esVisualizacion ? "Pedido cerrado - No editable" : pedido ? "Actualizar pedido" : "Crear nuevo pedido"}
-                        >
+                        <button type="button" onClick={() => setCantidades({})} style={styles.limpiarBtn} disabled={esVisualizacion}>Limpiar</button>
+                        <button type="submit" style={styles.grabarBtn} disabled={esVisualizacion}>
                             {pedido ? "💾 Actualizar" : "💾 Grabar"}
                         </button>
                     </div>
-                    {error && <p style={styles.error}>{error}</p>}
                 </form>
             </div>
         </div>
@@ -1101,38 +992,64 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
 const styles = {
     overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 },
-    modal: { backgroundColor: '#fff', width: '95%', maxWidth: '500px', maxHeight: '95vh', border: '1px solid #ccc', padding: '10px', borderRadius: '4px', display: 'flex', flexDirection: 'column' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #00BFFF', marginBottom: '10px' },
-    title: { fontSize: '16px', fontWeight: 'bold', color: '#000', margin: 0 },
-    soloLecturaBadge: { fontSize: '12px', backgroundColor: '#3498db', color: 'white', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' },
-    edicionBadge: { fontSize: '12px', backgroundColor: '#f39c12', color: 'white', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' },
-    closeButton: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#000' },
-    content: { display: 'flex', flexDirection: 'column', gap: '10px' },
-    topRow: { display: 'flex', gap: '8px', justifyContent: 'space-between' },
-    inputGroup: { display: 'flex', flexDirection: 'column', flex: 1, gap: '4px' },
-    label: { fontSize: '12px', fontWeight: 'bold', color: '#000' },
-    inputSmall: { padding: '6px', border: '1px solid #aaa', fontSize: '13px', color: '#000', backgroundColor: '#fff', width: '100%', boxSizing: 'border-box' },
-    inputReadOnly: { padding: '6px', border: '1px solid #ccc', fontSize: '13px', color: '#555', backgroundColor: '#f0f0f0', width: '100%', boxSizing: 'border-box', cursor: 'not-allowed' },
-    totalsBar: { display: 'flex', gap: '10px', justifyContent: 'space-between', padding: '5px 0' },
-    totalBox: { flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#e1f5fe', padding: '8px', border: '1px solid #00BFFF', borderRadius: '4px' },
-    totalLabel: { fontSize: '13px', fontWeight: 'bold', color: '#000' },
+    modal: { backgroundColor: '#fff', width: '95%', maxWidth: '500px', maxHeight: '95vh', padding: '15px', borderRadius: '8px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #00BFFF', marginBottom: '8px' },
+    title: { fontSize: '16px', fontWeight: 'bold', color: '#000' },
+    closeButton: { background: 'none', border: 'none', fontSize: '32px', cursor: 'pointer', minWidth: '44px', color: '#000' },
+    content: { display: 'flex', flexDirection: 'column', gap: '8px' },
+    // AJUSTE: topRow asegura que los hijos crezcan por igual con flex: 1
+    topRow: { display: 'flex', flexDirection: 'row', gap: '10px', width: '100%', boxSizing: 'border-box' },
+    inputGroup: { display: 'flex', flexDirection: 'column', flex: 1, gap: '2px' },
+    // AJUSTE: Todas las etiquetas en color negro sólido
+    label: { fontSize: '14px', fontWeight: 'bold', color: '#000', display: 'block' },
+    // AJUSTE: inputSmall e inputReadOnly con anchos idénticos y box-sizing
+    totalsBar: { display: 'flex', gap: '8px', justifyContent: 'space-between' },
+    totalBox: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#e1f5fe', padding: '6px', border: '1px solid #00BFFF', borderRadius: '4px' },
+    totalLabel: { fontSize: '11px', fontWeight: 'bold', color: '#000' },
     totalValue: { fontSize: '14px', fontWeight: 'bold', color: '#007bff' },
-    productListContainer: { border: '1px solid #aaa', borderRadius: '2px' },
-    productListHeader: { textAlign: 'center', color: '#00BFFF', padding: '5px', borderBottom: '1px solid #aaa', fontWeight: 'bold' },
-    productList: { height: '275px', overflowY: 'auto', backgroundColor: '#fff' },
-    groupTitle: { fontSize: '18px', fontWeight: 'bold', backgroundColor: '#f1f1f1', padding: '8px 10px', color: '#000', display: 'flex', justifyContent: 'space-between' },
-    groupPrice: { color: '#007bff', fontSize: '16px' },
-    productItem: { padding: '8px 10px', borderBottom: '1px solid #eee' },
-    productName: { fontSize: '14px', color: '#000' },
-    productDetails: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    stockText: { fontSize: '12px', color: '#333' },
-    quantityControl: { display: 'flex', alignItems: 'center', gap: '4px' },
-    qtyBtn: { width: '30px', height: '30px', backgroundColor: '#eee', border: '1px solid #ccc', cursor: 'pointer', fontWeight: 'bold', fontSize: '18px', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    qtyInput: { width: '40px', textAlign: 'center', border: '1px solid #ccc', padding: '4px', color: '#000', backgroundColor: '#fff' },
-    footer: { display: 'flex', gap: '15px', marginTop: '5px' },
-    limpiarBtn: { backgroundColor: '#f44336', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', flex: 1 },
-    grabarBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', flex: 1 },
-    error: { color: 'red', fontSize: '12px', textAlign: 'center' }
+    infoBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: 'bold', color: '#000', padding: '0 5px' },
+    deliveryGroup: { display: 'flex', alignItems: 'center', gap: '5px' },
+    checkbox: { width: '18px', height: '18px' },
+    deliveryText: { color: '#000' },
+    productListContainer: { border: '1px solid #aaa', borderRadius: '4px', overflow: 'hidden', marginTop: '5px' },
+    productListHeader: { textAlign: 'center', backgroundColor: '#00BFFF', color: 'white', padding: '4px', fontSize: '13px', fontWeight: 'bold' },
+    productList: { height: '260px', overflowY: 'auto', backgroundColor: '#fff' },
+    groupTitle: { fontSize: '14px', fontWeight: 'bold', backgroundColor: '#f1f1f1', padding: '6px 10px', color: '#000' },
+    productItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #eee' },
+    productName: { fontSize: '13px', color: '#000' },
+    quantityControl: { display: 'flex', alignItems: 'center', gap: '5px' },
+    qtyBtn: { width: '32px', height: '32px', backgroundColor: '#eee', border: '1px solid #ccc', fontWeight: 'bold', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' },
+    qtyInput: { width: '40px', textAlign: 'center', border: '1px solid #ccc', padding: '4px', backgroundColor: '#f0f0f0', color: '#000', fontWeight: 'bold' },
+    footer: { display: 'flex', gap: '10px', marginTop: '5px' },
+    limpiarBtn: { backgroundColor: '#f44336', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', flex: 1, fontWeight: 'bold' },
+    grabarBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', flex: 1, fontWeight: 'bold' },
+inputSmall: { 
+        padding: '8px', 
+        border: '1px solid #aaa', 
+        borderRadius: '4px', 
+        width: '100%', 
+        boxSizing: 'border-box', 
+        // UPDATED: Calendar input requirements
+        fontSize: '18px',          // 18px size as requested
+        color: '#fff',             // White text as requested
+        textAlign: 'center',       // Centered as requested
+        backgroundColor: '#00BFFF' // Dark blue background for visibility
+    },
+
+    inputReadOnly: { 
+        padding: '8px', 
+        border: '1px solid #ccc', 
+        borderRadius: '4px', 
+        width: '100%', 
+        boxSizing: 'border-box', 
+        cursor: 'not-allowed',
+        // UPDATED: Matches uniform style for order number and read-only date
+        fontSize: '18px', 
+        fontWeight: 'bold', 
+        color: '#fff',             // White text as requested
+        textAlign: 'center',       // Centered as requested
+        backgroundColor: '#555'    // Dark grey background for visibility
+    },
 };
 
 export default GestionPedido;
@@ -2217,6 +2134,8 @@ FILE: src/components/Pedidos.module.css
     font-size: 24px;
     font-weight: bold;
     margin-bottom: 5px;
+    /* Added grey colour for visibility on Android mobile */
+    color: #7f8c8d; 
 }
 
 .statLabel {
@@ -5210,8 +5129,8 @@ FILE: src/pages/Home.jsx
 ------------------------------
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { db } from '../lib/db/database.js'; 
-import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; 
+import { db } from '../lib/db/database.js'; // Persistent IndexedDB reference [1, 6]
+import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // Utility for currency conversion [7]
 import styles from './Home.module.css';
 
 function Home() {
@@ -5220,17 +5139,13 @@ function Home() {
     const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
     const [tasa, setTasa] = useState(0);
     const [cargando, setCargando] = useState(true);
-    
-    // Filter state for the group selection [1]
     const [filtroGrupo, setFiltroGrupo] = useState('todos');
-    
     const navigate = useNavigate();
 
-    // Initial data load from IndexedDB and utilities [2-4]
     useEffect(() => {
         const cargarTodo = async () => {
             try {
-                await db.init(); 
+                await db.init(); // [8]
                 const [p, g, t] = await Promise.all([
                     db.getAll('productos'),
                     db.getAll('grupos'),
@@ -5248,27 +5163,24 @@ function Home() {
         cargarTodo();
     }, []);
 
-    // Logic to filter products by stock and group [4]
+    // Filter updated: No longer excludes stock 0 to show badges [2]
     const productosFiltrados = productos.filter(p => {
-        const tieneStock = p.stock > 0;
         const coincideGrupo = filtroGrupo === 'todos' || p.grupo === filtroGrupo;
-        return tieneStock && coincideGrupo;
+        return coincideGrupo;
     });
 
-    // Handle recording the sale with confirmation prompt [5, 6]
     const handleGrabar = async () => {
         if (listaDeSeleccionados.length === 0) return;
 
-        // REQUESTED CHANGE: Confirmation prompt before proceeding
-        const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
-        if (!confirmar) return; // Abort if user cancels [5]
+        const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`); // [4]
+        if (!confirmar) return;
 
         try {
             for (const item of listaDeSeleccionados) {
                 const grupoInfo = grupos.find(g => g.nombre === item.grupo);
                 const precioUsd = grupoInfo ? grupoInfo.precio : 0;
 
-                // Record each item in the sales table [5]
+                // Records sale in 'ventas' table [4, 9]
                 await db.add('ventas', {
                     productoId: item.id,
                     nombre: item.nombre,
@@ -5278,11 +5190,10 @@ function Home() {
                     fecha: new Date().toISOString()
                 });
 
-                // Update inventory by subtracting 1 from stock [6, 7]
+                // Updates inventory [5, 10]
                 await db.updateStock(item.id, -1);
             }
 
-            // Refresh local state and clear selection [6]
             const productosActualizados = await db.getAll('productos');
             setProductos(productosActualizados);
             setListaDeSeleccionados([]);
@@ -5307,7 +5218,7 @@ function Home() {
             const grupoInfo = grupos.find(g => g.nombre === item.grupo);
             usd += grupoInfo ? grupoInfo.precio : 0;
         });
-        return { usd, bs: usd * tasa }; 
+        return { usd, bs: usd * tasa };
     };
 
     const { usd, bs } = calcularTotales();
@@ -5316,17 +5227,13 @@ function Home() {
 
     return (
         <div className={styles.container}>
-            
-            {/* Group selection combo [8] */}
-            <div style={{ marginTop: '15px', marginBottom: '15px', textAlign: 'center' }}>
-                <label htmlFor="filtro-home" style={{ fontWeight: 'bold', marginRight: '10px', color: '#333' }}>
-                    Filtrar por Grupo:
-                </label>
+            <div className={styles.filterBar}>
+                <label htmlFor="filtro-home">Filtrar por Grupo:</label>
                 <select 
-                    id="filtro-home"
+                    id="filtro-home" 
                     value={filtroGrupo} 
                     onChange={(e) => setFiltroGrupo(e.target.value)}
-                    style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ccc' }}
+                    className={styles.select}
                 >
                     <option value="todos">Todos los helados</option>
                     {grupos.map(g => (
@@ -5334,42 +5241,47 @@ function Home() {
                     ))}
                 </select>
             </div>
-            
-            {/* Product Grid [9] */}
+
             <div className={styles.grid}>
                 {productosFiltrados.map(p => {
                     const grupoInfo = grupos.find(g => g.nombre === p.grupo);
                     const precio = grupoInfo ? grupoInfo.precio : 0;
                     
+                    // Visual aid logic for stock levels [3]
+                    const esAgotado = p.stock === 0;
+                    const esBajoStock = p.stock > 0 && p.stock <= 5;
+
                     return (
-                        <div key={p.id} className={styles.card} onClick={() => seleccionarProducto(p)}>
-                            {/* Logic: If image exists, show image and name below; otherwise, name placeholder [9, 10] */}
+                        <div 
+                            key={p.id} 
+                            className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
+                            onClick={() => !esAgotado && seleccionarProducto(p)} // Disable click if stock is 0
+                        >
+                            {/* Stock Badge with real-time value and color alert */}
+                            <div className={styles.stockBadge} style={{
+                                backgroundColor: esAgotado ? '#ff4d4d' : (esBajoStock ? '#ffa500' : '#28a745')
+                            }}>
+                                {p.stock}
+                            </div>
+
                             {p.imagen && p.imagen.trim() !== "" ? (
-                                <>
-                                    <img src={p.imagen} alt={p.nombre} className={styles.imagen} />
-                                    <div style={{ fontWeight: 'bold', fontSize: '14px', marginTop: '4px', color: '#333' }}>
-                                        {p.nombre}
-                                    </div>
-                                </>
+                                <img src={p.imagen} alt={p.nombre} className={styles.productImage} />
                             ) : (
-                                <div style={{ 
-                                    fontWeight: 'bold', fontSize: '14px', height: '100px', 
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    textAlign: 'center', backgroundColor: '#f9f9f9', borderRadius: '8px',
-                                    marginBottom: '10px', color: '#333', padding: '5px'
-                                }}>
-                                    {p.nombre}
-                                </div>
+                                <div className={styles.placeholderName}>{p.nombre}</div>
                             )}
-                            <p style={{ color: 'red', fontWeight: '600', margin: '5px 0 0 0' }}>
-                                Id: {p.id} Existencia: {p.stock} Precio $: {precio.toFixed(2)}
-                            </p> 
+
+                            <div className={styles.cardInfo}>
+                                <p className={styles.productTitle}>{p.nombre}</p>
+                                <div className={styles.cardFooter}>
+                                    <span>ID: {p.id}</span>
+                                    <span className={styles.priceText}>${precio.toFixed(2)}</span>
+                                </div>
+                            </div>
                         </div>
                     );
                 })}
             </div>
 
-            {/* Fixed Selection and Totals Panel [10, 11] */}
             <div className={styles.selectedContainer}>
                 <div className={styles.selectedHeader}>
                     <span>Items Seleccionados ({listaDeSeleccionados.length}):</span>
@@ -5378,49 +5290,30 @@ function Home() {
 
                 <div className={styles.selectedList}>
                     {listaDeSeleccionados.length === 0 ? (
-                        <p style={{ color: '#666', fontSize: '0.9rem', textAlign: 'center' }}>
-                            No hay helados seleccionados
-                        </p>
+                        <p className={styles.emptyText}>No hay helados seleccionados</p>
                     ) : (
-                        listaDeSeleccionados.map((item, index) => {
-                            const grupoInfo = grupos.find(g => g.nombre === item.grupo);
-                            const precioIndividual = grupoInfo ? grupoInfo.precio : 0;
-                            return (
-                                <div key={index} className={styles.selectedItem}>
-                                    <span>#{item.id} - {item.nombre} (${precioIndividual.toFixed(2)})</span>
-                                    <button onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}>
-                                        ELIM
-                                    </button>
-                                </div>
-                            );
-                        })
+                        listaDeSeleccionados.map((item, index) => (
+                            <div key={index} className={styles.selectedItem}>
+                                <span>#{item.id} - {item.nombre}</span>
+                                <button onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}>ELIM</button>
+                            </div>
+                        ))
                     )}
                 </div>
 
-                <div style={{ marginTop: '8px', borderTop: '1px solid #ccc', paddingTop: '8px' }}>
-                    <h3 style={{ margin: '0 0 8px 0', color: '#000' }}>
-                        Total: ${usd.toFixed(2)} | Bs. {bs.toFixed(2)}
-                    </h3>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <button className={styles.vaciarBtn} onClick={() => setListaDeSeleccionados([])}>
-                            Vaciar
-                        </button>
-                        <button 
-                            onClick={handleGrabar}
-                            style={{ 
-                                flex: 2, 
-                                backgroundColor: '#28a745', 
-                                color: 'white', 
-                                border: 'none', 
-                                borderRadius: '8px', 
-                                fontWeight: 'bold',
-                                cursor: 'pointer'
-                            }}
-                            disabled={listaDeSeleccionados.length === 0}
-                        >
-                            Grabar
-                        </button>
-                    </div>
+                <div className={styles.totalRow}>
+                    Total: ${usd.toFixed(2)} | Bs. {bs.toFixed(2)}
+                </div>
+
+                <div className={styles.actionButtons}>
+                    <button className={styles.vaciarBtn} onClick={() => setListaDeSeleccionados([])}>Vaciar</button>
+                    <button 
+                        className={styles.grabarBtn} 
+                        onClick={handleGrabar}
+                        disabled={listaDeSeleccionados.length === 0}
+                    >
+                        Grabar
+                    </button>
                 </div>
             </div>
         </div>
@@ -5432,157 +5325,202 @@ export default Home;
 
 FILE: src/pages/Home.module.css
 ------------------------------
-.title{
-    text-align: center;
-    font-size: 28px;
-    color: #00BFFF;
-}
 
-/* Contenedor principal deja espacio abajo para la lista fija */
 .container {
-  padding-bottom: 260px; /* suficiente para lista de seleccionados + total + margen */
+    padding: 20px;
+    padding-bottom: 280px; /* Space for fixed footer */
+    background-color: #fafafa;
+    min-height: 100vh;
 }
 
-/* Grid principal */
+.filterBar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 0 12px;
+}
+
+.select {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    background-color: #fff;
+}
+
 .grid {
-  display: grid;
-  grid-template-columns: 1fr; /* una card por fila */
-  gap: 16px;
-  justify-content: center;
-  padding: 0 12px; /* margen lateral */
+    display: grid;
+    grid-template-columns: 1fr; /* Optimized for Android mobile [1] */
+    gap: 16px;
+    padding: 0 12px;
 }
 
-/* Card individual */
 .card {
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  padding: 12px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  width: 100%;        
-  max-width: 100%;    
-  margin: 0 auto;     
-  min-height: 100px;  
-  cursor: pointer; /* indica que es clickable */
-  margin-right: 8px; /* evita que quede pegada al borde derecho */
-}
-/* Imagen dentro de la card */
-.card img {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  border-radius: 12px;
-  margin-bottom: 12px;
+    position: relative; /* Necessary for absolute badge positioning */
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    padding: 15px;
+    cursor: pointer;
+    transition: transform 0.2s;
 }
 
-/* Nombre del producto */
-.card p {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0;
-  color: red;
+/* STOCK BADGE STYLES */
+.stockBadge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    z-index: 10;
 }
 
-/* Hover effect */
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+/* OUT OF STOCK STYLE */
+.cardDisabled {
+    opacity: 0.6;
+    filter: grayscale(1);
+    cursor: not-allowed !important;
 }
 
-/* Contenedor fijo de seleccionados */
+.productImage {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.placeholderName {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    font-weight: bold;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+.cardInfo {
+    text-align: left;
+}
+
+.productTitle {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin: 0 0 5px 0;
+    color: #2c3e50;
+}
+
+.cardFooter {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.priceText {
+    color: #28a745;
+    font-weight: bold;
+}
+
+/* FOOTER PANEL */
 .selectedContainer {
-  position: fixed;
-  bottom: 10px;
-  left: 12px;
-  right: 12px;
-  background-color: #f0f0f0;
-  border-radius: 12px;
-  padding: 8px;
-  max-height: 240px; /* hasta 3 items + total */
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  z-index: 999; /* encima de la grid */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #fff;
+    padding: 15px;
+    border-top: 2px solid #00BFFF;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+    z-index: 1000;
 }
 
-/* Header selected */
 .selectedHeader {
     display: flex;
-    justify-content: space-between; /* Aligns head to left and rate to right */
-    align-items: center;
+    justify-content: space-between;
     font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.selectedList {
+    max-height: 120px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.selectedItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background-color: #f8f9fa;
     margin-bottom: 4px;
+    border-radius: 4px;
+    font-size: 0.9rem;
     color: #000;
 }
 
-/* Lista de items con scroll */
-.selectedList {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow-y: auto;
-  max-height: 180px; /* scroll para más de 3 items */
-  padding-right: 4px; /* margen interno para scroll */
-}
-
-/* Item seleccionado */
-.selectedItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fff;
-  padding: 4px 8px; /* altura reducida */
-  border-radius: 8px;
-  color: #000;
-  font-size: 0.95rem;
-}
-
-/* Botón eliminar dentro de cada item */
 .selectedItem button {
-  background: #FF5757;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 2px 6px;
-  cursor: pointer;
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
 }
 
-/* Botón Vaciar fuera de la lista scrollable */
+.totalRow {
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-align: center;
+    margin: 10px 0;
+    color: #007bff;
+}
+
+.actionButtons {
+    display: flex;
+    gap: 10px;
+}
+
 .vaciarBtn {
-  margin-top: 6px;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 8px;
-  background: #FF5757;
-  color: #fff;
-  cursor: pointer;
+    flex: 1;
+    padding: 12px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
 }
 
-/* Modal overlay y content */
-.modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+.grabarBtn {
+    flex: 2;
+    padding: 12px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
 }
 
-.modalContent {
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  min-width: 300px;
+.loading {
+    text-align: center;
+    padding: 50px;
+    font-size: 1.2rem;
+    color: #666;
 }
-
-
 **************************************************
 
 FILE: src/pages/Lista.jsx
