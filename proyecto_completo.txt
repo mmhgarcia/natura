@@ -70,6 +70,8 @@ ESTRUCTURA DEL PROYECTO: natura
     📄 About.jsx
     📄 Admin.module.css
     📄 DeliveryPage.jsx
+    📄 Estadisticas.jsx
+    📄 Estadisticas.module.css
     📄 GruposPage.jsx
     📄 Home.jsx
     📄 Home.module.css
@@ -199,7 +201,8 @@ FILE: package.json
     "dexie-export-import": "^4.1.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.10.1"
+    "react-router-dom": "^7.10.1",
+    "recharts": "^3.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -395,6 +398,7 @@ import ProductosPage from './pages/ProductosPage';
 import PedidosPage from './pages/Pedidos'; 
 // Asegúrate de tener esto:
 import DeliveryPage from './pages/DeliveryPage';
+import Estadisticas from "./pages/Estadisticas";
 
 function App() {
   return (
@@ -409,6 +413,7 @@ function App() {
         <Route path="/admingrupos" element={<GruposPage />} />
         <Route path="/adminproductos" element={<ProductosPage />} />
         <Route path="/delivery" element={<DeliveryPage />} />
+         <Route path="/estadisticas" element={<Estadisticas />} />
         {/* Nueva ruta para Pedidos */}
         <Route path="/pedidos" element={<PedidosPage />} />
         <Route path="*" element={<NotFound />} />
@@ -3231,6 +3236,10 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>💰</span>
                         <span>Tasa BCV</span>
                     </Link>
+
+                    <Link to="/estadisticas" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Estadísticas
+                    </Link>
                     
                     {/* Opción Acerca de */}
                     <Link 
@@ -5108,6 +5117,344 @@ const styles = {
 export default DeliveryPage;
 **************************************************
 
+FILE: src/pages/Estadisticas.jsx
+------------------------------
+import { useState, useEffect } from 'react';
+import { db } from '../lib/db/database';
+import { getTasaBCV } from '../lib/db/utils/tasaUtil';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import styles from './Estadisticas.module.css';
+
+const Estadisticas = () => {
+    const [datosVentas, setDatosVentas] = useState([]);
+    const [tasa, setTasa] = useState(0);
+    const [rango, setRango] = useState('7d');
+    const [cargando, setCargando] = useState(true);
+
+    useEffect(() => {
+        const cargarData = async () => {
+            setCargando(true);
+            try {
+                const [ventasRaw, valorTasa] = await Promise.all([
+                    db.getAll('ventas'),
+                    getTasaBCV()
+                ]);
+                const filtradas = filtrarPorRango(ventasRaw, rango);
+                setDatosVentas(filtradas);
+                setTasa(valorTasa || 0);
+            } catch (err) {
+                console.error("Error:", err);
+            } finally {
+                setCargando(false);
+            }
+        };
+        cargarData();
+    }, [rango]);
+
+    const filtrarPorRango = (ventas, tipo) => {
+        const ahora = new Date();
+        return ventas.filter(v => {
+            const fechaVenta = new Date(v.fecha);
+            if (tipo === 'hoy') return fechaVenta.toDateString() === ahora.toDateString();
+            if (tipo === '7d') {
+                const limite = new Date();
+                limite.setDate(ahora.getDate() - 7);
+                return fechaVenta >= limite;
+            }
+            return true;
+        });
+    };
+
+    const dataGrafico = Object.entries(
+        datosVentas.reduce((acc, v) => {
+            acc[v.nombre] = (acc[v.nombre] || 0) + (v.cantidad || 1);
+            return acc;
+        }, {})
+    ).map(([name, value]) => ({ name, value }))
+     .sort((a, b) => b.value - a.value)
+     .slice(0, 6);
+
+    const ingresosUsd = datosVentas.reduce((acc, v) => acc + (v.precioUsd || 0), 0);
+
+    if (cargando) return <div className={styles.loading}>Procesando...</div>;
+
+    return (
+        <div className={styles.container}>
+            <header className={styles.header}>
+                <h2 className={styles.title}>📊 ANALÍTICA DE VENTAS</h2>
+                <div className={styles.selectWrapper}>
+                    <label className={styles.labelRango}>Rango de fecha:</label>
+                    <select value={rango} onChange={(e) => setRango(e.target.value)} className={styles.select}>
+                        <option value="hoy">Ventas de Hoy</option>
+                        <option value="7d">Últimos 7 Días</option>
+                        <option value="mes">Mes Actual</option>
+                    </select>
+                </div>
+            </header>
+
+            <div className={styles.resumen}>
+                <div className={styles.statCard}>
+                    <span className={styles.statNumber}>${ingresosUsd.toFixed(2)}</span>
+                    <span className={styles.statLabel}>TOTAL USD</span>
+                </div>
+                <div className={styles.statCard}>
+                    <span className={styles.statNumber}>Bs. {(ingresosUsd * tasa).toFixed(2)}</span>
+                    <span className={styles.statLabel}>TOTAL BS</span>
+                </div>
+            </div>
+
+            <div className={styles.chartBox}>
+                <h3 className={styles.chartTitle}>TOP 6: PRODUCTOS ESTRELLA</h3>
+                <ResponsiveContainer width="100%" height={350}>
+                    <BarChart data={dataGrafico} margin={{ top: 10, right: 10, left: -25, bottom: 60 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis 
+                            dataKey="name" 
+                            angle={-45} 
+                            textAnchor="end" 
+                            interval={0} 
+                            fontSize={11} 
+                            stroke="#333"
+                            height={80}
+                        />
+                        <YAxis fontSize={12} stroke="#333" />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#00BFFF" radius={[2]} />
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    );
+};
+
+export default Estadisticas;
+**************************************************
+
+FILE: src/pages/Estadisticas.module.css
+------------------------------
+
+.filterLabel {
+    color: #333;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr; 
+    gap: 16px;
+    padding: 0 12px;
+}
+
+.card {
+    position: relative;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    padding: 15px;
+    cursor: pointer;
+}
+
+.stockBadge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+
+.cardDisabled {
+    opacity: 0.6;
+    filter: grayscale(1);
+    cursor: not-allowed !important;
+}
+
+.productImage {
+.container {
+  padding: 20px;
+  padding-bottom: 280px;
+  background-color: #fafafa;
+  min-height: 100vh;
+  /* Add this to ensure general text is visible */
+  color: #333; 
+}
+
+.filterBar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 0 12px;
+  /* Specifically ensure the label text is dark */
+  color: #2c3e50; 
+  font-weight: bold;
+}
+
+.select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  background-color: #fff;
+  /* CRITICAL: Force the text colour to be dark */
+  color: #333; 
+}
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.placeholderName {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    font-weight: bold;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+.productTitle {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin: 0 0 5px 0;
+    color: #2c3e50;
+}
+
+.cardFooter {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.priceText {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.selectedContainer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #fff;
+    padding: 15px;
+    border-top: 2px solid #00BFFF;
+    z-index: 1000;
+}
+
+.selectedHeader {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.selectedList {
+    max-height: 120px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.selectedItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background-color: #f8f9fa;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #000;
+}
+
+.selectedItem button {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.totalRow {
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-align: center;
+    margin: 10px 0;
+    color: #007bff;
+}
+
+.actionButtons {
+    display: flex;
+    gap: 10px;
+}
+
+.vaciarBtn, .grabarBtn {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.vaciarBtn { background-color: #6c757d; color: white; flex: 1; }
+.grabarBtn { background-color: #28a745; color: white; flex: 2; }
+.grabarBtn:disabled { background-color: #ccc; cursor: not-allowed; }
+
+.loading {
+    text-align: center;
+    padding: 50px;
+    color: #666;
+}
+
+
+.container {
+  padding: 20px;
+  padding-bottom: 280px;
+  background-color: red;
+  min-height: 100vh;
+  /* Add this to ensure general text is visible */
+  color: #333; 
+}
+
+.filterBar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 0 12px;
+  /* Specifically ensure the label text is dark */
+  color: #2c3e50; 
+  font-weight: bold;
+}
+
+.select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid blue;
+  font-size: 1rem;
+  background-color: #fff;
+  /* CRITICAL: Force the text colour to be dark */
+  color: #333; 
+}
+**************************************************
+
 FILE: src/pages/GruposPage.jsx
 ------------------------------
 // src/pages/GruposPage.jsx
@@ -5129,8 +5476,8 @@ FILE: src/pages/Home.jsx
 ------------------------------
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { db } from '../lib/db/database.js'; // Persistent IndexedDB reference [1, 6]
-import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // Utility for currency conversion [7]
+import { db } from '../lib/db/database.js'; 
+import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; 
 import styles from './Home.module.css';
 
 function Home() {
@@ -5145,7 +5492,7 @@ function Home() {
     useEffect(() => {
         const cargarTodo = async () => {
             try {
-                await db.init(); // [8]
+                await db.init(); 
                 const [p, g, t] = await Promise.all([
                     db.getAll('productos'),
                     db.getAll('grupos'),
@@ -5163,7 +5510,6 @@ function Home() {
         cargarTodo();
     }, []);
 
-    // Filter updated: No longer excludes stock 0 to show badges [2]
     const productosFiltrados = productos.filter(p => {
         const coincideGrupo = filtroGrupo === 'todos' || p.grupo === filtroGrupo;
         return coincideGrupo;
@@ -5171,8 +5517,7 @@ function Home() {
 
     const handleGrabar = async () => {
         if (listaDeSeleccionados.length === 0) return;
-
-        const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`); // [4]
+        const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`); 
         if (!confirmar) return;
 
         try {
@@ -5180,7 +5525,6 @@ function Home() {
                 const grupoInfo = grupos.find(g => g.nombre === item.grupo);
                 const precioUsd = grupoInfo ? grupoInfo.precio : 0;
 
-                // Records sale in 'ventas' table [4, 9]
                 await db.add('ventas', {
                     productoId: item.id,
                     nombre: item.nombre,
@@ -5190,16 +5534,13 @@ function Home() {
                     fecha: new Date().toISOString()
                 });
 
-                // Updates inventory [5, 10]
                 await db.updateStock(item.id, -1);
             }
-
             const productosActualizados = await db.getAll('productos');
             setProductos(productosActualizados);
             setListaDeSeleccionados([]);
             alert("✅ Venta procesada con éxito.");
         } catch (error) {
-            console.error("Error saving sale:", error);
             alert("❌ Error al procesar la venta.");
         }
     };
@@ -5228,7 +5569,7 @@ function Home() {
     return (
         <div className={styles.container}>
             <div className={styles.filterBar}>
-                <label htmlFor="filtro-home">Filtrar por Grupo:</label>
+                <label htmlFor="filtro-home" className={styles.filterLabel}>Filtrar por Grupo:</label>
                 <select 
                     id="filtro-home" 
                     value={filtroGrupo} 
@@ -5246,8 +5587,6 @@ function Home() {
                 {productosFiltrados.map(p => {
                     const grupoInfo = grupos.find(g => g.nombre === p.grupo);
                     const precio = grupoInfo ? grupoInfo.precio : 0;
-                    
-                    // Visual aid logic for stock levels [3]
                     const esAgotado = p.stock === 0;
                     const esBajoStock = p.stock > 0 && p.stock <= 5;
 
@@ -5255,16 +5594,15 @@ function Home() {
                         <div 
                             key={p.id} 
                             className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
-                            onClick={() => !esAgotado && seleccionarProducto(p)} // Disable click if stock is 0
+                            onClick={() => !esAgotado && seleccionarProducto(p)}
                         >
-                            {/* Stock Badge with real-time value and color alert */}
                             <div className={styles.stockBadge} style={{
                                 backgroundColor: esAgotado ? '#ff4d4d' : (esBajoStock ? '#ffa500' : '#28a745')
                             }}>
                                 {p.stock}
                             </div>
 
-                            {p.imagen && p.imagen.trim() !== "" ? (
+                            {p.imagen ? (
                                 <img src={p.imagen} alt={p.nombre} className={styles.productImage} />
                             ) : (
                                 <div className={styles.placeholderName}>{p.nombre}</div>
@@ -5287,31 +5625,20 @@ function Home() {
                     <span>Items Seleccionados ({listaDeSeleccionados.length}):</span>
                     <span>Tasa: {tasa.toFixed(2)}</span>
                 </div>
-
                 <div className={styles.selectedList}>
-                    {listaDeSeleccionados.length === 0 ? (
-                        <p className={styles.emptyText}>No hay helados seleccionados</p>
-                    ) : (
-                        listaDeSeleccionados.map((item, index) => (
-                            <div key={index} className={styles.selectedItem}>
-                                <span>#{item.id} - {item.nombre}</span>
-                                <button onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}>ELIM</button>
-                            </div>
-                        ))
-                    )}
+                    {listaDeSeleccionados.map((item, index) => (
+                        <div key={index} className={styles.selectedItem}>
+                            <span>#{item.id} - {item.nombre}</span>
+                            <button onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}>ELIM</button>
+                        </div>
+                    ))}
                 </div>
-
                 <div className={styles.totalRow}>
                     Total: ${usd.toFixed(2)} | Bs. {bs.toFixed(2)}
                 </div>
-
                 <div className={styles.actionButtons}>
                     <button className={styles.vaciarBtn} onClick={() => setListaDeSeleccionados([])}>Vaciar</button>
-                    <button 
-                        className={styles.grabarBtn} 
-                        onClick={handleGrabar}
-                        disabled={listaDeSeleccionados.length === 0}
-                    >
+                    <button className={styles.grabarBtn} onClick={handleGrabar} disabled={listaDeSeleccionados.length === 0}>
                         Grabar
                     </button>
                 </div>
@@ -5333,21 +5660,32 @@ FILE: src/pages/Home.module.css
     min-height: 100vh;
 }
 
-.filterBar {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 20px;
-    padding: 0 12px;
-}
 
 .select {
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    font-size: 1rem;
-    background-color: #fff;
+  padding: 8px;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  width: 100%; /* Matches the full-width layout of the date input */
+  box-sizing: border-box;
+  
+  /* These are the core styles from the date selector in GestionPedido.jsx */
+  font-size: 18px; 
+  color: #fff;
+  text-align: center;
+  text-align-last: center; /* Essential for centering text inside a <select> */
+  background-color: #00BFFF; /* The specific light blue used in your app */
+  font-weight: bold;
 }
+
+/* Optional: Ensure the filter bar doesn't look too cramped */
+.filterBar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 0 12px;
+}
+
 
 .grid {
     display: grid;
