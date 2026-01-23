@@ -1,207 +1,161 @@
-
 .container {
-    padding: 20px;
-    padding-bottom: 280px; /* Space for fixed footer */
-    background-color: #fafafa;
-    min-height: 100vh;
-}
-
-
-.select {
-  padding: 8px;
-  border: 1px solid #aaa;
-  border-radius: 4px;
-  width: 100%; /* Matches the full-width layout of the date input */
+  padding: 15px;
+  padding-bottom: 280px; /* Espacio para el panel fijo inferior [13] */
+  background-color: #fafafa;
+  min-height: 100vh;
+  width: 100%;
   box-sizing: border-box;
-  
-  /* These are the core styles from the date selector in GestionPedido.jsx */
-  font-size: 18px; 
-  color: #fff;
-  text-align: center;
-  text-align-last: center; /* Essential for centering text inside a <select> */
-  background-color: #00BFFF; /* The specific light blue used in your app */
-  font-weight: bold;
+  color: #333;
 }
 
-/* Optional: Ensure the filter bar doesn't look too cramped */
 .filterBar {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-bottom: 20px;
-  padding: 0 12px;
-}
-
-
-.grid {
-    display: grid;
-    grid-template-columns: 1fr; /* Optimized for Android mobile [1] */
-    gap: 16px;
-    padding: 0 12px;
-}
-
-.card {
-    position: relative; /* Necessary for absolute badge positioning */
-    background-color: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    padding: 15px;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-/* STOCK BADGE STYLES */
-.stockBadge {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 14px;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    z-index: 10;
-}
-
-/* OUT OF STOCK STYLE */
-.cardDisabled {
-    opacity: 0.6;
-    filter: grayscale(1);
-    cursor: not-allowed !important;
-}
-
-.productImage {
-    width: 100%;
-    height: auto;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-
-.placeholderName {
-    height: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #f0f0f0;
-    border-radius: 8px;
-    font-weight: bold;
-    color: #555;
-    margin-bottom: 10px;
-}
-
-.cardInfo {
-    text-align: left;
-}
-
-.productTitle {
-    font-size: 1.1rem;
-    font-weight: bold;
-    margin: 0 0 5px 0;
-    color: #2c3e50;
-}
-
-.cardFooter {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.priceText {
-    color: #28a745;
-    font-weight: bold;
-}
-
-/* FOOTER PANEL */
-.selectedContainer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background-color: #fff;
-    padding: 15px;
-    border-top: 2px solid #00BFFF;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-    z-index: 1000;
+  padding: 0 5px;
+  color: #2c3e50;
+  font-weight: bold;
 }
 
 .selectedHeader {
     display: flex;
-    justify-content: space-between;
-    font-weight: bold;
+    justify-content: space-between; /* Empuja Items a la izquierda y Tasa a la derecha */
+    font-weight: bold;             /* Aplica negrita general a la fila */
     margin-bottom: 10px;
     color: #333;
 }
 
+.select {
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  font-size: 18px;
+  background-color: #00BFFF; /* Azul Natura [14] */
+  color: #fff;
+  font-weight: bold;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr; /* Una sola columna para máxima visibilidad en móvil [14] */
+  gap: 16px;
+  width: 100%;
+}
+
+.card {
+  position: relative;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 15px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.card:active {
+  transform: scale(0.98); /* Feedback táctil para Android */
+}
+
+.stockBadge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  z-index: 10;
+}
+
+.cardDisabled {
+  opacity: 0.6;
+  filter: grayscale(1);
+  cursor: not-allowed !important;
+}
+
+.productImage {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.productTitle {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 0 0 5px 0;
+  color: #2c3e50;
+}
+
+.priceText {
+  color: #28a745;
+  font-weight: bold;
+}
+
+/* Panel de selección fijo en la base [12] */
+.selectedContainer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  padding: 15px;
+  border-top: 2px solid #00BFFF;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+  z-index: 1000;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .selectedList {
-    max-height: 120px;
-    overflow-y: auto;
-    margin-bottom: 10px;
+  max-height: 120px;
+  overflow-y: auto;
+  margin-bottom: 10px;
 }
 
 .selectedItem {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 10px;
-    background-color: #f8f9fa;
-    margin-bottom: 4px;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    color: #000;
-}
-
-.selectedItem button {
-    background-color: #ff4d4d;
-    color: white;
-    border: none;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background-color: #f8f9fa;
+  margin-bottom: 5px;
+  border-radius: 4px;
+  color: #000;
 }
 
 .totalRow {
-    font-size: 1.1rem;
-    font-weight: bold;
-    text-align: center;
-    margin: 10px 0;
-    color: #007bff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  text-align: center;
+  margin: 10px 0;
+  color: #007bff;
 }
 
 .actionButtons {
-    display: flex;
-    gap: 10px;
+  display: flex;
+  gap: 10px;
 }
 
-.vaciarBtn {
-    flex: 1;
-    padding: 12px;
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
+.vaciarBtn, .grabarBtn {
+  padding: 15px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
 }
 
-.grabarBtn {
-    flex: 2;
-    padding: 12px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-}
-
-.loading {
-    text-align: center;
-    padding: 50px;
-    font-size: 1.2rem;
-    color: #666;
-}
+.vaciarBtn { background-color: #6c757d; color: white; flex: 1; }
+.grabarBtn { background-color: #28a745; color: white; flex: 2; }
+.grabarBtn:disabled { background-color: #ccc; }
