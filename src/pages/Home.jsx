@@ -1,23 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { db } from '../lib/db/database.js'; // Acceso a dbTasaBCV [4]
-import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // Utilidad de tasa [5]
+import { db } from '../lib/db/database.js'; // Acceso a dbTasaBCV [1, 4]
+import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // Utilidad de tasa [1, 5]
 import styles from './Home.module.css';
 
 function Home() {
   const [productos, setProductos] = useState([]);
   const [grupos, setGrupos] = useState([]);
-  const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]); 
+  const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
   const [tasa, setTasa] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [filtroGrupo, setFiltroGrupo] = useState('todos');
   const navigate = useNavigate();
 
-  // Carga inicial de datos optimizada para Android [6]
+  // Carga inicial de datos optimizada para Android [2, 6]
   useEffect(() => {
     const cargarTodo = async () => {
       try {
-        await db.init(); // Inicializa dbTasaBCV [7]
+        await db.init(); // Inicializa dbTasaBCV [2, 7]
         const [p, g, t] = await Promise.all([
           db.getAll('productos'),
           db.getAll('grupos'),
@@ -35,12 +35,12 @@ function Home() {
     cargarTodo();
   }, []);
 
-  // Filtrado de productos por grupo [8]
+  // Filtrado de productos por grupo [8, 9]
   const productosFiltrados = productos.filter(p => {
     return filtroGrupo === 'todos' || p.grupo === filtroGrupo;
   });
 
-  // Confirmación de seguridad para vaciar selección en móvil [8]
+  // Confirmación de seguridad para vaciar selección en móvil [8, 9]
   const handleVaciarLista = () => {
     if (listaDeSeleccionados.length === 0) return;
     const confirmar = window.confirm(
@@ -49,7 +49,7 @@ function Home() {
     if (confirmar) setListaDeSeleccionados([]);
   };
 
-  // Procesamiento de venta con actualización de stock en tiempo real [2, 3]
+  // Procesamiento de venta con actualización de stock en tiempo real [10-12]
   const handleGrabar = async () => {
     if (listaDeSeleccionados.length === 0) return;
     const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
@@ -60,7 +60,7 @@ function Home() {
         const grupoInfo = grupos.find(g => g.nombre === item.grupo);
         const precioUsd = grupoInfo ? grupoInfo.precio : 0;
 
-        // Registrar en tabla ventas [2, 9]
+        // Registrar en tabla ventas [10, 13, 14]
         await db.add('ventas', {
           productoId: item.id,
           nombre: item.nombre,
@@ -70,7 +70,7 @@ function Home() {
           fecha: new Date().toISOString()
         });
 
-        // Descontar del inventario [3, 10]
+        // Descontar del inventario [11, 14, 15]
         await db.updateStock(item.id, -1);
       }
 
@@ -103,13 +103,13 @@ function Home() {
 
   const { usd, bs } = calcularTotales();
 
-  if (cargando) return <div className={styles.loading}>Cargando tienda...</div>;
+  if (cargando) return <div className={styles.loading}>Cargando tienda...</div>; [16]
 
   return (
     <div className={styles.container}>
       <div className={styles.filterBar}>
         <label htmlFor="filtro-home">Filtrar por Grupo:</label>
-        <select 
+        <select
           id="filtro-home"
           value={filtroGrupo}
           onChange={(e) => setFiltroGrupo(e.target.value)}
@@ -130,8 +130,8 @@ function Home() {
           const esBajoStock = p.stock > 0 && p.stock <= 5;
 
           return (
-            <div 
-              key={p.id} 
+            <div
+              key={p.id}
               className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
               onClick={() => !esAgotado && seleccionarProducto(p)}
             >
@@ -141,34 +141,31 @@ function Home() {
               >
                 {p.stock}
               </div>
-              
+
               {p.imagen ? (
                 <img src={p.imagen} alt={p.nombre} className={styles.productImage} />
               ) : (
                 <div className={styles.placeholderName}>{p.nombre}</div>
               )}
 
-              <div className={styles.cardInfo}>
-                <h3 className={styles.productTitle}>{p.nombre}</h3>
-                <div className={styles.cardFooter}>
-                  <span className={styles.priceText}>ID: {p.id}</span>
-                  &nbsp;&nbsp;-&nbsp;&nbsp;
-                  <span className={styles.priceText}>Precio: ${precio.toFixed(2)}</span>
-                </div>
+              <h3 className={styles.productTitle}>{p.nombre}</h3>
+              <div className={styles.cardFooter}>                
+                <span className={styles.priceText}>
+                  ID: {p.id} - $: {precio.toFixed(2)} - Bs.: {(precio * tasa).toFixed(2)}
+                </span>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Footer fijo optimizado para Android [11, 12] */}
+      {/* Footer fijo optimizado para Android [3, 17, 18] */}
       <div className={styles.selectedContainer}>
-        
         <div className={styles.selectedHeader}>
           <span>Items: <strong>{listaDeSeleccionados.length}</strong></span>
           <span>Tasa: <strong>{tasa.toFixed(2)}</strong></span>
         </div>
-        
+
         <div className={styles.selectedList}>
           {listaDeSeleccionados.map((item, index) => (
             <div key={index} className={styles.selectedItem}>
