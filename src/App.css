@@ -1,7 +1,8 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  width: 100%;         /* Asegura que el root ocupe todo el ancho */
+  max-width: 100%;     /* Elimina el límite de 1280px si existiera */
+  margin: 0;           /* Elimina el margin: 0 auto */
+  padding: 0;          /* ELIMINA el padding: 2rem que causa el recorte */
   text-align: center;
 }
 

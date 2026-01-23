@@ -24,9 +24,8 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
+  display: block;      /* Cambia flex por block para evitar centrados forzados */
+  min-width: 100%;     /* Asegura que ocupe el 100% */
   min-height: 100vh;
 }
 

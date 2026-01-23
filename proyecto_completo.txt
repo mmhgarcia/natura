@@ -33,7 +33,6 @@ ESTRUCTURA DEL PROYECTO: natura
         📄 useGrupos.js
         📄 useProductos.jsx
     📄 Pedidos.jsx
-    📄 Pedidos.module copy.css
     📄 Pedidos.module.css
     📁 ProductosCRUD/
       📄 ModalProducto.jsx
@@ -388,9 +387,10 @@ if __name__ == "__main__":
 FILE: src/App.css
 ------------------------------
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  width: 100%;         /* Asegura que el root ocupe todo el ancho */
+  max-width: 100%;     /* Elimina el límite de 1280px si existiera */
+  margin: 0;           /* Elimina el margin: 0 auto */
+  padding: 0;          /* ELIMINA el padding: 2rem que causa el recorte */
   text-align: center;
 }
 
@@ -1930,9 +1930,9 @@ const importarProductos = async () => {
 
 FILE: src/components/Pedidos.jsx
 ------------------------------
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../lib/db/database'; // Acceso a IndexedDB [1, 4]
+import { db } from '../lib/db/database';
 import GestionPedido from './GestionPedido';
 import styles from './Pedidos.module.css';
 
@@ -1942,37 +1942,32 @@ const PedidosComponente = () => {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
-  const [hoveredRow, setHoveredRow] = useState(null);
-  const [dropdownAbierto, setDropdownAbierto] = useState(null);
   const [stats, setStats] = useState({
     pedidosActivos: 0,
     pedidosCerrados: 0
   });
 
-  const dropdownRefs = useRef({});
-
-  // ==================== CARGAR DATOS ====================
   const cargarRegistros = async () => {
     try {
       setLoading(true);
-      const datos = await db.getAll('pedidos'); // Obtiene de la tabla pedidos [5]
-      
+      // Obtener todos los pedidos de la tabla 'pedidos' en IndexedDB [4]
+      const datos = await db.getAll('pedidos');
+
+      // Ordenar por número de pedido descendente [4, 5]
       const datosOrdenados = datos.sort((a, b) => {
         const numA = parseInt(a.numero_pedido) || 0;
         const numB = parseInt(b.numero_pedido) || 0;
-        return numB - numA; // Orden descendente por número de pedido
+        return numB - numA;
       });
 
       setListaPedidos(datosOrdenados);
 
-      // Calcular estadísticas de pedidos [6]
-      const pedidosActivos = datosOrdenados.filter(p => p.estatus === 'Activo' || !p.estatus).length;
-      const pedidosCerrados = datosOrdenados.filter(p => p.estatus === 'Cerrado').length;
-      setStats({ pedidosActivos, pedidosCerrados });
-
+      // Calcular estadísticas según el estatus [5]
+      const activos = datosOrdenados.filter(p => p.estatus === 'Activo' || !p.estatus).length;
+      const cerrados = datosOrdenados.filter(p => p.estatus === 'Cerrado').length;
+      setStats({ pedidosActivos: activos, pedidosCerrados: cerrados });
     } catch (error) {
       console.error("Error al cargar pedidos:", error);
-      alert("❌ Error al cargar los pedidos.");
     } finally {
       setLoading(false);
     }
@@ -1980,204 +1975,163 @@ const PedidosComponente = () => {
 
   useEffect(() => {
     cargarRegistros();
-
-    const handleClickOutside = (event) => {
-      const isDropdownClick = Object.values(dropdownRefs.current).some(
-        ref => ref && ref.contains(event.target)
-      );
-      if (!isDropdownClick) setDropdownAbierto(null);
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ==================== FUNCIONES DE ACCIÓN ====================
-  
+  // --- NUEVA FUNCIONALIDAD: INCREMENTAR STOCK AL RECIBIR ---
+  const handleRecibirPedido = async (pedido, e) => {
+    e.stopPropagation(); // Evita abrir el modal al hacer click en el icono [6]
+
+    // Validación: solo procesar si no ha sido recibido antes [3]
+    if (pedido.estatus === 'Cerrado') {
+      alert("Este pedido ya fue recibido e ingresado al inventario.");
+      return;
+    }
+
+    const confirmar = window.confirm(`¿Marcar Pedido #${pedido.numero_pedido} como RECIBIDO?\n\nEsta acción sumará las cantidades al stock actual de cada producto.`);
+    
+    if (confirmar) {
+      try {
+        // 1. Recorrer los items del pedido e incrementar el stock [2, 7]
+        // pedido.items es un objeto { id_producto: cantidad }
+        const actualizaciones = Object.entries(pedido.items).map(([id, cantidad]) => {
+          return db.updateStock(parseInt(id), cantidad); // Suma al stock usando el método de la DB [1]
+        });
+
+        await Promise.all(actualizaciones);
+
+        // 2. Actualizar el estatus del pedido a 'Cerrado' [8]
+        const pedidoActualizado = {
+          ...pedido,
+          estatus: 'Cerrado',
+          updatedAt: new Date().toISOString()
+        };
+        
+        await db.put('pedidos', pedidoActualizado);
+
+        // 3. Refrescar la UI
+        alert("✅ Inventario actualizado y pedido marcado como RECIBIDO.");
+        await cargarRegistros();
+      } catch (error) {
+        console.error("Error al procesar la recepción:", error);
+        alert("❌ Error crítico al actualizar el inventario.");
+      }
+    }
+  };
+
   const handleNuevoPedido = () => {
     setPedidoSeleccionado(null);
     setModalOpen(true);
   };
 
-  // NUEVA FUNCIÓN: Vaciar historial con confirmación
-  const handleVaciarTodo = async () => {
-    const primeraConfirmacion = window.confirm(
-      "⚠️ ¿ESTÁS SEGURO?\n\nEsta acción eliminará TODOS los pedidos del historial permanentemente."
-    );
-
-    if (primeraConfirmacion) {
-      const segundaConfirmacion = window.confirm(
-        "🚨 ¡ATENCIÓN!\n\nSe borrarán tanto pedidos pendientes como recibidos. ¿Proceder de todas formas?"
-      );
-
-      if (segundaConfirmacion) {
-        try {
-          await db.db.pedidos.clear(); // Limpia la tabla pedidos en IndexedDB [4, 5]
-          alert("✅ Historial de pedidos vaciado correctamente.");
-          cargarRegistros();
-        } catch (error) {
-          console.error("Error al vaciar pedidos:", error);
-          alert("❌ Error al vaciar la base de datos.");
-        }
-      }
-    }
-  };
-
-  const handleEditar = (pedido, e) => {
-    e.stopPropagation();
-    setDropdownAbierto(null);
-    if (pedido.estatus === 'Cerrado') {
-      alert("ℹ️ Solo se pueden editar pedidos en estado Activo.");
-      return;
-    }
-    setPedidoSeleccionado(pedido);
-    setModalOpen(true);
-  };
-
-  const handleRecibir = async (pedido, e) => {
-    e.stopPropagation();
-    setDropdownAbierto(null);
-    if (pedido.estatus === 'Cerrado') return;
-
-    const confirmar = window.confirm(`¿Procesar ingreso del pedido #${pedido.numero_pedido}?\n\n✅ Esto incrementará el stock y marcará como "Cerrado".`);
-    if (!confirmar) return;
-
-    try {
-      // Actualizar stock de cada producto en el pedido [7]
-      if (pedido.items) {
-        for (const [prodId, qty] of Object.entries(pedido.items)) {
-          if (parseInt(qty) > 0) {
-            await db.updateStock(parseInt(prodId), parseInt(qty));
-          }
-        }
-      }
-
-      await db.put('pedidos', {
-        ...pedido,
-        estatus: 'Cerrado',
-        fechaRecepcion: new Date().toISOString()
-      });
-
-      alert(`✅ Pedido #${pedido.numero_pedido} recibido.`);
-      cargarRegistros();
-    } catch (error) {
-      alert(`❌ Error: ${error.message}`);
-    }
-  };
-
   const handleEliminar = async (pedido, e) => {
     e.stopPropagation();
-    setDropdownAbierto(null);
+    // Capa de seguridad: no eliminar pedidos cerrados [9]
     if (pedido.estatus === 'Cerrado') {
-      alert("❌ Pedido ya procesado. No se puede eliminar.");
+      alert("No se puede eliminar un pedido que ya ha sido recibido.");
       return;
     }
 
-    if (window.confirm(`⚠️ ¿ELIMINAR PEDIDO #${pedido.numero_pedido}?\n\nEsta acción NO se puede deshacer.`)) {
-      try {
-        await db.del('pedidos', pedido.id); // Elimina de IndexedDB [7, 8]
-        cargarRegistros();
-      } catch (error) {
-        alert(`❌ Error: ${error.message}`);
-      }
+    if (window.confirm(`¿Eliminar pedido #${pedido.numero_pedido}?`)) {
+      await db.del('pedidos', pedido.id);
+      cargarRegistros();
     }
   };
-
-  const exportarPedido = async (pedido, e) => {
-    if (e) e.stopPropagation();
-    setDropdownAbierto(null);
-    // Lógica de exportación de archivo .txt para proveedor [9, 10]
-    // ... (Se mantiene igual a la fuente original)
-  };
-
-  // ==================== RENDER ====================
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <button onClick={() => navigate(-1)} className={styles.backArrow}>←</button>
-        <h1 className={styles.title}>📦 Gestión de Pedidos</h1>
+        <span className={styles.title}>Pedidos Natura</span>
+        <button onClick={handleNuevoPedido} className={styles.addBtnCircle}>+</button>
       </header>
 
+      {/* Barra de Estadísticas [6] */}
       <div className={styles.statsBar}>
         <div className={styles.statCard}>
           <span className={styles.statNumber}>{listaPedidos.length}</span>
           <span className={styles.statLabel}>TOTAL</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statNumber} style={{color: '#27ae60'}}>{stats.pedidosActivos}</span>
+          <span className={styles.statNumber} style={{ color: '#27ae60' }}>{stats.pedidosActivos}</span>
           <span className={styles.statLabel}>PENDIENTES</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statNumber} style={{color: '#3498db'}}>{stats.pedidosCerrados}</span>
+          <span className={styles.statNumber} style={{ color: '#3498db' }}>{stats.pedidosCerrados}</span>
           <span className={styles.statLabel}>RECIBIDOS</span>
         </div>
       </div>
 
-      <main className={styles.content}>
-        <div className={styles.actionHeader}>
-          <button className={styles.addBtnCircle} onClick={handleNuevoPedido}>+</button>
-          {listaPedidos.length > 0 && (
-            <button className={styles.vaciarHistorialBtn} onClick={handleVaciarTodo}>
-              🗑️ Vaciar Historial
-            </button>
-          )}
-        </div>
+      <div className={styles.listaCards}>
+        {loading ? (
+          <p className={styles.loading}>Cargando registros...</p>
+        ) : listaPedidos.length === 0 ? (
+          <p className={styles.loading}>No hay pedidos registrados</p>
+        ) : (
+          listaPedidos.map((p) => (
+            <div 
+              key={p.id} 
+              className={styles.pedidoCard}
+              onClick={() => { setPedidoSeleccionado(p); setModalOpen(true); }}
+              style={{ borderLeftColor: p.estatus === 'Cerrado' ? '#3498db' : '#27ae60' }}
+            >
+              <div className={styles.cardHeader}>
+                <span className={styles.orderNumber}>#{p.numero_pedido}</span>
+                <span className={`${styles.statusBadge} ${p.estatus === 'Cerrado' ? styles.statusCerrado : styles.statusPendiente}`}>
+                  {p.estatus === 'Cerrado' ? '✅ RECIBIDO' : '🟢 PENDIENTE'}
+                </span>
+              </div>
+              
+              <div className={styles.tasaRow}>
+                <span className={styles.tasaLabel}>💰 Tasa BCV aplicada:</span>
+                <span className={styles.tasaValue}>{p.tasa || '---'}</span>
+              </div>
 
-        <div className={styles.headerRow}>
-          <div className={styles.headerCell}>PEDIDO</div>
-          <div className={styles.headerCell}>FECHA</div>
-          <div className={styles.headerCell}>TOTAL</div>
-          <div className={styles.headerCell}>ACCIONES</div>
-        </div>
-
-        <div className={styles.listaContainer}>
-          {loading ? (
-            <div className={styles.loading}>Cargando...</div>
-          ) : listaPedidos.length === 0 ? (
-            <div className={styles.emptyState}>No hay pedidos registrados</div>
-          ) : (
-            listaPedidos.map((p) => (
-              <div 
-                key={p.id} 
-                className={styles.row}
-                onClick={() => setPedidoSeleccionado(p) || setModalOpen(true)}
-              >
-                <div className={styles.cell}>
-                  <span className={styles.pedidoNumero}>#{p.numero_pedido}</span>
-                  <span className={p.estatus === 'Cerrado' ? styles.estatusCerrado : styles.estatusActivo}>
-                    {p.estatus === 'Cerrado' ? '✅ Recibido' : '🟢 Pendiente'}
-                  </span>
+              <div className={styles.cardBody}>
+                <div className={styles.cardDate}>
+                  📅 {new Date(p.fecha_pedido).toLocaleDateString('es-ES')}
                 </div>
-                <div className={styles.cell}>
-                  {new Date(p.fecha_pedido).toLocaleDateString('es-ES')}
-                </div>
-                <div className={styles.cell}>
-                  <div className={styles.totalBS}>Bs. {p.total_bs?.toFixed(2)}</div>
-                  <div className={styles.totalUSD}>$ {p.total_usd?.toFixed(2)}</div>
-                </div>
-                <div className={styles.cell}>
-                  <button 
-                    className={styles.dropdownButton}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDropdownAbierto(dropdownAbierto === p.id ? null : p.id);
-                    }}
-                  >⋮</button>
-                  {dropdownAbierto === p.id && (
-                    <div className={styles.dropdownMenu}>
-                      <button onClick={(e) => handleEditar(p, e)} className={styles.dropdownItem}>✏️ Editar</button>
-                      <button onClick={(e) => handleRecibir(p, e)} className={styles.dropdownItem}>📥 Recibir</button>
-                      <button onClick={(e) => exportarPedido(p, e)} className={styles.dropdownItem}>📤 Exportar</button>
-                      <button onClick={(e) => handleEliminar(p, e)} className={styles.dropdownItem}>🗑️ Eliminar</button>
-                    </div>
-                  )}
+                <div className={styles.cardTotals}>
+                  <div className={styles.totalUsd}>${p.total_usd?.toFixed(2)}</div>
+                  <div className={styles.totalBs}>Bs. {p.total_bs?.toFixed(2)}</div>
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </main>
+
+              <div className={styles.cardActions}>
+                {/* Botón Editar / Ver */}
+                <span className={styles.actionBtn}>✏️</span>
+                
+                {/* Botón RECIBIR con la nueva lógica vinculada */}
+                <span 
+                  className={styles.actionBtn}
+                  onClick={(e) => handleRecibirPedido(p, e)}
+                  style={{ 
+                    opacity: p.estatus === 'Cerrado' ? 0.3 : 1,
+                    cursor: p.estatus === 'Cerrado' ? 'not-allowed' : 'pointer',
+                    backgroundColor: p.estatus === 'Cerrado' ? '#eee' : '#e8f4fc'
+                  }}
+                  title="Recibir Pedido e incrementar Stock"
+                >
+                  📥
+                </span>
+
+                <span className={styles.actionBtn}>📤</span>
+                
+                <button 
+                  onClick={(e) => handleEliminar(p, e)}
+                  className={styles.deleteBtn}
+                  disabled={p.estatus === 'Cerrado'}
+                  style={{
+                    opacity: p.estatus === 'Cerrado' ? 0.3 : 1,
+                    cursor: p.estatus === 'Cerrado' ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
 
       {modalOpen && (
         <GestionPedido 
@@ -2193,344 +2147,18 @@ const PedidosComponente = () => {
 export default PedidosComponente;
 ************************************************************
 
-FILE: src/components/Pedidos.module copy.css
-------------------------------
-/* src/components/Pedidos.module.css */
-
-.container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    min-height: 100vh;
-    background-color: #f5f7fa;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-.header {
-    display: flex;
-    align-items: center;
-    padding: 15px 20px;
-    background-color: #2c3e50;
-    color: white;
-    width: 100%;
-    box-sizing: border-box;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.backArrow {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 24px;
-    cursor: pointer;
-    margin-right: 15px;
-    padding: 5px 10px;
-    border-radius: 6px;
-    transition: all 0.2s;
-}
-
-.backArrow:hover {
-    background-color: rgba(255,255,255,0.1);
-}
-
-.title {
-    font-size: 20px;
-    font-weight: bold;
-    margin: 0;
-    flex: 1;
-}
-
-.statsBar {
-    display: flex;
-    justify-content: space-around;
-    padding: 15px 20px;
-    background-color: white;
-    border-bottom: 1px solid #eaeaea;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
-.statCard {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 12px 20px;
-    background-color: #f8f9fa;
-    border-radius: 10px;
-    min-width: 100px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.statNumber {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 5px;
-    /* Added grey colour for visibility on Android mobile */
-    color: #7f8c8d; 
-}
-
-.statLabel {
-    font-size: 12px;
-    color: #7f8c8d;
-    text-align: center;
-}
-
-.content {
-    padding: 0 20px 20px;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.addBtnCircle {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: #27ae60;
-    color: white;
-    border: none;
-    font-size: 36px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
-    padding: 0;
-    line-height: 0;
-    transition: all 0.3s;
-    margin: 0 auto 20px;
-}
-
-.addBtnCircle:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 16px rgba(39, 174, 96, 0.4);
-}
-
-.headerRow {
-    display: grid;
-    grid-template-columns: 100px 100px 120px 80px;
-    background-color: #34495e;
-    border-bottom: 2px solid #2c3e50;
-    padding: 14px 10px;
-    font-weight: bold;
-    font-size: 13px;
-    color: white;
-    border-radius: 8px 8px 0 0;
-}
-
-.headerCell {
-    text-align: left;
-    padding: 0 5px;
-}
-
-.listaContainer {
-    width: 100%;
-    min-height: 200px;
-    background-color: white;
-    border-radius: 0 0 8px 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.row {
-    display: grid;
-    grid-template-columns: 100px 100px 120px 80px;
-    border-bottom: 1px solid #f0f0f0;
-    cursor: pointer;
-    align-items: center;
-    padding: 12px 10px;
-    transition: all 0.2s;
-}
-
-.row:hover {
-    background-color: #f8f9ff;
-}
-
-.cell {
-    padding: 8px 5px;
-    text-align: left;
-    color: #2c3e50;
-    font-size: 14px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.pedidoNumero {
-    font-weight: bold;
-    font-size: 15px;
-    color: #2c3e50;
-}
-
-.pedidoEstatus {
-    font-size: 11px;
-    margin-top: 3px;
-    padding: 3px 8px;
-    border-radius: 12px;
-    display: inline-block;
-    width: fit-content;
-    font-weight: 500;
-}
-
-.estatusActivo {
-    background-color: #d5f4e6;
-    color: #27ae60;
-    border: 1px solid #27ae60;
-}
-
-.estatusCerrado {
-    background-color: #e8f4fc;
-    color: #3498db;
-    border: 1px solid #3498db;
-}
-
-.totalContainer {
-    display: flex;
-    flex-direction: column;
-}
-
-.totalBS {
-    font-weight: bold;
-    font-size: 14px;
-    color: #2c3e50;
-}
-
-.totalUSD {
-    font-size: 12px;
-    color: #7f8c8d;
-    margin-top: 2px;
-}
-
-/* DROPDOWN STYLES */
-.dropdownContainer {
-    position: relative;
-    display: inline-block;
-}
-
-.dropdownButton {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #2c3e50;
-    cursor: pointer;
-    padding: 5px 10px;
-    border-radius: 4px;
-    transition: all 0.2s;
-    font-weight: bold;
-}
-
-.dropdownButton:hover {
-    background-color: #f0f0f0;
-}
-
-.dropdownMenu {
-    position: absolute;
-    right: 0;
-    top: 100%;
-    background-color: white;
-    min-width: 180px;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    z-index: 1000;
-    border: 1px solid #e0e0e0;
-    margin-top: 5px;
-}
-
-.dropdownItem {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 10px 15px;
-    border: none;
-    background: none;
-    text-align: left;
-    font-size: 14px;
-    color: #333;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.dropdownItem:not(:disabled):hover {
-    background-color: #f5f5f5 !important;
-}
-
-.dropdownItem:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    color: #999;
-}
-
-.dropdownIcon {
-    width: 20px;
-    text-align: center;
-}
-
-.dropdownSeparator {
-    height: 1px;
-    background-color: #e0e0e0;
-    margin: 5px 0;
-}
-
-/* LOADING AND EMPTY STATES */
-.loadingContainer {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    color: #7f8c8d;
-}
-
-.loadingSpinner {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-    margin-bottom: 20px;
-}
-
-.emptyState {
-    text-align: center;
-    padding: 60px 20px;
-    color: #7f8c8d;
-}
-
-.emptyStateIcon {
-    font-size: 60px;
-    margin-bottom: 20px;
-    opacity: 0.3;
-}
-
-/* ANIMATIONS */
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-************************************************************
-
 FILE: src/components/Pedidos.module.css
 ------------------------------
-/* src/components/Pedidos.module.css */
-
 .container {
     display: flex;
     flex-direction: column;
-    width: 100%;
+    width: 100vw;
     min-height: 100vh;
     background-color: #f5f7fa;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    overflow-x: hidden; /* Evita el recorte derecho */
 }
 
 .header {
@@ -2539,12 +2167,11 @@ FILE: src/components/Pedidos.module.css
     padding: 15px 20px;
     background-color: #2c3e50;
     color: white;
-    width: 100%;
-    box-sizing: border-box;
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .backArrow {
@@ -2552,295 +2179,131 @@ FILE: src/components/Pedidos.module.css
     border: none;
     color: white;
     font-size: 24px;
-    cursor: pointer;
     margin-right: 15px;
-    padding: 5px 10px;
-    border-radius: 6px;
-    transition: all 0.2s;
-}
-
-.backArrow:hover {
-    background-color: rgba(255,255,255,0.1);
 }
 
 .title {
-    font-size: 20px;
+    font-size: 1.2rem;
     font-weight: bold;
-    margin: 0;
     flex: 1;
+    margin-right: 20px; /* Margen derecho del literal solicitado */
+}
+
+/* Botón "+" corregido para ser circular */
+.addBtnCircle {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    font-size: 28px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0; /* Elimina padding que causa elipse */
+    flex-shrink: 0; /* Evita que se aplaste en el contenedor flex */
+    box-sizing: border-box;
+}
+
+/* Estilo para la Tasa BCV dentro de la card */
+.tasaRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background-color: #fcf8e3;
+    border-radius: 6px;
+    border: 1px solid #faebcc;
+    width: fit-content;
+    margin: 5px 0;
+}
+
+.tasaLabel {
+    font-size: 0.8rem;
+    color: #8a6d3b;
+    font-weight: 600;
+}
+
+.tasaValue {
+    font-size: 0.9rem;
+    color: #2c3e50;
+    font-weight: 800;
 }
 
 .statsBar {
-    display: flex;
-    justify-content: space-around;
-    padding: 15px 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 15px;
     background-color: white;
     border-bottom: 1px solid #eaeaea;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-    gap: 15px;
 }
 
 .statCard {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 12px 20px;
+    padding: 10px;
     background-color: #f8f9fa;
-    border-radius: 10px;
-    min-width: 100px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-radius: 8px;
 }
 
-.statNumber {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 5px;
-    /* Added grey colour for visibility on Android mobile */
-    color: #7f8c8d; 
-}
+.statNumber { font-size: 1.1rem; font-weight: bold; color: #7f8c8d; }
+.statLabel { font-size: 0.65rem; color: #95a5a6; text-transform: uppercase; }
 
-.statLabel {
-    font-size: 12px;
-    color: #7f8c8d;
-    text-align: center;
-}
-
-.content {
-    padding: 0 20px 20px;
+.listaCards {
     display: flex;
     flex-direction: column;
+    gap: 15px;
+    padding: 15px;
     width: 100%;
     box-sizing: border-box;
 }
 
-.addBtnCircle {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: #27ae60;
-    color: white;
-    border: none;
-    font-size: 36px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
-    padding: 0;
-    line-height: 0;
-    transition: all 0.3s;
-    margin: 0 auto 20px;
-}
-
-.addBtnCircle:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 16px rgba(39, 174, 96, 0.4);
-}
-
-.headerRow {
-    display: grid;
-    grid-template-columns: 100px 100px 120px 80px;
-    background-color: #34495e;
-    border-bottom: 2px solid #2c3e50;
-    padding: 14px 10px;
-    font-weight: bold;
-    font-size: 13px;
-    color: white;
-    border-radius: 8px 8px 0 0;
-}
-
-.headerCell {
-    text-align: left;
-    padding: 0 5px;
-}
-
-.listaContainer {
-    width: 100%;
-    min-height: 200px;
+.pedidoCard {
     background-color: white;
-    border-radius: 0 0 8px 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.row {
-    display: grid;
-    grid-template-columns: 100px 100px 120px 80px;
-    border-bottom: 1px solid #f0f0f0;
-    cursor: pointer;
-    align-items: center;
-    padding: 12px 10px;
-    transition: all 0.2s;
-}
-
-.row:hover {
-    background-color: #f8f9ff;
-}
-
-.cell {
-    padding: 8px 5px;
-    text-align: left;
-    color: #2c3e50;
-    font-size: 14px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.pedidoNumero {
-    font-weight: bold;
-    font-size: 15px;
-    color: #2c3e50;
-}
-
-.pedidoEstatus {
-    font-size: 11px;
-    margin-top: 3px;
-    padding: 3px 8px;
     border-radius: 12px;
-    display: inline-block;
-    width: fit-content;
-    font-weight: 500;
-}
-
-.estatusActivo {
-    background-color: #d5f4e6;
-    color: #27ae60;
-    border: 1px solid #27ae60;
-}
-
-.estatusCerrado {
-    background-color: #e8f4fc;
-    color: #3498db;
-    border: 1px solid #3498db;
-}
-
-.totalContainer {
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-left: 6px solid #00BFFF;
     display: flex;
     flex-direction: column;
-}
-
-.totalBS {
-    font-weight: bold;
-    font-size: 14px;
-    color: #2c3e50;
-}
-
-.totalUSD {
-    font-size: 12px;
-    color: #7f8c8d;
-    margin-top: 2px;
-}
-
-/* DROPDOWN STYLES */
-.dropdownContainer {
-    position: relative;
-    display: inline-block;
-}
-
-.dropdownButton {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #2c3e50;
-    cursor: pointer;
-    padding: 5px 10px;
-    border-radius: 4px;
-    transition: all 0.2s;
-    font-weight: bold;
-}
-
-.dropdownButton:hover {
-    background-color: #f0f0f0;
-}
-
-.dropdownMenu {
-    position: absolute;
-    right: 0;
-    top: 100%;
-    background-color: white;
-    min-width: 180px;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    z-index: 1000;
-    border: 1px solid #e0e0e0;
-    margin-top: 5px;
-}
-
-.dropdownItem {
-    display: flex;
-    align-items: center;
     gap: 10px;
     width: 100%;
-    padding: 10px 15px;
-    border: none;
-    background: none;
-    text-align: left;
-    font-size: 14px;
-    color: #333;
-    cursor: pointer;
-    transition: all 0.2s;
+    box-sizing: border-box;
 }
 
-.dropdownItem:not(:disabled):hover {
-    background-color: #f5f5f5 !important;
-}
+.cardHeader { display: flex; justify-content: space-between; align-items: center; }
+.orderNumber { font-size: 1.1rem; font-weight: 800; color: #2c3e50; }
+.statusBadge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; font-weight: bold; }
+.statusPendiente { background-color: #d5f4e6; color: #27ae60; }
+.statusCerrado { background-color: #e8f4fc; color: #3498db; }
 
-.dropdownItem:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    color: #999;
-}
+.cardBody { display: flex; justify-content: space-between; align-items: flex-end; }
+.cardDate { font-size: 0.9rem; color: #7f8c8d; }
+.totalUsd { font-size: 1.5rem; font-weight: 900; color: #28a745; }
+.totalBs { font-size: 0.85rem; color: #7f8c8d; }
 
-.dropdownIcon {
-    width: 20px;
-    text-align: center;
-}
-
-.dropdownSeparator {
-    height: 1px;
-    background-color: #e0e0e0;
-    margin: 5px 0;
-}
-
-/* LOADING AND EMPTY STATES */
-.loadingContainer {
+.cardActions {
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.actionBtn, .deleteBtn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background-color: #f8f9fa;
+    font-size: 1.2rem;
+    display: flex;
     justify-content: center;
-    padding: 60px 20px;
-    color: #7f8c8d;
 }
 
-.loadingSpinner {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-    margin-bottom: 20px;
-}
-
-.emptyState {
-    text-align: center;
-    padding: 60px 20px;
-    color: #7f8c8d;
-}
-
-.emptyStateIcon {
-    font-size: 60px;
-    margin-bottom: 20px;
-    opacity: 0.3;
-}
-
-/* ANIMATIONS */
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+.deleteBtn { color: #f44336; border-color: #ffcdd2; }
 ************************************************************
 
 FILE: src/components/ProductosCRUD/ModalProducto.jsx
@@ -4626,9 +4089,8 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
+  display: block;      /* Cambia flex por block para evitar centrados forzados */
+  min-width: 100%;     /* Asegura que ocupe el 100% */
   min-height: 100vh;
 }
 

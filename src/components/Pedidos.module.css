@@ -1,14 +1,13 @@
-
 .container {
     display: flex;
     flex-direction: column;
-    width: 100%;
+    width: 100vw;
     min-height: 100vh;
     background-color: #f5f7fa;
     margin: 0;
     padding: 0;
-    box-sizing: border-box; /* Asegura que el padding no sume al ancho total [1, 2] */
-    overflow-x: hidden; /* Evita el desbordamiento horizontal en Android [3] */
+    box-sizing: border-box;
+    overflow-x: hidden; /* Evita el recorte derecho */
 }
 
 .header {
@@ -17,12 +16,11 @@
     padding: 15px 20px;
     background-color: #2c3e50;
     color: white;
-    width: 100%;
-    box-sizing: border-box;
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .backArrow {
@@ -30,502 +28,128 @@
     border: none;
     color: white;
     font-size: 24px;
-    cursor: pointer;
     margin-right: 15px;
-    padding: 5px 10px;
-    border-radius: 6px;
-    transition: all 0.2s;
 }
 
 .title {
-    font-size: 20px;
+    font-size: 1.2rem;
     font-weight: bold;
-    margin: 0;
     flex: 1;
+    margin-right: 20px; /* Margen derecho del literal solicitado */
 }
 
-/* RESUMEN DE PEDIDOS: 3 botones en la misma línea con el mismo ancho */
-.statsBar {
+/* Botón "+" corregido para ser circular */
+.addBtnCircle {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    font-size: 28px;
     display: flex;
-    flex-direction: row; /* Fuerza una sola línea para evitar el efecto oversized [4] */
-    justify-content: space-between;
-    padding: 15px 10px;
+    justify-content: center;
+    align-items: center;
+    padding: 0; /* Elimina padding que causa elipse */
+    flex-shrink: 0; /* Evita que se aplaste en el contenedor flex */
+    box-sizing: border-box;
+}
+
+/* Estilo para la Tasa BCV dentro de la card */
+.tasaRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background-color: #fcf8e3;
+    border-radius: 6px;
+    border: 1px solid #faebcc;
+    width: fit-content;
+    margin: 5px 0;
+}
+
+.tasaLabel {
+    font-size: 0.8rem;
+    color: #8a6d3b;
+    font-weight: 600;
+}
+
+.tasaValue {
+    font-size: 0.9rem;
+    color: #2c3e50;
+    font-weight: 800;
+}
+
+.statsBar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 15px;
     background-color: white;
     border-bottom: 1px solid #eaeaea;
-    margin-bottom: 15px;
-    gap: 8px; /* Espaciado uniforme entre los elementos */
-    width: 100%;
-    box-sizing: border-box;
 }
 
 .statCard {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 10px 5px;
+    padding: 10px;
     background-color: #f8f9fa;
-    border-radius: 10px;
-    flex: 1; /* Hace que los tres botones tengan exactamente el mismo ancho */
-    min-width: 0; /* Permite que el contenido se ajuste en pantallas pequeñas */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-radius: 8px;
 }
 
-.statNumber {
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 5px;
-    color: #7f8c8d; /* Color optimizado para visibilidad en Android [5, 6] */
-}
+.statNumber { font-size: 1.1rem; font-weight: bold; color: #7f8c8d; }
+.statLabel { font-size: 0.65rem; color: #95a5a6; text-transform: uppercase; }
 
-.statLabel {
-    font-size: 10px;
-    color: #7f8c8d;
-    text-align: center;
-    text-transform: uppercase;
-}
-
-.content {
-    padding: 0 10px 20px;
+.listaCards {
     display: flex;
     flex-direction: column;
+    gap: 15px;
+    padding: 15px;
     width: 100%;
     box-sizing: border-box;
 }
 
-/* BOTÓN "+" CON FORMA CIRCULAR */
-.addBtnCircle {
-    width: 60px; /* Ancho y alto idénticos para garantizar el círculo [7, 8] */
-    height: 60px;
-    border-radius: 50%; /* Crea la forma circular */
-    background-color: #27ae60;
-    color: white;
-    border: none;
-    font-size: 36px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
-    padding: 0;
-    line-height: 0;
-    transition: all 0.3s;
-    margin: 0 auto 20px; /* Centrado horizontal */
-}
-
-.addBtnCircle:active {
-    transform: scale(0.95); /* Feedback visual para dispositivos táctiles */
-}
-
-/* GRID DINÁMICO: Ajustado para ser responsivo (fr en lugar de px) */
-.headerRow {
-    display: grid;
-    /* Se sustituyen los px fijos [8] por unidades fr para evitar el modo oversized */
-    grid-template-columns: 1fr 1fr 1.5fr 0.5fr; 
-    background-color: #34495e;
-    border-bottom: 2px solid #2c3e50;
-    padding: 12px 5px;
-    font-weight: bold;
-    font-size: 12px;
-    color: white;
-    border-radius: 8px 8px 0 0;
-}
-
-.headerCell {
-    text-align: left;
-    padding: 0 5px;
-}
-
-.listaContainer {
-    width: 100%;
-    min-height: 200px;
+.pedidoCard {
     background-color: white;
-    border-radius: 0 0 8px 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.row {
-    display: grid;
-    /* Debe coincidir exactamente con el grid-template-columns del headerRow */
-    grid-template-columns: 1fr 1fr 1.5fr 0.5fr;
-    border-bottom: 1px solid #f0f0f0;
-    cursor: pointer;
-    align-items: center;
-    padding: 12px 5px;
-    transition: all 0.2s;
-}
-
-.row:active {
-    background-color: #f0f7ff;
-}
-
-.cell {
-    padding: 5px;
-    text-align: left;
-    color: #2c3e50;
-    font-size: 13px;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-left: 6px solid #00BFFF;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    overflow: hidden; /* Evita que el texto rompa la estructura de la celda */
-}
-
-.pedidoNumero {
-    font-weight: bold;
-    font-size: 14px;
-    color: #2c3e50;
-}
-
-.pedidoEstatus {
-    font-size: 10px;
-    margin-top: 3px;
-    padding: 2px 6px;
-    border-radius: 10px;
-    display: inline-block;
-    width: fit-content;
-    font-weight: 600;
-}
-
-.estatusActivo {
-    background-color: #d5f4e6;
-    color: #27ae60;
-    border: 1px solid #27ae60;
-}
-
-.estatusCerrado {
-    background-color: #e8f4fc;
-    color: #3498db;
-    border: 1px solid #3498db;
-}
-
-.totalContainer {
-    display: flex;
-    flex-direction: column;
-}
-
-.totalBS {
-    font-weight: bold;
-    font-size: 13px;
-    color: #2c3e50;
-}
-
-.totalUSD {
-    font-size: 11px;
-    color: #7f8c8d;
-    margin-top: 1px;
-}
-
-/* DROPDOWN MENU */
-.dropdownButton {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #2c3e50;
-    cursor: pointer;
-    padding: 5px;
-    font-weight: bold;
-}
-
-.dropdownMenu {
-    position: absolute;
-    right: 10px;
-    top: auto;
-    background-color: white;
-    min-width: 150px;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    z-index: 1000;
-    border: 1px solid #e0e0e0;
-}
-
-.dropdownItem {
-    display: flex;
-    align-items: center;
     gap: 10px;
     width: 100%;
-    padding: 12px 15px;
-    border: none;
-    background: none;
-    text-align: left;
-    font-size: 14px;
-    color: #333;
-    cursor: pointer;
-}
-
-/* CARGA Y ESTADOS VACÍOS */
-.loadingContainer, .emptyState {
-    text-align: center;
-    padding: 40px 20px;
-    color: #7f8c8d;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-.container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    min-height: 100vh;
-    background-color: #f5f7fa;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box; /* Asegura que el padding no sume al ancho total [1, 2] */
-    overflow-x: hidden; /* Evita el desbordamiento horizontal en Android [3] */
-}
-
-.header {
-    display: flex;
-    align-items: center;
-    padding: 15px 20px;
-    background-color: #2c3e50;
-    color: white;
-    width: 100%;
     box-sizing: border-box;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.backArrow {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 24px;
-    cursor: pointer;
-    margin-right: 15px;
-    padding: 5px 10px;
-    border-radius: 6px;
-    transition: all 0.2s;
+.cardHeader { display: flex; justify-content: space-between; align-items: center; }
+.orderNumber { font-size: 1.1rem; font-weight: 800; color: #2c3e50; }
+.statusBadge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; font-weight: bold; }
+.statusPendiente { background-color: #d5f4e6; color: #27ae60; }
+.statusCerrado { background-color: #e8f4fc; color: #3498db; }
+
+.cardBody { display: flex; justify-content: space-between; align-items: flex-end; }
+.cardDate { font-size: 0.9rem; color: #7f8c8d; }
+.totalUsd { font-size: 1.5rem; font-weight: 900; color: #28a745; }
+.totalBs { font-size: 0.85rem; color: #7f8c8d; }
+
+.cardActions {
+    display: flex;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
 }
 
-.title {
-    font-size: 20px;
-    font-weight: bold;
-    margin: 0;
+.actionBtn, .deleteBtn {
     flex: 1;
-}
-
-/* RESUMEN DE PEDIDOS: 3 botones en la misma línea con el mismo ancho */
-.statsBar {
-    display: flex;
-    flex-direction: row; /* Fuerza una sola línea para evitar el efecto oversized [4] */
-    justify-content: space-between;
-    padding: 15px 10px;
-    background-color: white;
-    border-bottom: 1px solid #eaeaea;
-    margin-bottom: 15px;
-    gap: 8px; /* Espaciado uniforme entre los elementos */
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.statCard {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 5px;
-    background-color: #f8f9fa;
-    border-radius: 10px;
-    flex: 1; /* Hace que los tres botones tengan exactamente el mismo ancho */
-    min-width: 0; /* Permite que el contenido se ajuste en pantallas pequeñas */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.statNumber {
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 5px;
-    color: #7f8c8d; /* Color optimizado para visibilidad en Android [5, 6] */
-}
-
-.statLabel {
-    font-size: 10px;
-    color: #7f8c8d;
-    text-align: center;
-    text-transform: uppercase;
-}
-
-.content {
-    padding: 0 10px 20px;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-/* BOTÓN "+" CON FORMA CIRCULAR */
-.addBtnCircle {
-    width: 60px; /* Ancho y alto idénticos para garantizar el círculo [7, 8] */
-    height: 60px;
-    border-radius: 50%; /* Crea la forma circular */
-    background-color: #27ae60;
-    color: white;
-    border: none;
-    font-size: 36px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
-    padding: 0;
-    line-height: 0;
-    transition: all 0.3s;
-    margin: 0 auto 20px; /* Centrado horizontal */
-}
-
-.addBtnCircle:active {
-    transform: scale(0.95); /* Feedback visual para dispositivos táctiles */
-}
-
-/* GRID DINÁMICO: Ajustado para ser responsivo (fr en lugar de px) */
-.headerRow {
-    display: grid;
-    /* Se sustituyen los px fijos [8] por unidades fr para evitar el modo oversized */
-    grid-template-columns: 1fr 1fr 1.5fr 0.5fr; 
-    background-color: #34495e;
-    border-bottom: 2px solid #2c3e50;
-    padding: 12px 5px;
-    font-weight: bold;
-    font-size: 12px;
-    color: white;
-    border-radius: 8px 8px 0 0;
-}
-
-.headerCell {
-    text-align: left;
-    padding: 0 5px;
-}
-
-.listaContainer {
-    width: 100%;
-    min-height: 200px;
-    background-color: white;
-    border-radius: 0 0 8px 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.row {
-    display: grid;
-    /* Debe coincidir exactamente con el grid-template-columns del headerRow */
-    grid-template-columns: 1fr 1fr 1.5fr 0.5fr;
-    border-bottom: 1px solid #f0f0f0;
-    cursor: pointer;
-    align-items: center;
-    padding: 12px 5px;
-    transition: all 0.2s;
-}
-
-.row:active {
-    background-color: #f0f7ff;
-}
-
-.cell {
-    padding: 5px;
-    text-align: left;
-    color: #2c3e50;
-    font-size: 13px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    overflow: hidden; /* Evita que el texto rompa la estructura de la celda */
-}
-
-.pedidoNumero {
-    font-weight: bold;
-    font-size: 14px;
-    color: #2c3e50;
-}
-
-.pedidoEstatus {
-    font-size: 10px;
-    margin-top: 3px;
-    padding: 2px 6px;
-    border-radius: 10px;
-    display: inline-block;
-    width: fit-content;
-    font-weight: 600;
-}
-
-.estatusActivo {
-    background-color: #d5f4e6;
-    color: #27ae60;
-    border: 1px solid #27ae60;
-}
-
-.estatusCerrado {
-    background-color: #e8f4fc;
-    color: #3498db;
-    border: 1px solid #3498db;
-}
-
-.totalContainer {
-    display: flex;
-    flex-direction: column;
-}
-
-.totalBS {
-    font-weight: bold;
-    font-size: 13px;
-    color: #2c3e50;
-}
-
-.totalUSD {
-    font-size: 11px;
-    color: #7f8c8d;
-    margin-top: 1px;
-}
-
-/* DROPDOWN MENU */
-.dropdownButton {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #2c3e50;
-    cursor: pointer;
-    padding: 5px;
-    font-weight: bold;
-}
-
-.dropdownMenu {
-    position: absolute;
-    right: 10px;
-    top: auto;
-    background-color: white;
-    min-width: 150px;
+    padding: 10px;
     border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    z-index: 1000;
-    border: 1px solid #e0e0e0;
-}
-
-.dropdownItem {
+    border: 1px solid #ddd;
+    background-color: #f8f9fa;
+    font-size: 1.2rem;
     display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 12px 15px;
-    border: none;
-    background: none;
-    text-align: left;
-    font-size: 14px;
-    color: #333;
-    cursor: pointer;
+    justify-content: center;
 }
 
-/* CARGA Y ESTADOS VACÍOS */
-.loadingContainer, .emptyState {
-    text-align: center;
-    padding: 40px 20px;
-    color: #7f8c8d;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+.deleteBtn { color: #f44336; border-color: #ffcdd2; }

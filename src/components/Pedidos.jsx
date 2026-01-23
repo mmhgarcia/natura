@@ -1,221 +1,215 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../lib/db/database'; // Acceso a IndexedDB [1]
+import { db } from '../lib/db/database';
 import GestionPedido from './GestionPedido';
 import styles from './Pedidos.module.css';
 
 const PedidosComponente = () => {
-    const navigate = useNavigate();
-    const [listaPedidos, setListaPedidos] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [modalOpen, setModalOpen] = useState(false);
-    const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
-    const [dropdownAbierto, setDropdownAbierto] = useState(null);
-    const [stats, setStats] = useState({
-        pedidosActivos: 0,
-        pedidosCerrados: 0
-    });
-    const dropdownRefs = useRef({});
+  const navigate = useNavigate();
+  const [listaPedidos, setListaPedidos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
+  const [stats, setStats] = useState({
+    pedidosActivos: 0,
+    pedidosCerrados: 0
+  });
 
-    // ==================== CARGAR DATOS ====================
-    const cargarRegistros = async () => {
-        try {
-            setLoading(true);
-            const datos = await db.getAll('pedidos'); [2]
-            const datosOrdenados = datos.sort((a, b) => {
-                const numA = parseInt(a.numero_pedido) || 0;
-                const numB = parseInt(b.numero_pedido) || 0;
-                return numB - numA; 
-            });
-            setListaPedidos(datosOrdenados);
+  const cargarRegistros = async () => {
+    try {
+      setLoading(true);
+      // Obtener todos los pedidos de la tabla 'pedidos' en IndexedDB [4]
+      const datos = await db.getAll('pedidos');
 
-            const pedidosActivos = datosOrdenados.filter(p => p.estatus === 'Activo' || !p.estatus).length;
-            const pedidosCerrados = datosOrdenados.filter(p => p.estatus === 'Cerrado').length;
-            setStats({ pedidosActivos, pedidosCerrados }); [3]
+      // Ordenar por número de pedido descendente [4, 5]
+      const datosOrdenados = datos.sort((a, b) => {
+        const numA = parseInt(a.numero_pedido) || 0;
+        const numB = parseInt(b.numero_pedido) || 0;
+        return numB - numA;
+      });
 
-        } catch (error) {
-            console.error("Error al cargar pedidos:", error);
-            alert("❌ Error al cargar los pedidos.");
-        } finally {
-            setLoading(false);
-        }
-    };
+      setListaPedidos(datosOrdenados);
 
-    useEffect(() => {
-        cargarRegistros();
-        const handleClickOutside = (event) => {
-            const isDropdownClick = Object.values(dropdownRefs.current).some(
-                ref => ref && ref.contains(event.target)
-            );
-            if (!isDropdownClick) setDropdownAbierto(null);
+      // Calcular estadísticas según el estatus [5]
+      const activos = datosOrdenados.filter(p => p.estatus === 'Activo' || !p.estatus).length;
+      const cerrados = datosOrdenados.filter(p => p.estatus === 'Cerrado').length;
+      setStats({ pedidosActivos: activos, pedidosCerrados: cerrados });
+    } catch (error) {
+      console.error("Error al cargar pedidos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarRegistros();
+  }, []);
+
+  // --- NUEVA FUNCIONALIDAD: INCREMENTAR STOCK AL RECIBIR ---
+  const handleRecibirPedido = async (pedido, e) => {
+    e.stopPropagation(); // Evita abrir el modal al hacer click en el icono [6]
+
+    // Validación: solo procesar si no ha sido recibido antes [3]
+    if (pedido.estatus === 'Cerrado') {
+      alert("Este pedido ya fue recibido e ingresado al inventario.");
+      return;
+    }
+
+    const confirmar = window.confirm(`¿Marcar Pedido #${pedido.numero_pedido} como RECIBIDO?\n\nEsta acción sumará las cantidades al stock actual de cada producto.`);
+    
+    if (confirmar) {
+      try {
+        // 1. Recorrer los items del pedido e incrementar el stock [2, 7]
+        // pedido.items es un objeto { id_producto: cantidad }
+        const actualizaciones = Object.entries(pedido.items).map(([id, cantidad]) => {
+          return db.updateStock(parseInt(id), cantidad); // Suma al stock usando el método de la DB [1]
+        });
+
+        await Promise.all(actualizaciones);
+
+        // 2. Actualizar el estatus del pedido a 'Cerrado' [8]
+        const pedidoActualizado = {
+          ...pedido,
+          estatus: 'Cerrado',
+          updatedAt: new Date().toISOString()
         };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+        
+        await db.put('pedidos', pedidoActualizado);
 
-    // ==================== FUNCIONES DE ACCIÓN ====================
-    const handleNuevoPedido = () => {
-        setPedidoSeleccionado(null);
-        setModalOpen(true);
-    };
+        // 3. Refrescar la UI
+        alert("✅ Inventario actualizado y pedido marcado como RECIBIDO.");
+        await cargarRegistros();
+      } catch (error) {
+        console.error("Error al procesar la recepción:", error);
+        alert("❌ Error crítico al actualizar el inventario.");
+      }
+    }
+  };
 
-    /* Se ha eliminado la función handleVaciarTodo que se encontraba aquí [4-6] */
+  const handleNuevoPedido = () => {
+    setPedidoSeleccionado(null);
+    setModalOpen(true);
+  };
 
-    const handleEditar = (pedido, e) => {
-        e.stopPropagation();
-        setDropdownAbierto(null);
-        if (pedido.estatus === 'Cerrado') {
-            alert("ℹ️ Solo se pueden editar pedidos en estado Activo.");
-            return;
-        }
-        setPedidoSeleccionado(pedido);
-        setModalOpen(true);
-    };
+  const handleEliminar = async (pedido, e) => {
+    e.stopPropagation();
+    // Capa de seguridad: no eliminar pedidos cerrados [9]
+    if (pedido.estatus === 'Cerrado') {
+      alert("No se puede eliminar un pedido que ya ha sido recibido.");
+      return;
+    }
 
-    const handleRecibir = async (pedido, e) => {
-        e.stopPropagation();
-        setDropdownAbierto(null);
-        if (pedido.estatus === 'Cerrado') return;
-        const confirmar = window.confirm(`¿Procesar ingreso del pedido #${pedido.numero_pedido}?\n\n✅ Esto incrementará el stock y marcará como "Cerrado".`);
-        if (!confirmar) return;
+    if (window.confirm(`¿Eliminar pedido #${pedido.numero_pedido}?`)) {
+      await db.del('pedidos', pedido.id);
+      cargarRegistros();
+    }
+  };
 
-        try {
-            if (pedido.items) {
-                for (const [prodId, qty] of Object.entries(pedido.items)) {
-                    if (parseInt(qty) > 0) {
-                        await db.updateStock(parseInt(prodId), parseInt(qty)); [7]
-                    }
-                }
-            }
-            await db.put('pedidos', {
-                ...pedido,
-                estatus: 'Cerrado',
-                fechaRecepcion: new Date().toISOString()
-            });
-            alert(`✅ Pedido #${pedido.numero_pedido} recibido.`);
-            cargarRegistros();
-        } catch (error) {
-            alert(`❌ Error: ${error.message}`);
-        }
-    };
+  return (
+    <div className={styles.container}>
+      <header className={styles.header}>
+        <button onClick={() => navigate(-1)} className={styles.backArrow}>←</button>
+        <span className={styles.title}>Pedidos Natura</span>
+        <button onClick={handleNuevoPedido} className={styles.addBtnCircle}>+</button>
+      </header>
 
-    const handleEliminar = async (pedido, e) => {
-        e.stopPropagation();
-        setDropdownAbierto(null);
-        if (pedido.estatus === 'Cerrado') {
-            alert("❌ Pedido ya procesado. No se puede eliminar.");
-            return;
-        }
-        if (window.confirm(`⚠️ ¿ELIMINAR PEDIDO #${pedido.numero_pedido}?\n\nEsta acción NO se puede deshacer.`)) {
-            try {
-                await db.del('pedidos', pedido.id); [8]
-                cargarRegistros();
-            } catch (error) {
-                alert(`❌ Error: ${error.message}`);
-            }
-        }
-    };
-
-    const exportarPedido = async (pedido, e) => {
-        if (e) e.stopPropagation();
-        setDropdownAbierto(null);
-        // Lógica de exportación omitida por brevedad...
-    };
-
-    return (
-        <div className={styles.container}>
-            <header className={styles.header}>
-                <button onClick={() => navigate(-1)} className={styles.backArrow}>←</button>
-                <h1 className={styles.title}>📦 Gestión de Pedidos</h1>
-            </header>
-
-            <div className={styles.statsBar}>
-                <div className={styles.statCard}>
-                    <span className={styles.statNumber}>{listaPedidos.length}</span>
-                    <span className={styles.statLabel}>TOTAL</span>
-                </div>
-                <div className={styles.statCard}>
-                    <span className={styles.statNumber}>{stats.pedidosActivos}</span>
-                    <span className={styles.statLabel}>PENDIENTES</span>
-                </div>
-                <div className={styles.statCard}>
-                    <span className={styles.statNumber}>{stats.pedidosCerrados}</span>
-                    <span className={styles.statLabel}>RECIBIDOS</span>
-                </div>
-            </div>
-
-            <main className={styles.content}>
-                <button onClick={handleNuevoPedido} className={styles.addBtnCircle}>+</button>
-
-                {/* Se ha eliminado el bloque condicional del botón Vaciar Historial [9] */}
-
-                <div className={styles.headerRow}>
-                    <div className={styles.headerCell}>PEDIDO</div>
-                    <div className={styles.headerCell}>FECHA</div>
-                    <div className={styles.headerCell}>TOTAL</div>
-                    <div className={styles.headerCell}>ACCIONES</div>
-                </div>
-
-                <div className={styles.listaContainer}>
-                    {loading ? (
-                        <div className={styles.loadingContainer}>Cargando...</div>
-                    ) : listaPedidos.length === 0 ? (
-                        <div className={styles.emptyState}>No hay pedidos registrados</div>
-                    ) : (
-                        listaPedidos.map((p) => (
-                            <div 
-                                key={p.id} 
-                                className={styles.row} 
-                                onClick={() => { setPedidoSeleccionado(p); setModalOpen(true); }}
-                            >
-                                <div className={styles.cell}>
-                                    <span className={styles.pedidoNumero}>#{p.numero_pedido}</span>
-                                    <span className={`${styles.pedidoEstatus} ${p.estatus === 'Cerrado' ? styles.estatusCerrado : styles.estatusActivo}`}>
-                                        {p.estatus === 'Cerrado' ? '✅ Recibido' : '🟢 Pendiente'}
-                                    </span>
-                                </div>
-                                <div className={styles.cell}>
-                                    {new Date(p.fecha_pedido).toLocaleDateString('es-ES')}
-                                </div>
-                                <div className={styles.cell}>
-                                    <div className={styles.totalContainer}>
-                                        <span className={styles.totalBS}>Bs. {p.total_bs?.toFixed(2)}</span>
-                                        <span className={styles.totalUSD}>$ {p.total_usd?.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                                <div className={styles.cell} ref={el => dropdownRefs.current[p.id] = el}>
-                                    <button 
-                                        className={styles.dropdownButton} 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDropdownAbierto(dropdownAbierto === p.id ? null : p.id);
-                                        }}
-                                    >⋮</button>
-                                    
-                                    {dropdownAbierto === p.id && (
-                                        <div className={styles.dropdownMenu}>
-                                            <button onClick={(e) => handleEditar(p, e)} className={styles.dropdownItem}>✏️ Editar</button>
-                                            <button onClick={(e) => handleRecibir(p, e)} className={styles.dropdownItem}>📥 Recibir</button>
-                                            <button onClick={(e) => exportarPedido(p, e)} className={styles.dropdownItem}>📤 Exportar</button>
-                                            <button onClick={(e) => handleEliminar(p, e)} className={styles.dropdownItem}>🗑️ Eliminar</button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-            </main>
-
-            {modalOpen && (
-                <GestionPedido 
-                    pedido={pedidoSeleccionado} 
-                    onClose={() => { setModalOpen(false); cargarRegistros(); }} 
-                    onSave={cargarRegistros} 
-                />
-            )}
+      {/* Barra de Estadísticas [6] */}
+      <div className={styles.statsBar}>
+        <div className={styles.statCard}>
+          <span className={styles.statNumber}>{listaPedidos.length}</span>
+          <span className={styles.statLabel}>TOTAL</span>
         </div>
-    );
+        <div className={styles.statCard}>
+          <span className={styles.statNumber} style={{ color: '#27ae60' }}>{stats.pedidosActivos}</span>
+          <span className={styles.statLabel}>PENDIENTES</span>
+        </div>
+        <div className={styles.statCard}>
+          <span className={styles.statNumber} style={{ color: '#3498db' }}>{stats.pedidosCerrados}</span>
+          <span className={styles.statLabel}>RECIBIDOS</span>
+        </div>
+      </div>
+
+      <div className={styles.listaCards}>
+        {loading ? (
+          <p className={styles.loading}>Cargando registros...</p>
+        ) : listaPedidos.length === 0 ? (
+          <p className={styles.loading}>No hay pedidos registrados</p>
+        ) : (
+          listaPedidos.map((p) => (
+            <div 
+              key={p.id} 
+              className={styles.pedidoCard}
+              onClick={() => { setPedidoSeleccionado(p); setModalOpen(true); }}
+              style={{ borderLeftColor: p.estatus === 'Cerrado' ? '#3498db' : '#27ae60' }}
+            >
+              <div className={styles.cardHeader}>
+                <span className={styles.orderNumber}>#{p.numero_pedido}</span>
+                <span className={`${styles.statusBadge} ${p.estatus === 'Cerrado' ? styles.statusCerrado : styles.statusPendiente}`}>
+                  {p.estatus === 'Cerrado' ? '✅ RECIBIDO' : '🟢 PENDIENTE'}
+                </span>
+              </div>
+              
+              <div className={styles.tasaRow}>
+                <span className={styles.tasaLabel}>💰 Tasa BCV aplicada:</span>
+                <span className={styles.tasaValue}>{p.tasa || '---'}</span>
+              </div>
+
+              <div className={styles.cardBody}>
+                <div className={styles.cardDate}>
+                  📅 {new Date(p.fecha_pedido).toLocaleDateString('es-ES')}
+                </div>
+                <div className={styles.cardTotals}>
+                  <div className={styles.totalUsd}>${p.total_usd?.toFixed(2)}</div>
+                  <div className={styles.totalBs}>Bs. {p.total_bs?.toFixed(2)}</div>
+                </div>
+              </div>
+
+              <div className={styles.cardActions}>
+                {/* Botón Editar / Ver */}
+                <span className={styles.actionBtn}>✏️</span>
+                
+                {/* Botón RECIBIR con la nueva lógica vinculada */}
+                <span 
+                  className={styles.actionBtn}
+                  onClick={(e) => handleRecibirPedido(p, e)}
+                  style={{ 
+                    opacity: p.estatus === 'Cerrado' ? 0.3 : 1,
+                    cursor: p.estatus === 'Cerrado' ? 'not-allowed' : 'pointer',
+                    backgroundColor: p.estatus === 'Cerrado' ? '#eee' : '#e8f4fc'
+                  }}
+                  title="Recibir Pedido e incrementar Stock"
+                >
+                  📥
+                </span>
+
+                <span className={styles.actionBtn}>📤</span>
+                
+                <button 
+                  onClick={(e) => handleEliminar(p, e)}
+                  className={styles.deleteBtn}
+                  disabled={p.estatus === 'Cerrado'}
+                  style={{
+                    opacity: p.estatus === 'Cerrado' ? 0.3 : 1,
+                    cursor: p.estatus === 'Cerrado' ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {modalOpen && (
+        <GestionPedido 
+          pedido={pedidoSeleccionado}
+          onClose={() => { setModalOpen(false); cargarRegistros(); }}
+          onSave={cargarRegistros}
+        />
+      )}
+    </div>
+  );
 };
 
 export default PedidosComponente;
