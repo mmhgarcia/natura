@@ -151,8 +151,9 @@ function Home() {
               <div className={styles.cardInfo}>
                 <h3 className={styles.productTitle}>{p.nombre}</h3>
                 <div className={styles.cardFooter}>
-                  <span>ID: {p.id}</span>
-                  <span className={styles.priceText}>${precio.toFixed(2)}</span>
+                  <span className={styles.priceText}>ID: {p.id}</span>
+                  &nbsp;&nbsp;-&nbsp;&nbsp;
+                  <span className={styles.priceText}>Precio: ${precio.toFixed(2)}</span>
                 </div>
               </div>
             </div>
