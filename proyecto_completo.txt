@@ -857,7 +857,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
   const [listaGrupos, setListaGrupos] = useState([]);
   const [cantidades, setCantidades] = useState({});
   const [aplicarDelivery, setAplicarDelivery] = useState(true);
-
   const [totales, setTotales] = useState({ usd: 0, bs: 0 });
   const [utilidad, setUtilidad] = useState({ usd: 0, bs: 0 });
 
@@ -884,11 +883,13 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
             estatus: pedido.estatus || 'Activo',
             delivery_tasa: pedido.delivery_tasa !== undefined ? pedido.delivery_tasa : (deliveryValor || 0)
           });
+
           if (pedido.items) setCantidades(pedido.items);
           setAplicarDelivery(pedido.delivery_aplicado ?? true);
         } else {
           const ultimoPedido = await db.pedidos.orderBy('id').last();
           const siguienteNumero = ultimoPedido ? (parseInt(ultimoPedido.numero_pedido) + 1).toString() : "1";
+          
           setFormData(prev => ({
             ...prev,
             numero_pedido: siguienteNumero,
@@ -900,6 +901,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
         console.error("Error cargando datos:", err);
       }
     };
+
     cargarDatos();
   }, [pedido]);
 
@@ -936,6 +938,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
       const nuevaTasa = await db.getConfigValue('tasa');
       const nuevoDelivery = await db.getConfigValue('delivery');
       const gruposActualizados = await db.getAll('grupos');
+      
       setListaGrupos(gruposActualizados);
       setFormData(prev => ({
         ...prev,
@@ -958,8 +961,8 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     e.preventDefault();
     if (esVisualizacion) return;
 
-    const mensaje = pedido 
-      ? `¿Estás seguro de que deseas ACTUALIZAR los cambios en el pedido #${formData.numero_pedido}?` 
+    const mensaje = pedido
+      ? `¿Estás seguro de que deseas ACTUALIZAR los cambios en el pedido #${formData.numero_pedido}?`
       : `¿Deseas GRABAR el nuevo pedido #${formData.numero_pedido}?`;
 
     if (!window.confirm(mensaje)) return;
@@ -996,23 +999,28 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
   return (
     <div className={styles.overlay}>
-      <form className={styles.modal} onSubmit={handleSubmit}>
+      <div className={styles.modal}>
         <div className={styles.header}>
           <span className={styles.title}>GESTIÓN DE PEDIDOS</span>
-          <button type="button" className={styles.closeButton} onClick={onClose}>×</button>
+          <button className={styles.closeButton} onClick={onClose}>×</button>
         </div>
 
-        <div className={styles.content}>
+        <form onSubmit={handleSubmit} className={styles.content}>
           <div className={styles.topRow}>
             <div className={styles.inputGroup}>
               <label className={styles.label}>Pedido #</label>
-              <input type="text" value={formData.numero_pedido} className={styles.inputSmall} disabled />
+              <input
+                type="text"
+                value={formData.numero_pedido}
+                readOnly
+                className={styles.inputSmall}
+              />
             </div>
             <div className={styles.inputGroup}>
               <label className={styles.label}>Fecha</label>
-              <input 
-                type="date" 
-                value={formData.fecha_pedido} 
+              <input
+                type="date"
+                value={formData.fecha_pedido}
                 onChange={(e) => setFormData({...formData, fecha_pedido: e.target.value})}
                 className={esVisualizacion ? styles.inputReadOnly : styles.inputSmall}
                 disabled={esVisualizacion}
@@ -1033,16 +1041,16 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
           <div className={styles.infoBar}>
             <span>Tasa: {formData.tasa || '---'}</span>
-            <div className={styles.deliveryGroup}>
-              <input 
-                type="checkbox" 
-                checked={aplicarDelivery} 
+            <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <input
+                type="checkbox"
+                checked={aplicarDelivery}
                 onChange={(e) => setAplicarDelivery(e.target.checked)}
                 className={styles.checkbox}
                 disabled={esVisualizacion}
               />
-              <span className={styles.deliveryText}>Delivery: ${formData.delivery_tasa}</span>
-            </div>
+              Delivery: ${formData.delivery_tasa}
+            </label>
           </div>
 
           <div className={styles.productListContainer}>
@@ -1051,29 +1059,39 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
               {Object.entries(productosAgrupados).map(([grupo, items]) => (
                 <div key={grupo}>
                   <div className={styles.groupTitle}>{grupo.toUpperCase()}</div>
-                  {items.map((prod) => (
-                    <div key={prod.id} className={styles.productItem}>
-                      <div className={styles.stockBadgeSmall} style={{ backgroundColor: prod.stock > 0 ? '#28a745' : '#f44336' }}>
-                        {prod.stock}
+                  {items.map((prod) => {
+                    // Lógica de colores de stock del componente Home [2]
+                    const esAgotado = prod.stock === 0;
+                    const esBajoStock = prod.stock > 0 && prod.stock <= 5;
+                    const badgeColor = esAgotado ? '#ff4d4d' : (esBajoStock ? '#ffa500' : '#28a745');
+
+                    return (
+                      <div key={prod.id} className={styles.productItem}>
+                        <div 
+                          className={styles.stockBadgeSmall} 
+                          style={{ backgroundColor: badgeColor }}
+                        >
+                          {prod.stock}
+                        </div>
+                        <span className={styles.productName}>{prod.nombre}</span>
+                        <div className={styles.quantityControl}>
+                          <button
+                            type="button"
+                            className={styles.qtyBtn}
+                            onClick={() => setCantidades({...cantidades, [prod.id]: Math.max(0, (cantidades[prod.id] || 0) - 1)})}
+                            disabled={esVisualizacion}
+                          >-</button>
+                          <span>{cantidades[prod.id] || 0}</span>
+                          <button
+                            type="button"
+                            className={styles.qtyBtn}
+                            onClick={() => setCantidades({...cantidades, [prod.id]: (cantidades[prod.id] || 0) + 1})}
+                            disabled={esVisualizacion}
+                          >+</button>
+                        </div>
                       </div>
-                      <span className={styles.productName}>{prod.nombre}</span>
-                      <div className={styles.quantityControl}>
-                        <button 
-                          type="button"
-                          className={styles.qtyBtn}
-                          onClick={() => setCantidades({...cantidades, [prod.id]: Math.max(0, (cantidades[prod.id] || 0) - 1)})}
-                          disabled={esVisualizacion}
-                        >-</button>
-                        <span className={styles.qtyInput}>{cantidades[prod.id] || 0}</span>
-                        <button 
-                          type="button"
-                          className={styles.qtyBtn}
-                          onClick={() => setCantidades({...cantidades, [prod.id]: (cantidades[prod.id] || 0) + 1})}
-                          disabled={esVisualizacion}
-                        >+</button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ))}
             </div>
@@ -1082,31 +1100,33 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
           <div className={styles.utilidadBar}>
             <div className={styles.utilidadBox}>
               <span className={styles.utilidadLabel}>UTILIDAD EST. $</span>
-              <span className={styles.utilidadValue} style={{ color: utilidad.usd >= 0 ? '#28a745' : '#f44336' }}>
+              <span style={{ fontWeight: 'bold', color: utilidad.usd >= 0 ? '#28a745' : '#f44336' }}>
                 ${utilidad.usd.toFixed(2)}
               </span>
             </div>
             <div className={styles.utilidadBox}>
               <span className={styles.utilidadLabel}>UTILIDAD EST. BS</span>
-              <span className={styles.utilidadValue} style={{ color: utilidad.bs >= 0 ? '#28a745' : '#f44336' }}>
+              <span style={{ fontWeight: 'bold', color: utilidad.bs >= 0 ? '#28a745' : '#f44336' }}>
                 Bs. {utilidad.bs.toFixed(2)}
               </span>
             </div>
           </div>
-        </div>
 
-        <div className={styles.footer}>
-          <button type="button" className={styles.limpiarBtn} onClick={handleLimpiar}>Limpiar</button>
-          
-          <button type="button" className={styles.recalcularBtn} onClick={handleRecalcular}>Recalcular</button>
-          
-          {!esVisualizacion && (
-            <button type="submit" className={styles.grabarBtn}>
-              {pedido ? "Actualizar" : "Grabar"}
+          <div className={styles.footer}>
+            <button type="button" className={styles.limpiarBtn} onClick={handleLimpiar} disabled={esVisualizacion}>
+              Limpiar
             </button>
-          )}
-        </div>
-      </form>
+            <button type="button" className={styles.recalcularBtn} onClick={handleRecalcular}>
+              Recalcular
+            </button>
+            {!esVisualizacion && (
+              <button type="submit" className={styles.grabarBtn}>
+                {pedido ? "Actualizar" : "Grabar"}
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
