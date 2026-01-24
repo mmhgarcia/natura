@@ -1,221 +1,121 @@
+.container {
+    padding: 20px;
+    padding-bottom: 120px;
+    /* Cambio: Eliminado el fondo rojo de las fuentes [1] por un blanco profesional */
+    background-color: #ffffff; 
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #333;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Título de la Analítica */
+.title {
+    font-size: 1.6rem;
+    color: #2c3e50;
+    font-weight: 800;
+    margin-bottom: 25px;
+    text-align: center;
+    letter-spacing: -0.5px;
+}
+
+/* El componente principal presentado en una Card Profesional */
+.mainCard {
+    background-color: #ffffff;
+    border-radius: 20px; /* Bordes redondeados solicitados */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); /* Sombra profesional */
+    padding: 25px;
+    width: 100%;
+    max-width: 500px; /* Optimizado para el dispositivo Android del host Vercel [2] */
+    border: 1px solid #f0f0f0;
+    box-sizing: border-box;
+}
+
+/* Barra de filtros */
+.filterBar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 25px;
+}
 
 .filterLabel {
-    color: #333;
-    font-weight: bold;
-    font-size: 0.9rem;
+    color: #546e7a;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
 }
 
-
-.grid {
-    display: grid;
-    grid-template-columns: 1fr; 
-    gap: 16px;
-    padding: 0 12px;
-}
-
-.card {
-    position: relative;
-    background-color: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    padding: 15px;
-    cursor: pointer;
-}
-
-.stockBadge {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 14px;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    z-index: 10;
-}
-
-.cardDisabled {
-    opacity: 0.6;
-    filter: grayscale(1);
-    cursor: not-allowed !important;
-}
-
-.productImage {
-.container {
-  padding: 20px;
-  padding-bottom: 280px;
-  background-color: #fafafa;
-  min-height: 100vh;
-  /* Add this to ensure general text is visible */
-  color: #333; 
-}
-
-.filterBar {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding: 0 12px;
-  /* Specifically ensure the label text is dark */
-  color: #2c3e50; 
-  font-weight: bold;
-}
-
+/* Selector de rango de fechas */
 .select {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-  background-color: #fff;
-  /* CRITICAL: Force the text colour to be dark */
-  color: #333; 
-}
-    width: 100%;
-    height: auto;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    padding: 12px 15px;
+    border-radius: 12px;
+    border: 2px solid #eceff1;
+    font-size: 1rem;
+    background-color: #f8fafc;
+    color: #263238; /* Asegura visibilidad del texto solicitado en fuentes [3, 4] */
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-.placeholderName {
-    height: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #f0f0f0;
-    border-radius: 8px;
-    font-weight: bold;
-    color: #555;
-    margin-bottom: 10px;
+.select:focus {
+    outline: none;
+    border-color: #00BFFF; /* Azul Natura */
 }
 
-.productTitle {
-    font-size: 1.1rem;
-    font-weight: bold;
-    margin: 0 0 5px 0;
-    color: #2c3e50;
+/* Bloques de ingresos (USD y BS) */
+.ingresosContainer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 30px;
 }
 
-.cardFooter {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.priceText {
-    color: #28a745;
-    font-weight: bold;
-}
-
-.selectedContainer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background-color: #fff;
+.ingresosCard {
+    background: #f1f8ff;
     padding: 15px;
-    border-top: 2px solid #00BFFF;
-    z-index: 1000;
-}
-
-.selectedHeader {
-    display: flex;
-    justify-content: space-between;
-    font-weight: bold;
-    margin-bottom: 10px;
-    color: #333;
-}
-
-.selectedList {
-    max-height: 120px;
-    overflow-y: auto;
-    margin-bottom: 10px;
-}
-
-.selectedItem {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 10px;
-    background-color: #f8f9fa;
-    margin-bottom: 4px;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    color: #000;
-}
-
-.selectedItem button {
-    background-color: #ff4d4d;
-    color: white;
-    border: none;
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-
-.totalRow {
-    font-size: 1.1rem;
-    font-weight: bold;
+    border-radius: 15px;
     text-align: center;
-    margin: 10px 0;
+    border: 1px solid #e1f5fe;
+}
+
+.ingresosValue {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 800;
     color: #007bff;
 }
 
-.actionButtons {
-    display: flex;
-    gap: 10px;
+.ingresosLabel {
+    font-size: 0.7rem;
+    color: #78909c;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
-.vaciarBtn, .grabarBtn {
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
+/* Contenedor para el gráfico de Recharts [5] */
+.chartWrapper {
+    margin-top: 20px;
+    padding: 15px;
+    background: #fafafa;
+    border-radius: 15px;
+    border: 1px solid #f0f0f0;
 }
 
-.vaciarBtn { background-color: #6c757d; color: white; flex: 1; }
-.grabarBtn { background-color: #28a745; color: white; flex: 2; }
-.grabarBtn:disabled { background-color: #ccc; cursor: not-allowed; }
+.chartTitle {
+    font-size: 0.9rem;
+    color: #455a64;
+    font-weight: 700;
+    margin-bottom: 15px;
+    text-align: center;
+}
 
+/* Estado de carga */
 .loading {
     text-align: center;
     padding: 50px;
-    color: #666;
-}
-
-
-.container {
-  padding: 20px;
-  padding-bottom: 280px;
-  background-color: red;
-  min-height: 100vh;
-  /* Add this to ensure general text is visible */
-  color: #333; 
-}
-
-.filterBar {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding: 0 12px;
-  /* Specifically ensure the label text is dark */
-  color: #2c3e50; 
-  font-weight: bold;
-}
-
-.select {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid blue;
-  font-size: 1rem;
-  background-color: #fff;
-  /* CRITICAL: Force the text colour to be dark */
-  color: #333; 
+    color: #90a4ae;
+    font-weight: 500;
 }
