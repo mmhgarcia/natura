@@ -28,7 +28,6 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 2px solid #00BFFF;
-  margin-bottom: 0px;
 }
 
 .title {
@@ -42,7 +41,6 @@
   border: none;
   font-size: 32px;
   cursor: pointer;
-  min-width: 44px;
   color: #000;
 }
 
@@ -50,20 +48,19 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
 }
 
 .topRow {
   display: flex;
-  flex-direction: row;
   gap: 10px;
-  width: 100%;
+  margin-top: 10px;
 }
 
 .inputGroup {
   display: flex;
   flex-direction: column;
   flex: 1;
-  gap: 2px;
 }
 
 .label {
@@ -92,7 +89,7 @@
 .totalLabel {
   font-size: 11px;
   font-weight: bold;
-  color: #000;
+  color: #000; /* Se agrega color negro para cumplir con la solicitud */
 }
 
 .totalValue {
@@ -107,30 +104,13 @@
   align-items: center;
   font-size: 13px;
   font-weight: bold;
-  color: #000;
-  padding: 0 5px;
-}
-
-.deliveryGroup {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.checkbox {
-  width: 18px;
-  height: 18px;
-}
-
-.deliveryText {
-  color: #000;
+  color: #000; /* Se agrega color negro para cumplir con la solicitud */
 }
 
 .productListContainer {
   border: 1px solid #aaa;
   border-radius: 4px;
   overflow: hidden;
-  margin-top: 5px;
 }
 
 .productListHeader {
@@ -138,14 +118,12 @@
   background-color: #00BFFF;
   color: white;
   padding: 4px;
-  font-size: 13px;
   font-weight: bold;
 }
 
 .productList {
-  height: 260px;
+  height: 250px;
   overflow-y: auto;
-  background-color: #fff;
 }
 
 .groupTitle {
@@ -153,7 +131,7 @@
   font-weight: bold;
   background-color: #f1f1f1;
   padding: 6px 10px;
-  color: #000;
+  color: #000; /* Se agrega para que el texto del grupo sea negro */
 }
 
 .productItem {
@@ -173,21 +151,28 @@
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  font-weight: bold;
-  border: 1px solid #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  flex-shrink: 0;
-}
-
-.productName {
-  font-size: 13px;
-  color: #000;
 }
 
 .quantityControl {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;           /* Aumentado ligeramente para mejor separación */
+  
+  /* Propiedades para hacer visible la cantidad */
+  color: #000;        /* Color negro para el número */
+  font-weight: bold;  /* Resalta la cantidad */
+  font-size: 16px;    /* Tamaño de fuente legible */
+  min-width: 25px;    /* Espacio mínimo para que el número no se mueva */
+  justify-content: center;
+}
+
+.qtyBtnOld {
+  width: 32px;
+  height: 32px;
+  background-color: #eee;
+  border: 1px solid #ccc;
+  font-weight: bold;
+  color: #000; /* Se añade color negro para los signos + y - */
 }
 
 .qtyBtn {
@@ -196,26 +181,19 @@
   background-color: #eee;
   border: 1px solid #ccc;
   font-weight: bold;
-  font-size: 20px;
+  color: #000;          /* Signos en color negro (solicitud anterior) */
+  
+  /* Nuevas propiedades para centrado */
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #000;
-  cursor: pointer;
-}
-
-.qtyInput {
-  width: 40px;
-  text-align: center;
-  font-weight: bold;
-  color: #000;
+  align-items: center;  /* Centrado vertical */
+  justify-content: center; /* Centrado horizontal */
+  padding: 0;           /* Elimina paddings por defecto que puedan desviar el signo */
+  line-height: normal;  /* Asegura que el interlineado no afecte la posición */
 }
 
 .utilidadBar {
   display: flex;
   gap: 8px;
-  justify-content: space-between;
-  margin-top: 5px;
   padding: 8px;
   background-color: #f9f9f9;
   border: 1px solid #ddd;
@@ -229,96 +207,70 @@
   align-items: center;
 }
 
-.utilidadLabel {
-  font-size: 10px;
-  font-weight: bold;
-  color: #555;
-}
+/* --- ESTILOS DE LA BOTONERA INFERIOR --- */
 
-.utilidadValue {
-  font-size: 15px;
-  font-weight: bold;
-}
-
-/* --- NUEVA FILA: RECALCULAR --- */
-.recalcularRow {
+.footer {
   display: flex;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 15px;
   width: 100%;
 }
 
-.recalcularBtn {
-  flex: 1;
-  background-color: #007bff;
-  color: white;
+.limpiarBtn, .recalcularBtn, .grabarBtn {
+  flex: 1; /* Esto asegura que los 3 botones tengan el mismo ancho */
+  padding: 12px 5px;
   border: none;
-  padding: 12px;
   border-radius: 4px;
   font-weight: bold;
+  font-size: 14px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 15px;
-}
-
-.recalcularBtn:active {
-  transform: scale(0.98);
-}
-
-/* --- FOOTER Y BOTONES --- */
-.footer {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
+  text-align: center;
 }
 
 .limpiarBtn {
   background-color: #f44336;
   color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 4px;
-  flex: 1;
-  font-weight: bold;
-  cursor: pointer;
+}
+
+.recalcularBtn {
+  background-color: #007bff;
+  color: white;
 }
 
 .grabarBtn {
   background-color: #28a745;
   color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 4px;
-  flex: 1;
-  font-weight: bold;
-  cursor: pointer;
+}
+
+.grabarBtn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 
 .inputSmall {
   padding: 8px;
-  border: 1px solid #aaa;
   border-radius: 4px;
   width: 100%;
   box-sizing: border-box;
-  font-size: 18px;
-  color: #fff;
-  text-align: center;
+  font-size: 16px;
   background-color: #00BFFF;
+  color: white;
   font-weight: bold;
+  text-align: center;
+  border: 1px solid #aaa;
 }
 
-.inputReadOnly {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  width: 100%;
-  box-sizing: border-box;
-  cursor: not-allowed;
-  font-size: 18px;
-  font-weight: bold;
-  color: #fff;
-  text-align: center;
-  background-color: #555;
+.productName {
+  color: #666; 
+  flex: 1; 
+  margin-left: 10px;
+  font-size: 14px; /* Se reduce la fuente a 14px (2px menos que el estándar de 16px del componente) */
 }
+
+.utilidadLabel {
+  font-size: 11px;
+  font-weight: bold;
+  color: #000; /* Negro solicitado */
+  /* Aquí podrías añadir un estilo diferente, como otro color o margen */
+}
+
