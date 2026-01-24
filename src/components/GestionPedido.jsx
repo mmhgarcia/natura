@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/db/database'; 
+import { db } from '../lib/db/database';
 import styles from './GestionPedido.module.css';
 
 const GestionPedido = ({ pedido, onClose, onSave }) => {
   const getLocalToday = () => new Date().toLocaleDateString('en-CA');
 
-  // Estados del formulario y datos
+  // Estados del formulario y datos persistidos en dbTasaBCV [1, 5]
   const [formData, setFormData] = useState({
     numero_pedido: '',
     fecha_pedido: getLocalToday(),
@@ -18,14 +18,14 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
   const [listaGrupos, setListaGrupos] = useState([]);
   const [cantidades, setCantidades] = useState({});
   const [aplicarDelivery, setAplicarDelivery] = useState(true);
-  
-  // Estados de cálculo financiero
+
+  // Estados de cálculo financiero [5, 6]
   const [totales, setTotales] = useState({ usd: 0, bs: 0 });
   const [utilidad, setUtilidad] = useState({ usd: 0, bs: 0 });
 
   const esVisualizacion = !!pedido && pedido.estatus === 'Cerrado';
 
-  // Carga inicial de datos desde IndexedDB (dbTasaBCV) [1-3]
+  // Carga inicial de datos desde IndexedDB [2, 7]
   useEffect(() => {
     const cargarDatos = async () => {
       try {
@@ -66,7 +66,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     cargarDatos();
   }, [pedido]);
 
-  // Cálculo de totales y utilidad en tiempo real [4, 5]
+  // Cálculo de totales y utilidad en tiempo real [6, 8]
   useEffect(() => {
     const calcularFinanzas = () => {
       let costoTotalUSD = 0;
@@ -75,22 +75,17 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
       Object.entries(cantidades).forEach(([prodId, qty]) => {
         const producto = productos.find(p => p.id === parseInt(prodId));
         if (producto && qty > 0) {
-          // Normalización para evitar errores de coincidencia de grupo
           const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === producto.grupo.toLowerCase());
           if (grupo) {
-            costoTotalUSD += qty * (grupo.costo_$ || 0); // Basado en versión 5 de la DB [5]
+            costoTotalUSD += qty * (grupo.costo_$ || 0); 
             ingresoEstimadoUSD += qty * (grupo.precio || 0);
           }
         }
       });
 
       const cargoDelivery = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
-      
-      // El total del pedido es el costo invertido + delivery si aplica
       const totalPedidoUSD = costoTotalUSD + cargoDelivery;
       const tasaNum = parseFloat(formData.tasa) || 0;
-
-      // Utilidad: Lo que se cobraría al vender menos lo invertido en el pedido
       const utilidadUSD = ingresoEstimadoUSD - totalPedidoUSD;
 
       setTotales({ usd: totalPedidoUSD, bs: totalPedidoUSD * tasaNum });
@@ -100,7 +95,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     if (productos.length > 0) calcularFinanzas();
   }, [cantidades, productos, listaGrupos, formData.tasa, formData.delivery_tasa, aplicarDelivery]);
 
-  // Confirmación para limpiar el pedido
   const handleLimpiar = () => {
     if (window.confirm("¿Estás seguro de que deseas vaciar todas las cantidades seleccionadas?")) {
       setCantidades({});
@@ -110,19 +104,20 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (esVisualizacion) return;
-    const pedidoData = { 
-      ...formData, 
-      items: cantidades, 
-      total_usd: totales.usd, 
-      total_bs: totales.bs, 
+
+    const pedidoData = {
+      ...formData,
+      items: cantidades,
+      total_usd: totales.usd,
+      total_bs: totales.bs,
       delivery_aplicado: aplicarDelivery,
-      updatedAt: new Date().toISOString() 
+      updatedAt: new Date().toISOString()
     };
-    
+
     if (pedido?.id) await db.put('pedidos', { ...pedidoData, id: pedido.id });
     else await db.add('pedidos', { ...pedidoData, createdAt: new Date().toISOString() });
     
-    onSave(); 
+    onSave();
     onClose();
   };
 
@@ -145,7 +140,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
           <div className={styles.topRow}>
             <div className={styles.inputGroup}>
               <label className={styles.label}>Pedido #</label>
-              <input value={formData.numero_pedido} readOnly className={styles.inputReadOnly} />
+              <input type="text" value={formData.numero_pedido} className={styles.inputSmall} disabled />
             </div>
             <div className={styles.inputGroup}>
               <label className={styles.label}>Fecha</label>
@@ -190,38 +185,24 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
               {Object.entries(productosAgrupados).map(([grupo, items]) => (
                 <div key={grupo}>
                   <div className={styles.groupTitle}>{grupo.toUpperCase()}</div>
-                  {items.map((prod) => {
-                    const badgeColor = prod.stock === 0 ? '#ff4d4d' : (prod.stock <= 5 ? '#ffa500' : '#28a745');
-                    return (
-                      <div key={prod.id} className={styles.productItem}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div className={styles.stockBadgeSmall} style={{ backgroundColor: badgeColor }}>{prod.stock}</div>
-                          <span className={styles.productName}>{prod.nombre}</span>
-                        </div>
-                        <div className={styles.quantityControl}>
-                          <button 
-                            type="button" 
-                            className={styles.qtyBtn}
-                            onClick={() => setCantidades({...cantidades, [prod.id]: Math.max(0, (cantidades[prod.id] || 0) - 1)})}
-                            disabled={esVisualizacion}
-                          >-</button>
-                          <span className={styles.qtyInput}>{cantidades[prod.id] || 0}</span>
-                          <button 
-                            type="button" 
-                            className={styles.qtyBtn}
-                            onClick={() => setCantidades({...cantidades, [prod.id]: (cantidades[prod.id] || 0) + 1})}
-                            disabled={esVisualizacion}
-                          >+</button>
-                        </div>
+                  {items.map((prod) => (
+                    <div key={prod.id} className={styles.productItem}>
+                      <div className={styles.stockBadgeSmall} style={{ backgroundColor: prod.stock === 0 ? '#ff4d4d' : '#28a745' }}>
+                        {prod.stock}
                       </div>
-                    );
-                  })}
+                      <span className={styles.productName}>{prod.nombre}</span>
+                      <div className={styles.quantityControl}>
+                        <button type="button" className={styles.qtyBtn} onClick={() => setCantidades({...cantidades, [prod.id]: Math.max(0, (cantidades[prod.id] || 0) - 1)})} disabled={esVisualizacion}>-</button>
+                        <span className={styles.qtyInput}>{cantidades[prod.id] || 0}</span>
+                        <button type="button" className={styles.qtyBtn} onClick={() => setCantidades({...cantidades, [prod.id]: (cantidades[prod.id] || 0) + 1})} disabled={esVisualizacion}>+</button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Barra de Utilidad Estimada (Debajo de la lista) */}
           <div className={styles.utilidadBar}>
             <div className={styles.utilidadBox}>
               <span className={styles.utilidadLabel}>UTILIDAD EST. $</span>
@@ -238,15 +219,21 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
           </div>
         </div>
 
+        {/* Fila inferior con tres botones iguales */}
         <div className={styles.footer}>
-          <button type="button" onClick={handleLimpiar} className={styles.limpiarBtn} disabled={esVisualizacion}>
+          <button type="button" className={styles.limpiarBtn} onClick={handleLimpiar}>
             Limpiar
           </button>
+          
           {!esVisualizacion && (
-            <button type="submit" className={styles.grabarBtn}>
+            <button className={styles.grabarBtn} type="submit">
               {pedido ? "💾 Actualizar" : "💾 Grabar"}
             </button>
           )}
+
+          <button type="button" className={styles.recalcularBtn}>
+            🧮 Recalcular
+          </button>
         </div>
       </form>
     </div>
