@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { db } from '../lib/db/database.js'; // Acceso a dbTasaBCV [1, 4]
-import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // Utilidad de tasa [1, 5]
+import { db } from '../lib/db/database.js'; // Acceso a dbTasaBCV [4]
+import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // Utilidad de tasa [4]
 import styles from './Home.module.css';
 
 function Home() {
@@ -13,11 +13,11 @@ function Home() {
   const [filtroGrupo, setFiltroGrupo] = useState('todos');
   const navigate = useNavigate();
 
-  // Carga inicial de datos optimizada para Android [2, 6]
+  // Carga inicial de datos desde IndexedDB [5]
   useEffect(() => {
     const cargarTodo = async () => {
       try {
-        await db.init(); // Inicializa dbTasaBCV [2, 7]
+        await db.init(); // Inicializa dbTasaBCV [5]
         const [p, g, t] = await Promise.all([
           db.getAll('productos'),
           db.getAll('grupos'),
@@ -35,12 +35,16 @@ function Home() {
     cargarTodo();
   }, []);
 
-  // Filtrado de productos por grupo [8, 9]
+  /**
+   * FILTRADO ACTUALIZADO (Sin campo 'visible'):
+   * Se elimina cualquier validación referente a la visibilidad.
+   * Ahora sólo filtra por el grupo seleccionado [1].
+   */
   const productosFiltrados = productos.filter(p => {
     return filtroGrupo === 'todos' || p.grupo === filtroGrupo;
   });
 
-  // Confirmación de seguridad para vaciar selección en móvil [8, 9]
+  // Confirmación para vaciar la lista [1]
   const handleVaciarLista = () => {
     if (listaDeSeleccionados.length === 0) return;
     const confirmar = window.confirm(
@@ -49,7 +53,7 @@ function Home() {
     if (confirmar) setListaDeSeleccionados([]);
   };
 
-  // Procesamiento de venta con actualización de stock en tiempo real [10-12]
+  // Procesamiento de venta y actualización de stock [6, 7]
   const handleGrabar = async () => {
     if (listaDeSeleccionados.length === 0) return;
     const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
@@ -60,7 +64,7 @@ function Home() {
         const grupoInfo = grupos.find(g => g.nombre === item.grupo);
         const precioUsd = grupoInfo ? grupoInfo.precio : 0;
 
-        // Registrar en tabla ventas [10, 13, 14]
+        // Registrar venta en IndexedDB [7]
         await db.add('ventas', {
           productoId: item.id,
           nombre: item.nombre,
@@ -70,11 +74,11 @@ function Home() {
           fecha: new Date().toISOString()
         });
 
-        // Descontar del inventario [11, 14, 15]
+        // Descontar inventario [7, 8]
         await db.updateStock(item.id, -1);
       }
 
-      // Refrescar estado local
+      // Refrescar lista de productos con stock actualizado [7]
       const productosActualizados = await db.getAll('productos');
       setProductos(productosActualizados);
       setListaDeSeleccionados([]);
@@ -103,7 +107,7 @@ function Home() {
 
   const { usd, bs } = calcularTotales();
 
-  if (cargando) return <div className={styles.loading}>Cargando tienda...</div>; [16]
+  if (cargando) return <div className={styles.loading}>Cargando tienda...</div>;
 
   return (
     <div className={styles.container}>
@@ -135,31 +139,35 @@ function Home() {
               className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
               onClick={() => !esAgotado && seleccionarProducto(p)}
             >
-              <div 
+              <div
                 className={styles.stockBadge}
                 style={{ backgroundColor: esAgotado ? '#ff4d4d' : (esBajoStock ? '#ffa500' : '#28a745') }}
               >
                 {p.stock}
               </div>
-
+              
+              {/* Renderizado de imagen corregido para mostrar el archivo real [2] */}
               {p.imagen ? (
-                <img src={p.imagen} alt={p.nombre} className={styles.productImage} />
+                <img 
+                  src={p.imagen} 
+                  alt={p.nombre} 
+                  className={styles.productImage} 
+                  onError={(e) => { e.target.style.display = 'none'; }} 
+                />
               ) : (
-                <div className={styles.placeholderName}>{p.nombre}</div>
+                <div className={styles.productImagePlaceholder}>{p.nombre}</div>
               )}
 
               <h3 className={styles.productTitle}>{p.nombre}</h3>
-              <div className={styles.cardFooter}>                
-                <span className={styles.priceText}>
-                  ID: {p.id} - $: {precio.toFixed(2)} - Bs.: {(precio * tasa).toFixed(2)}
-                </span>
-              </div>
+              <p className={styles.priceText}>
+                ID: {p.id} - $: {precio.toFixed(2)} - Bs.: {(precio * tasa).toFixed(2)}
+              </p>
             </div>
           );
         })}
       </div>
 
-      {/* Footer fijo optimizado para Android [3, 17, 18] */}
+      {/* Panel inferior fijo [9] */}
       <div className={styles.selectedContainer}>
         <div className={styles.selectedHeader}>
           <span>Items: <strong>{listaDeSeleccionados.length}</strong></span>
@@ -168,9 +176,14 @@ function Home() {
 
         <div className={styles.selectedList}>
           {listaDeSeleccionados.map((item, index) => (
-            <div key={index} className={styles.selectedItem}>
+            <div key={`${item.id}-${index}`} className={styles.selectedItem}>
               <span>#{item.id} - {item.nombre}</span>
-              <button onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}>ELIM</button>
+              <button 
+                className={styles.eliminarBtn} 
+                onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}
+              >
+                ELIM
+              </button>
             </div>
           ))}
         </div>
@@ -180,9 +193,11 @@ function Home() {
         </div>
 
         <div className={styles.actionButtons}>
-          <button className={styles.vaciarBtn} onClick={handleVaciarLista}>Vaciar</button>
-          <button 
-            className={styles.grabarBtn} 
+          <button className={styles.vaciarBtn} onClick={handleVaciarLista}>
+            Vaciar
+          </button>
+          <button
+            className={styles.grabarBtn}
             onClick={handleGrabar}
             disabled={listaDeSeleccionados.length === 0}
           >

@@ -1,0 +1,56 @@
+.container { padding: 20px; }
+.grid {
+  display: grid;
+  grid-template-columns: 1fr; /* Una columna en móvil */
+  gap: 15px;
+}
+.card {
+  background: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+.valorCosto { color: #e74c3c; font-size: 1.5rem; font-weight: bold; }
+.valorVenta { color: #3498db; font-size: 1.5rem; font-weight: bold; }
+.valorGanancia { color: #2ecc71; font-size: 1.8rem; font-weight: bold; }
+
+label{
+    color: black;
+}
+
+.highlightBs {
+  background-color: #f8f9fa;
+  border-left: 5px solid #ff9800; /* Color naranja para resaltar moneda local */
+}
+
+.valorBs {
+  color: #ff9800;
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.tasaInfo {
+  margin-top: 5px;
+  color: #6c757d;
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+.sidebar {
+  position: fixed; /* Crucial para que no se mueva al hacer scroll */
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 280px; /* O el ancho que prefieras */
+  background-color: #ffffff;
+  
+  /* Elevación máxima */
+  z-index: 9999; 
+  
+  /* Sombra para dar profundidad y separar visualmente del fondo */
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
+  
+  transition: transform 0.3s ease-in-out;
+}

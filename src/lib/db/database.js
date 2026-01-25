@@ -55,12 +55,31 @@ export class NaturaDBClass {
             pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus'
         });
 
+        this.db.version(7).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio, costo_$',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
+            gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago'
+        });
+
+        this.db.version(8).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt, visible',
+            grupos: '++id, nombre, precio, costo_$',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
+            gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago'
+        });
+
         // Direct access references for components [6]
         this.productos = this.db.productos;
         this.grupos = this.db.grupos;
         this.config = this.db.config;
         this.ventas = this.db.ventas;
         this.pedidos = this.db.pedidos;
+        this.gastos = this.db.gastos;
     }
 
     // Initialisation method called by the app entry points [6]

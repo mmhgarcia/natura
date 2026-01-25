@@ -34,7 +34,7 @@ const styles = {
         borderBottom: '1px solid #dee2e6',
         position: 'sticky',
         top: 0,
-        zIndex: 999
+        zIndex: 10000  
     },
     nav: {
         display: 'flex',

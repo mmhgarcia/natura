@@ -231,18 +231,19 @@ const ProductosCRUD = () => {
   );
 };
 
-// Estilos
 const styles = {
   container: { 
     padding: '20px', 
     maxWidth: '1000px', 
     margin: '0 auto',
-    minHeight: '100vh'
+    minHeight: '100vh',
+    fontFamily: 'system-ui, -apple-system, sans-serif'
   },
   title: { 
     marginBottom: '20px', 
-    color: '#333',
-    fontSize: '24px'
+    color: '#1a1a1a',
+    fontSize: '26px',
+    fontWeight: '700'
   },
   loading: { 
     padding: '40px', 
@@ -251,12 +252,15 @@ const styles = {
     color: '#666'
   },
   errorAlert: { 
-    backgroundColor: '#fee', 
-    color: '#c33', 
-    padding: '12px', 
-    borderRadius: '4px',
+    backgroundColor: '#fff5f5', 
+    color: '#c53030', 
+    padding: '12px 16px', 
+    borderRadius: '6px',
     marginBottom: '20px',
-    border: '1px solid #fcc'
+    border: '1px solid #feb2b2',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
   },
   controles: {
     display: 'flex',
@@ -264,7 +268,11 @@ const styles = {
     alignItems: 'flex-end',
     marginBottom: '25px',
     flexWrap: 'wrap',
-    gap: '15px'
+    gap: '15px',
+    backgroundColor: '#fff',
+    padding: '15px',
+    borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
   },
   filtros: {
     flex: 1
@@ -272,90 +280,115 @@ const styles = {
   filtroGrupo: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '5px'
+    gap: '8px'
   },
   filtroLabel: {
-    fontSize: '14px',
-    color: '#555',
-    fontWeight: '500'
+    fontSize: '13px',
+    color: '#666',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
   },
   select: {
-    padding: '8px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
+    padding: '10px 12px',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
     fontSize: '14px',
-    maxWidth: '200px',
-    backgroundColor: 'white'
+    maxWidth: '240px',
+    backgroundColor: '#f8fafc',
+    cursor: 'pointer',
+    outline: 'none',
+    transition: 'border-color 0.2s'
   },
   nuevoButton: {
-    padding: '10px 20px',
-    backgroundColor: '#2196F3',
+    padding: '11px 22px',
+    backgroundColor: '#2563eb', // Azul moderno
     color: 'white',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '6px',
     cursor: 'pointer',
     fontSize: '14px',
-    fontWeight: '500',
-    whiteSpace: 'nowrap'
+    fontWeight: '600',
+    whiteSpace: 'nowrap',
+    transition: 'background 0.2s',
+    boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
   },
   lista: { 
-    border: '1px solid #ddd',
-    borderRadius: '8px',
+    border: '1px solid #e2e8f0',
+    borderRadius: '10px',
     overflow: 'hidden',
-    marginBottom: '20px'
+    marginBottom: '20px',
+    backgroundColor: 'white',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
   },
   vacio: { 
-    padding: '40px', 
+    padding: '60px 20px', 
     textAlign: 'center', 
-    color: '#666',
+    color: '#94a3b8',
     fontSize: '16px'
   },
   item: {
     display: 'flex',
     alignItems: 'center',
-    padding: '15px',
-    borderBottom: '1px solid #eee',
+    padding: '16px 20px',
+    borderBottom: '1px solid #f1f5f9',
     backgroundColor: 'white',
-    gap: '15px'
+    gap: '20px',
+    transition: 'background 0.2s'
   },
   itemImagen: {
-    width: '60px',
-    height: '60px',
-    flexShrink: 0
+    width: '64px',
+    height: '64px',
+    flexShrink: 0,
+    position: 'relative' // Para indicadores sobre la imagen
   },
   imagen: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
-    borderRadius: '4px',
-    border: '1px solid #eee'
+    borderRadius: '8px',
+    border: '1px solid #e2e8f0'
   },
   imagenPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#f5f5f5',
-    borderRadius: '4px',
+    backgroundColor: '#f1f5f9',
+    borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '24px',
-    color: '#999',
-    border: '1px dashed #ddd'
+    color: '#94a3b8',
+    border: '1px dashed #cbd5e1'
   },
   itemInfo: {
     flex: 1,
-    minWidth: 0 // Para que el texto no desborde
+    minWidth: 0
+  },
+  itemHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '6px'
   },
   itemNombre: { 
-    fontWeight: 'bold', 
+    fontWeight: '600', 
     fontSize: '16px', 
-    marginBottom: '8px',
-    color: '#333'
+    color: '#1e293b'
   },
+  badgeVisible: {
+    fontSize: '10px',
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontWeight: '700',
+    textTransform: 'uppercase'
+  },
+  visibleTrue: { backgroundColor: '#dcfce7', color: '#15803d' },
+  visibleFalse: { backgroundColor: '#fee2e2', color: '#b91c1c' },
+
   itemDetalles: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-    gap: '8px',
+    display: 'flex',
+    gap: '20px',
     fontSize: '13px'
   },
   detalle: {
@@ -363,53 +396,56 @@ const styles = {
     gap: '5px'
   },
   detalleLabel: {
-    color: '#666',
-    fontWeight: '500'
+    color: '#64748b',
+    fontWeight: '400'
   },
   detalleValor: {
-    color: '#333'
+    color: '#334155',
+    fontWeight: '600'
   },
   itemActions: { 
     display: 'flex', 
-    gap: '10px',
+    gap: '8px',
     flexShrink: 0
   },
   btnEditar: {
-    padding: '8px 16px',
-    backgroundColor: '#2196F3',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
+    padding: '8px 14px',
+    backgroundColor: '#f1f5f9',
+    color: '#475569',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
     cursor: 'pointer',
-    fontSize: '14px',
-    whiteSpace: 'nowrap'
+    fontSize: '13px',
+    fontWeight: '600',
+    transition: 'all 0.2s'
   },
   btnEliminar: {
-    padding: '8px 16px',
-    backgroundColor: '#f44336',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
+    padding: '8px 14px',
+    backgroundColor: '#fff',
+    color: '#ef4444',
+    border: '1px solid #fee2e2',
+    borderRadius: '6px',
     cursor: 'pointer',
-    fontSize: '14px',
-    whiteSpace: 'nowrap'
+    fontSize: '13px',
+    fontWeight: '600',
+    transition: 'all 0.2s'
   },
   resumen: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '15px',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '8px',
+    padding: '20px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '10px',
     fontSize: '14px',
-    color: '#555',
-    flexWrap: 'wrap',
-    gap: '10px'
+    color: '#475569',
+    border: '1px solid #e2e8f0'
   },
   stockTotal: {
-    fontWeight: 'bold',
-    color: '#1976d2'
-  }
+    fontWeight: '700',
+    color: '#2563eb',
+    fontSize: '16px'
+  },
 };
 
 export default ProductosCRUD;

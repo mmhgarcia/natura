@@ -14,6 +14,8 @@ import PedidosPage from './pages/Pedidos';
 // Asegúrate de tener esto:
 import DeliveryPage from './pages/DeliveryPage';
 import Estadisticas from "./pages/Estadisticas";
+import ResumenInventario from "./components/ResumenInventario";
+import RegistroGasto from "./components/RegistroGasto";
 
 function App() {
   return (
@@ -28,7 +30,9 @@ function App() {
         <Route path="/admingrupos" element={<GruposPage />} />
         <Route path="/adminproductos" element={<ProductosPage />} />
         <Route path="/delivery" element={<DeliveryPage />} />
-         <Route path="/estadisticas" element={<Estadisticas />} />
+        <Route path="/estadisticas" element={<Estadisticas />} />
+        <Route path="/resumeninventario" element={<ResumenInventario />} />
+        <Route path="/registrogasto" element={<RegistroGasto />} />
         {/* Nueva ruta para Pedidos */}
         <Route path="/pedidos" element={<PedidosPage />} />
         <Route path="*" element={<NotFound />} />

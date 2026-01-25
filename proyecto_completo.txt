@@ -37,6 +37,10 @@ ESTRUCTURA DEL PROYECTO: natura
     📁 ProductosCRUD/
       📄 ModalProducto.jsx
       📄 ProductosCRUD.jsx
+    📄 RegistroGasto.jsx
+    📄 RegistroGasto.module.css
+    📄 ResumenInventario.jsx
+    📄 ResumenInventario.module.css
     📄 Sidebar.jsx
     📄 TasaForm.jsx
     📄 TasaImporter.jsx
@@ -450,6 +454,8 @@ import PedidosPage from './pages/Pedidos';
 // Asegúrate de tener esto:
 import DeliveryPage from './pages/DeliveryPage';
 import Estadisticas from "./pages/Estadisticas";
+import ResumenInventario from "./components/ResumenInventario";
+import RegistroGasto from "./components/RegistroGasto";
 
 function App() {
   return (
@@ -464,7 +470,9 @@ function App() {
         <Route path="/admingrupos" element={<GruposPage />} />
         <Route path="/adminproductos" element={<ProductosPage />} />
         <Route path="/delivery" element={<DeliveryPage />} />
-         <Route path="/estadisticas" element={<Estadisticas />} />
+        <Route path="/estadisticas" element={<Estadisticas />} />
+        <Route path="/resumeninventario" element={<ResumenInventario />} />
+        <Route path="/registrogasto" element={<RegistroGasto />} />
         {/* Nueva ruta para Pedidos */}
         <Route path="/pedidos" element={<PedidosPage />} />
         <Route path="*" element={<NotFound />} />
@@ -1678,7 +1686,7 @@ const styles = {
         borderBottom: '1px solid #dee2e6',
         position: 'sticky',
         top: 0,
-        zIndex: 999
+        zIndex: 10000  
     },
     nav: {
         display: 'flex',
@@ -2341,269 +2349,305 @@ FILE: src/components/Pedidos.module.css
 FILE: src/components/ProductosCRUD/ModalProducto.jsx
 ------------------------------
 import React, { useState, useEffect } from 'react';
-import { db } from '../../lib/db/database';
+import { db } from '../../lib/db/database'; // Acceso a dbTasaBCV [4]
 
 const ModalProducto = ({ producto, grupos, onClose, onSave }) => {
-    const [formData, setFormData] = useState({
+  // Estado inicial incluyendo el campo 'visible' soportado en la versión 8 de la DB [1, 2]
+  const [formData, setFormData] = useState({
+    id: '',
+    nombre: '',
+    grupo: '',
+    stock: 0,
+    imagen: '',
+    visible: true 
+  });
+
+  const [error, setError] = useState('');
+  const [validando, setValidando] = useState(false);
+
+  // Efecto para cargar los datos del producto al editar [2, 5]
+  useEffect(() => {
+    if (producto) {
+      setFormData({
+        id: producto.id.toString(),
+        nombre: producto.nombre || '',
+        grupo: producto.grupo || '',
+        stock: producto.stock || 0,
+        imagen: producto.imagen || '',
+        // Se asegura la carga del campo visible (predeterminado a true si no existe) [1]
+        visible: producto.visible !== undefined ? producto.visible : true 
+      });
+    } else {
+      setFormData({
         id: '',
         nombre: '',
-        grupo: '',
+        grupo: grupos.length > 0 ? grupos.nombre : '',
         stock: 0,
-        imagen: ''
-    });
+        imagen: '',
+        visible: true
+      });
+    }
+  }, [producto, grupos]);
 
-    const [error, setError] = useState('');
-    const [validando, setValidando] = useState(false);
+  // Valida que el ID no esté duplicado en IndexedDB [5]
+  const validarIdExistente = async (id) => {
+    try {
+      const existe = await db.get('productos', parseInt(id));
+      return !!existe;
+    } catch (err) {
+      console.error('Error validando ID:', err);
+      return false;
+    }
+  };
 
-    useEffect(() => {
-        if (producto) {
-            setFormData({
-                id: producto.id.toString(),
-                nombre: producto.nombre || '',
-                grupo: producto.grupo || '',
-                stock: producto.stock || 0,
-                imagen: producto.imagen || ''
-            });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Manejo específico para el campo booleano 'visible'
+    if (name === 'visible') {
+      setFormData(prev => ({ ...prev, visible: value === 'true' }));
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'stock' || name === 'id' ?
+        (value === '' ? '' : value.replace(/\D/g, '')) :
+        value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setValidando(true);
+
+    // Validaciones básicas de integridad [3, 5]
+    if (!formData.id.trim()) {
+      setError('El ID es requerido');
+      setValidando(false);
+      return;
+    }
+
+    const idNumero = parseInt(formData.id);
+    if (isNaN(idNumero) || idNumero <= 0) {
+      setError('El ID debe ser un número positivo');
+      setValidando(false);
+      return;
+    }
+
+    if (!formData.nombre.trim()) {
+      setError('El nombre es requerido');
+      setValidando(false);
+      return;
+    }
+
+    try {
+      const dataToSave = {
+        id: idNumero,
+        nombre: formData.nombre,
+        grupo: formData.grupo,
+        stock: parseInt(formData.stock),
+        imagen: formData.imagen,
+        visible: formData.visible, // Persistencia del estado de visibilidad [1]
+        createdAt: producto ? producto.createdAt : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (producto) {
+        const idCambiado = idNumero !== producto.id;
+        if (idCambiado) {
+          const idExiste = await validarIdExistente(idNumero);
+          if (idExiste) {
+            setError(`El ID ${idNumero} ya está en uso`);
+            setValidando(false);
+            return;
+          }
+          await db.del('productos', producto.id);
+          await db.add('productos', dataToSave);
         } else {
-            setFormData({
-                id: '',
-                nombre: '',
-                grupo: grupos.length > 0 ? grupos.nombre : '',
-                stock: 0,
-                imagen: ''
-            });
+          await db.put('productos', dataToSave); // Actualiza registro existente [6]
         }
-    }, [producto, grupos]);
-
-    const validarIdExistente = async (id) => {
-        try {
-            const existe = await db.get('productos', parseInt(id));
-            return !!existe;
-        } catch (err) {
-            console.error('Error validando ID:', err);
-            return false;
+      } else {
+        const idExiste = await validarIdExistente(idNumero);
+        if (idExiste) {
+          setError(`El ID ${idNumero} ya está en uso`);
+          setValidando(false);
+          return;
         }
-    };
+        await db.add('productos', dataToSave); // Crea nuevo registro [7]
+      }
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-        setValidando(true);
+      onSave(); // Refresca la lista en el componente padre [8]
+      onClose();
+    } catch (err) {
+      setError('Error al guardar: ' + err.message);
+    } finally {
+      setValidando(false);
+    }
+  };
 
-        if (!formData.id.trim()) {
-            setError('El ID es requerido');
-            setValidando(false);
-            return;
-        }
-
-        const idNumero = parseInt(formData.id);
-        if (isNaN(idNumero) || idNumero <= 0) {
-            setError('El ID debe ser un número positivo');
-            setValidando(false);
-            return;
-        }
-
-        if (!formData.nombre.trim()) {
-            setError('El nombre es requerido');
-            setValidando(false);
-            return;
-        }
-
-        if (!formData.grupo) {
-            setError('Debe seleccionar un grupo');
-            setValidando(false);
-            return;
-        }
-
-        if (formData.stock < 0) {
-            setError('El stock no puede ser negativo');
-            setValidando(false);
-            return;
-        }
-
-        try {
-            const dataToSave = {
-                id: idNumero,
-                nombre: formData.nombre,
-                grupo: formData.grupo,
-                stock: parseInt(formData.stock),
-                imagen: formData.imagen,
-                createdAt: producto ? producto.createdAt : new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            };
-
-            if (producto) {
-                const idCambiado = idNumero !== producto.id;
-                if (idCambiado) {
-                    const idExiste = await validarIdExistente(idNumero);
-                    if (idExiste) {
-                        setError(`El ID ${idNumero} ya está en uso por otro producto`);
-                        setValidando(false);
-                        return;
-                    }
-                    await db.del('productos', producto.id);
-                    await db.add('productos', dataToSave);
-                } else {
-                    await db.put('productos', dataToSave);
-                }
-            } else {
-                const idExiste = await validarIdExistente(idNumero);
-                if (idExiste) {
-                    setError(`El ID ${idNumero} ya está en uso`);
-                    setValidando(false);
-                    return;
-                }
-                await db.add('productos', dataToSave);
-            }
-
-            onSave();
-            onClose();
-        } catch (err) {
-            setError('Error al guardar: ' + err.message);
-            console.error(err);
-        } finally {
-            setValidando(false);
-        }
-    };
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: name === 'stock' || name === 'id' ?
-                (value === '' ? '' : value.replace(/\D/g, '')) :
-                value
-        }));
-    };
-
-    return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px'
-        }}>
-            <div style={{
-                backgroundColor: 'white', borderRadius: '8px', width: '100%',
-                maxWidth: '500px', maxHeight: '90vh', display: 'flex',
-                flexDirection: 'column', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
-            }}>
-                <div style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '20px', borderBottom: '1px solid #eee', backgroundColor: '#f8f9fa'
-                }}>
-                    <h3 style={{ margin: 0, color: '#333' }}>
-                        {producto ? '✏️ Editar Producto' : '➕ Nuevo Producto'}
-                    </h3>
-                    <button onClick={onClose} style={{
-                        background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer',
-                        color: '#666', width: '30px', height: '30px'
-                    }}>×</button>
-                </div>
-
-                <form onSubmit={handleSubmit} style={{ padding: '20px', overflowY: 'auto' }}>
-                    {error && (
-                        <div style={{
-                            backgroundColor: '#fee', color: '#c33', padding: '12px',
-                            borderRadius: '4px', marginBottom: '20px', fontSize: '14px', border: '1px solid #fcc'
-                        }}>
-                            ⚠️ {error}
-                        </div>
-                    )}
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#333', fontSize: '14px' }}>ID *</label>
-                            <input
-                                type="text"
-                                name="id"
-                                value={formData.id}
-                                onChange={handleChange}
-                                style={{
-                                    width: '100%', padding: '10px', border: '1px solid #ddd',
-                                    borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box',
-                                    backgroundColor: validando ? '#f8f9fa' : 'white',
-                                    color: '#333', cursor: validando ? 'not-allowed' : 'text'
-                                }}
-                                disabled={validando}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#333', fontSize: '14px' }}>Stock</label>
-                            <input
-                                type="number"
-                                name="stock"
-                                value={formData.stock}
-                                onChange={handleChange}
-                                style={{
-                                    width: '100%', padding: '10px', border: '1px solid #ddd',
-                                    borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box',
-                                    backgroundColor: validando ? '#f8f9fa' : 'white',
-                                    color: '#333', cursor: validando ? 'not-allowed' : 'text'
-                                }}
-                                disabled={validando}
-                            />
-                        </div>
-                    </div>
-
-                    <div style={{ marginBottom: '20px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#333', fontSize: '14px' }}>Nombre del Producto *</label>
-                        <input
-                            type="text"
-                            name="nombre"
-                            value={formData.nombre}
-                            onChange={handleChange}
-                            style={{
-                                width: '100%', padding: '10px', border: '1px solid #ddd',
-                                borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box',
-                                backgroundColor: validando ? '#f8f9fa' : 'white',
-                                color: '#333', cursor: validando ? 'not-allowed' : 'text'
-                            }}
-                            disabled={validando}
-                        />
-                    </div>
-
-                    <div style={{ marginBottom: '20px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#333', fontSize: '14px' }}>Grupo *</label>
-                        <select
-                            name="grupo"
-                            value={formData.grupo}
-                            onChange={handleChange}
-                            style={{
-                                width: '100%', padding: '10px', border: '1px solid #ddd',
-                                borderRadius: '4px', fontSize: '14px', 
-                                backgroundColor: validando || grupos.length === 0 ? '#f8f9fa' : 'white',
-                                color: '#333', cursor: (validando || grupos.length === 0) ? 'not-allowed' : 'pointer'
-                            }}
-                            disabled={validando || grupos.length === 0}
-                        >
-                            <option value="">Seleccionar grupo...</option>
-                            {grupos.map(grupo => (
-                                <option key={grupo.id} value={grupo.nombre}>
-                                    {grupo.nombre} {grupo.precio > 0 ? `(+$${grupo.precio.toFixed(2)})` : ''}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <input type="hidden" name="imagen" value={formData.imagen} />
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
-                        <button type="button" onClick={onClose} style={{
-                            padding: '10px 24px', backgroundColor: '#6c757d', color: 'white',
-                            border: 'none', borderRadius: '4px', cursor: 'pointer'
-                        }}>Cancelar</button>
-                        <button type="submit" style={{
-                            padding: '10px 24px', backgroundColor: '#28a745', color: 'white',
-                            border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer'
-                        }} disabled={validando}>
-                            {validando ? '⌛ Grabando...' : producto ? '💾 Guardar Cambios' : '✅ Grabar Producto'}
-                        </button>
-                    </div>
-                </form>
-            </div>
+  return (
+    <div style={modalStyles.overlay}>
+      <div style={modalStyles.modal}>
+        <div style={modalStyles.header}>
+          <h3 style={{ margin: 0, color: '#333' }}>
+            {producto ? '✏️ Editar Producto' : '➕ Nuevo Producto'}
+          </h3>
+          <button onClick={onClose} style={modalStyles.closeBtn}>×</button>
         </div>
-    );
+
+        <form onSubmit={handleSubmit} style={{ padding: '20px' }}>
+          {error && (
+            <div style={modalStyles.errorBox}>
+              ⚠️ {error}
+            </div>
+          )}
+
+          {/* Fila: ID y Stock [9] */}
+          <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={modalStyles.label}>ID *</label>
+              <input 
+                type="text" 
+                name="id" 
+                value={formData.id} 
+                onChange={handleChange} 
+                disabled={validando || !!producto} 
+                style={inputStyle(validando)} 
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={modalStyles.label}>Stock</label>
+              <input 
+                type="text" 
+                name="stock" 
+                value={formData.stock} 
+                onChange={handleChange} 
+                disabled={validando} 
+                style={inputStyle(validando)} 
+              />
+            </div>
+          </div>
+
+          {/* Campo: Nombre [9] */}
+          <div style={{ marginBottom: '15px' }}>
+            <label style={modalStyles.label}>Nombre del Producto *</label>
+            <input 
+              type="text" 
+              name="nombre" 
+              value={formData.nombre} 
+              onChange={handleChange} 
+              disabled={validando} 
+              style={inputStyle(validando)} 
+            />
+          </div>
+
+          {/* Campo: Ruta de la Imagen [10] */}
+          <div style={{ marginBottom: '15px' }}>
+            <label style={modalStyles.label}>Ruta de la Imagen</label>
+            <input 
+              type="text" 
+              name="imagen" 
+              value={formData.imagen} 
+              onChange={handleChange} 
+              disabled={validando} 
+              placeholder="/outputs/small/nombre_400.webp" 
+              style={inputStyle(validando)} 
+            />
+          </div>
+
+          {/* Campo: Visibilidad (Nuevo control basado en esquema v8) [1] */}
+          <div style={{ marginBottom: '15px' }}>
+            <label style={modalStyles.label}>Estado en Catálogo</label>
+            <select
+              name="visible"
+              value={formData.visible.toString()}
+              onChange={handleChange}
+              disabled={validando}
+              style={{ ...inputStyle(validando), cursor: 'pointer' }}
+            >
+              <option value="true">🟢 Visible (Disponible en Home)</option>
+              <option value="false">⚪ Oculto (Solo visible en Admin)</option>
+            </select>
+          </div>
+
+          {/* Campo: Grupo [10] */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={modalStyles.label}>Grupo *</label>
+            <select 
+              name="grupo" 
+              value={formData.grupo} 
+              onChange={handleChange} 
+              disabled={validando} 
+              style={{ ...inputStyle(validando), cursor: 'pointer' }}
+            >
+              <option value="">Seleccionar grupo...</option>
+              {grupos.map(grupo => (
+                <option key={grupo.id} value={grupo.nombre}>
+                  {grupo.nombre} {grupo.precio > 0 ? `(+$${grupo.precio.toFixed(2)})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={modalStyles.footer}>
+            <button 
+              type="button" 
+              onClick={onClose} 
+              disabled={validando} 
+              style={modalStyles.btnCancel}
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              disabled={validando} 
+              style={modalStyles.btnSave}
+            >
+              {validando ? '⌛ Grabando...' : producto ? '💾 Guardar Cambios' : '✅ Grabar Producto'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 };
+
+// Estilos basados en la estructura del proyecto [11, 12]
+const modalStyles = {
+  overlay: {
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex',
+    alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px'
+  },
+  modal: {
+    backgroundColor: 'white', borderRadius: '8px', width: '100%',
+    maxWidth: '500px', maxHeight: '90vh', display: 'flex',
+    flexDirection: 'column', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+    overflowY: 'auto'
+  },
+  header: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '20px', borderBottom: '1px solid #eee', backgroundColor: '#f8f9fa'
+  },
+  closeBtn: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#666' },
+  label: { display: 'block', fontWeight: 'bold', marginBottom: '5px', fontSize: '14px', color: '#333' },
+  errorBox: {
+    backgroundColor: '#fee', color: '#c33', padding: '12px',
+    borderRadius: '4px', marginBottom: '20px', fontSize: '14px', border: '1px solid #fcc'
+  },
+  footer: { display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '10px', borderTop: '1px solid #eee', padding: '20px' },
+  btnCancel: { padding: '10px 24px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
+  btnSave: { padding: '10px 24px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }
+};
+
+const inputStyle = (validando) => ({
+  width: '100%', padding: '10px', border: '1px solid #ddd',
+  borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box',
+  backgroundColor: validando ? '#f8f9fa' : 'white',
+  color: '#333', cursor: validando ? 'not-allowed' : 'text'
+});
 
 export default ModalProducto;
 ************************************************************
@@ -2843,18 +2887,19 @@ const ProductosCRUD = () => {
   );
 };
 
-// Estilos
 const styles = {
   container: { 
     padding: '20px', 
     maxWidth: '1000px', 
     margin: '0 auto',
-    minHeight: '100vh'
+    minHeight: '100vh',
+    fontFamily: 'system-ui, -apple-system, sans-serif'
   },
   title: { 
     marginBottom: '20px', 
-    color: '#333',
-    fontSize: '24px'
+    color: '#1a1a1a',
+    fontSize: '26px',
+    fontWeight: '700'
   },
   loading: { 
     padding: '40px', 
@@ -2863,12 +2908,15 @@ const styles = {
     color: '#666'
   },
   errorAlert: { 
-    backgroundColor: '#fee', 
-    color: '#c33', 
-    padding: '12px', 
-    borderRadius: '4px',
+    backgroundColor: '#fff5f5', 
+    color: '#c53030', 
+    padding: '12px 16px', 
+    borderRadius: '6px',
     marginBottom: '20px',
-    border: '1px solid #fcc'
+    border: '1px solid #feb2b2',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
   },
   controles: {
     display: 'flex',
@@ -2876,7 +2924,11 @@ const styles = {
     alignItems: 'flex-end',
     marginBottom: '25px',
     flexWrap: 'wrap',
-    gap: '15px'
+    gap: '15px',
+    backgroundColor: '#fff',
+    padding: '15px',
+    borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
   },
   filtros: {
     flex: 1
@@ -2884,90 +2936,115 @@ const styles = {
   filtroGrupo: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '5px'
+    gap: '8px'
   },
   filtroLabel: {
-    fontSize: '14px',
-    color: '#555',
-    fontWeight: '500'
+    fontSize: '13px',
+    color: '#666',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
   },
   select: {
-    padding: '8px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
+    padding: '10px 12px',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
     fontSize: '14px',
-    maxWidth: '200px',
-    backgroundColor: 'white'
+    maxWidth: '240px',
+    backgroundColor: '#f8fafc',
+    cursor: 'pointer',
+    outline: 'none',
+    transition: 'border-color 0.2s'
   },
   nuevoButton: {
-    padding: '10px 20px',
-    backgroundColor: '#2196F3',
+    padding: '11px 22px',
+    backgroundColor: '#2563eb', // Azul moderno
     color: 'white',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '6px',
     cursor: 'pointer',
     fontSize: '14px',
-    fontWeight: '500',
-    whiteSpace: 'nowrap'
+    fontWeight: '600',
+    whiteSpace: 'nowrap',
+    transition: 'background 0.2s',
+    boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
   },
   lista: { 
-    border: '1px solid #ddd',
-    borderRadius: '8px',
+    border: '1px solid #e2e8f0',
+    borderRadius: '10px',
     overflow: 'hidden',
-    marginBottom: '20px'
+    marginBottom: '20px',
+    backgroundColor: 'white',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
   },
   vacio: { 
-    padding: '40px', 
+    padding: '60px 20px', 
     textAlign: 'center', 
-    color: '#666',
+    color: '#94a3b8',
     fontSize: '16px'
   },
   item: {
     display: 'flex',
     alignItems: 'center',
-    padding: '15px',
-    borderBottom: '1px solid #eee',
+    padding: '16px 20px',
+    borderBottom: '1px solid #f1f5f9',
     backgroundColor: 'white',
-    gap: '15px'
+    gap: '20px',
+    transition: 'background 0.2s'
   },
   itemImagen: {
-    width: '60px',
-    height: '60px',
-    flexShrink: 0
+    width: '64px',
+    height: '64px',
+    flexShrink: 0,
+    position: 'relative' // Para indicadores sobre la imagen
   },
   imagen: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
-    borderRadius: '4px',
-    border: '1px solid #eee'
+    borderRadius: '8px',
+    border: '1px solid #e2e8f0'
   },
   imagenPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#f5f5f5',
-    borderRadius: '4px',
+    backgroundColor: '#f1f5f9',
+    borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '24px',
-    color: '#999',
-    border: '1px dashed #ddd'
+    color: '#94a3b8',
+    border: '1px dashed #cbd5e1'
   },
   itemInfo: {
     flex: 1,
-    minWidth: 0 // Para que el texto no desborde
+    minWidth: 0
+  },
+  itemHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '6px'
   },
   itemNombre: { 
-    fontWeight: 'bold', 
+    fontWeight: '600', 
     fontSize: '16px', 
-    marginBottom: '8px',
-    color: '#333'
+    color: '#1e293b'
   },
+  badgeVisible: {
+    fontSize: '10px',
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontWeight: '700',
+    textTransform: 'uppercase'
+  },
+  visibleTrue: { backgroundColor: '#dcfce7', color: '#15803d' },
+  visibleFalse: { backgroundColor: '#fee2e2', color: '#b91c1c' },
+
   itemDetalles: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-    gap: '8px',
+    display: 'flex',
+    gap: '20px',
     fontSize: '13px'
   },
   detalle: {
@@ -2975,56 +3052,326 @@ const styles = {
     gap: '5px'
   },
   detalleLabel: {
-    color: '#666',
-    fontWeight: '500'
+    color: '#64748b',
+    fontWeight: '400'
   },
   detalleValor: {
-    color: '#333'
+    color: '#334155',
+    fontWeight: '600'
   },
   itemActions: { 
     display: 'flex', 
-    gap: '10px',
+    gap: '8px',
     flexShrink: 0
   },
   btnEditar: {
-    padding: '8px 16px',
-    backgroundColor: '#2196F3',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
+    padding: '8px 14px',
+    backgroundColor: '#f1f5f9',
+    color: '#475569',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
     cursor: 'pointer',
-    fontSize: '14px',
-    whiteSpace: 'nowrap'
+    fontSize: '13px',
+    fontWeight: '600',
+    transition: 'all 0.2s'
   },
   btnEliminar: {
-    padding: '8px 16px',
-    backgroundColor: '#f44336',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
+    padding: '8px 14px',
+    backgroundColor: '#fff',
+    color: '#ef4444',
+    border: '1px solid #fee2e2',
+    borderRadius: '6px',
     cursor: 'pointer',
-    fontSize: '14px',
-    whiteSpace: 'nowrap'
+    fontSize: '13px',
+    fontWeight: '600',
+    transition: 'all 0.2s'
   },
   resumen: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '15px',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '8px',
+    padding: '20px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '10px',
     fontSize: '14px',
-    color: '#555',
-    flexWrap: 'wrap',
-    gap: '10px'
+    color: '#475569',
+    border: '1px solid #e2e8f0'
   },
   stockTotal: {
-    fontWeight: 'bold',
-    color: '#1976d2'
-  }
+    fontWeight: '700',
+    color: '#2563eb',
+    fontSize: '16px'
+  },
 };
 
 export default ProductosCRUD;
+************************************************************
+
+FILE: src/components/RegistroGasto.jsx
+------------------------------
+import React, { useState } from 'react';
+import { db } from '../lib/db/database';
+import styles from './RegistroGasto.module.css';
+
+const RegistroGasto = ({ onClose }) => {
+  const [gasto, setGasto] = useState({
+    descripcion: '',
+    montoUsd: '',
+    categoria: 'Operativo'
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!gasto.descripcion || !gasto.montoUsd) return;
+
+    await db.gastos.add({
+      ...gasto,
+      montoUsd: parseFloat(gasto.montoUsd),
+      fecha: new Date().toISOString()
+    });
+
+    alert('Gasto registrado con éxito');
+    setGasto({ descripcion: '', montoUsd: '', categoria: 'Operativo' });
+    if (onClose) onClose();
+  };
+
+  return (
+    <div className={styles.formContainer}>
+      <h3>💸 Registrar Gasto</h3>
+      <form onSubmit={handleSubmit}>
+        <div className={styles.inputGroup}>
+          <label>Descripción</label>
+          <input 
+            type="text" 
+            placeholder="Ej: Marcador, Almuerzo..."
+            value={gasto.descripcion}
+            onChange={(e) => setGasto({...gasto, descripcion: e.target.value})}
+            required
+          />
+        </div>
+
+        <div className={styles.inputGroup}>
+          <label>Monto ($)</label>
+          <input 
+            type="number" 
+            step="0.01"
+            placeholder="0.00"
+            value={gasto.montoUsd}
+            onChange={(e) => setGasto({...gasto, montoUsd: e.target.value})}
+            required
+          />
+        </div>
+
+        <div className={styles.inputGroup}>
+          <label>Categoría</label>
+          <select 
+            value={gasto.categoria}
+            onChange={(e) => setGasto({...gasto, categoria: e.target.value})}
+          >
+            <option value="Insumos">Insumos (Empaques/Vasos)</option>
+            <option value="Operativo">Operativo (Papelería/Limpieza)</option>
+            <option value="Personal">Personal (Comida/Retiro)</option>
+            <option value="Otros">Otros</option>
+          </select>
+        </div>
+
+        <button type="submit" className={styles.btnGuardar}>Guardar Gasto</button>
+      </form>
+    </div>
+  );
+};
+
+export default RegistroGasto;
+************************************************************
+
+FILE: src/components/RegistroGasto.module.css
+------------------------------
+.formContainer {
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+  margin: 10px;
+}
+
+.inputGroup {
+  margin-bottom: 15px;
+}
+
+.inputGroup label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.inputGroup input, .inputGroup select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px; /* Evita zoom automático en iOS/Android */
+}
+
+.btnGuardar {
+  width: 100%;
+  padding: 15px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 16px;
+}
+************************************************************
+
+FILE: src/components/ResumenInventario.jsx
+------------------------------
+// src/components/ResumenInventario.jsx
+import React, { useState, useEffect } from 'react';
+import { db } from '../lib/db/database';
+import styles from './ResumenInventario.module.css';
+
+const ResumenInventario = () => {
+  const [metricas, setMetricas] = useState({ 
+    totalCosto: 0, 
+    totalVenta: 0, 
+    ganancia: 0, 
+    gananciaBs: 0 
+  });
+  const [tasa, setTasa] = useState(0);
+
+  useEffect(() => {
+    const cargarDatosYCalcular = async () => {
+      // 1. Obtener datos base
+      const productos = await db.productos.toArray();
+      const grupos = await db.grupos.toArray();
+      const configTasa = await db.config.get('tasa'); // Ajusta 'tasa' según tu clave
+      
+      const valorTasa = configTasa ? parseFloat(configTasa.valor) : 0;
+      setTasa(valorTasa);
+
+      // 2. Mapeo de grupos
+      const gruposMap = grupos.reduce((acc, g) => {
+        acc[g.nombre] = { 
+          costo: parseFloat(g.costo_$) || 0, 
+          precio: parseFloat(g.precio) || 0 
+        };
+        return acc;
+      }, {});
+
+      // 3. Cálculo de totales
+      const totales = productos.reduce((acc, p) => {
+        const info = gruposMap[p.grupo];
+        if (info) {
+          acc.totalCosto += (p.stock || 0) * info.costo;
+          acc.totalVenta += (p.stock || 0) * info.precio;
+        }
+        return acc;
+      }, { totalCosto: 0, totalVenta: 0 });
+
+      const gananciaUsd = totales.totalVenta - totales.totalCosto;
+
+      setMetricas({
+        ...totales,
+        ganancia: gananciaUsd,
+        gananciaBs: gananciaUsd * valorTasa // Cálculo de la nueva sección
+      });
+    };
+
+    cargarDatosYCalcular();
+  }, []);
+
+  return (
+    <div className={styles.container}>
+      <h2>Análisis de Inventario Actual</h2>
+      <div className={styles.grid}>
+        <div className={styles.card}>
+          <label>Inversión (Costo $)</label>
+          <span className={styles.valorCosto}>${metricas.totalCosto.toFixed(2)}</span>
+        </div>
+        <div className={styles.card}>
+          <label>Venta Estimada ($)</label>
+          <span className={styles.valorVenta}>${metricas.totalVenta.toFixed(2)}</span>
+        </div>
+        <div className={styles.card}>
+          <label>Ganancia Potencial ($)</label>
+          <span className={styles.valorGanancia}>${metricas.ganancia.toFixed(2)}</span>
+        </div>
+        
+        {/* CUARTA SECCIÓN: Ganancia en Bs */}
+        <div className={`${styles.card} ${styles.highlightBs}`}>
+          <label>Ganancia Potencial (Bs)</label>
+          <span className={styles.valorBs}>
+            Bs. {metricas.gananciaBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+          <small className={styles.tasaInfo}>Tasa aplicada: {tasa}</small>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ResumenInventario;
+************************************************************
+
+FILE: src/components/ResumenInventario.module.css
+------------------------------
+.container { padding: 20px; }
+.grid {
+  display: grid;
+  grid-template-columns: 1fr; /* Una columna en móvil */
+  gap: 15px;
+}
+.card {
+  background: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+.valorCosto { color: #e74c3c; font-size: 1.5rem; font-weight: bold; }
+.valorVenta { color: #3498db; font-size: 1.5rem; font-weight: bold; }
+.valorGanancia { color: #2ecc71; font-size: 1.8rem; font-weight: bold; }
+
+label{
+    color: black;
+}
+
+.highlightBs {
+  background-color: #f8f9fa;
+  border-left: 5px solid #ff9800; /* Color naranja para resaltar moneda local */
+}
+
+.valorBs {
+  color: #ff9800;
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.tasaInfo {
+  margin-top: 5px;
+  color: #6c757d;
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+.sidebar {
+  position: fixed; /* Crucial para que no se mueva al hacer scroll */
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 280px; /* O el ancho que prefieras */
+  background-color: #ffffff;
+  
+  /* Elevación máxima */
+  z-index: 9999; 
+  
+  /* Sombra para dar profundidad y separar visualmente del fondo */
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
+  
+  transition: transform 0.3s ease-in-out;
+}
 ************************************************************
 
 FILE: src/components/Sidebar.jsx
@@ -3056,72 +3403,69 @@ export default function Sidebar({ isOpen, onClose }) {
     };
 
     // Estilos definidos como objeto
-    const styles = {
-        sidebar: {
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            height: '100vh',
-            width: '250px',
-            backgroundColor: '#ffffff',
-            boxShadow: '2px 0 10px rgba(0,0,0,0.2)',
-            zIndex: 1001,
-            transition: 'transform 0.3s ease-in-out',
-            display: 'flex',
-            flexDirection: 'column',
-        },
-        overlay: {
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            zIndex: 1000,
-        },
-        header: {
-            padding: '20px',
-            borderBottom: '1px solid #eee',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            backgroundColor: '#00BFFF',
-        },
-        title: { 
-            color: 'white', 
-            margin: 0, 
-            fontSize: '1.2rem' 
-        },
-        closeBtn: { 
-            background: 'none', 
-            border: 'none', 
-            color: 'white', 
-            fontSize: '2rem', 
-            cursor: 'pointer' 
-        },
-        nav: { 
-            display: 'flex', 
-            flexDirection: 'column', 
-            padding: '10px' 
-        },
-        link: {
-            padding: '15px',
-            textDecoration: 'none',
-            color: '#333',
-            fontSize: '1.1rem',
-            borderBottom: '1px solid #f5f5f5',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            transition: 'background-color 0.2s'
-        },
-        icon: {
-            fontSize: '1.2rem',
-            width: '24px',
-            textAlign: 'center'
-        }
-    };
+   const styles = {
+    sidebar: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        height: '100vh',
+        width: '250px',
+        backgroundColor: '#ffffff',
+        boxShadow: '2px 0 10px rgba(0,0,0,0.2)',
+        zIndex: 9999,
+        transition: 'transform 0.3s ease-in-out',
+        display: 'flex',
+        flexDirection: 'column',
+        // Asegura que el sidebar no se mueva si el contenido es largo
+        overflow: 'auto' 
+    },
+    overlay: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        // Subimos el zIndex para que bloquee botones o modales de la UI principal
+        zIndex: 9998, 
+        backdropFilter: 'blur(2px)', // Toque estético moderno
+    },
+    header: {
+        padding: '20px',
+        borderBottom: '1px solid #eee',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#00BFFF',
+        // El header se queda fijo arriba
+        flexShrink: 0,
+       
+    },
+    nav: { 
+        display: 'flex', 
+        flexDirection: 'column', 
+        padding: '10px',
+        // ESTO HACE QUE LA LISTA SEA DESPLAZABLE
+        overflowY: 'auto', 
+        flexGrow: 1,
+        WebkitOverflowScrolling: 'touch', // Scroll suave en móviles
+    },
+    // ... tus otros estilos (title, closeBtn, icon se mantienen igual)
+    link: {
+        padding: '15px',
+        textDecoration: 'none',
+        color: '#333',
+        fontSize: '1.1rem',
+        borderBottom: '1px solid #f5f5f5',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        transition: 'background-color 0.2s',
+        // Evita que el texto se rompa en varias líneas si es largo
+        whiteSpace: 'nowrap', 
+    },
+};
 
     return (
         <>
@@ -3165,6 +3509,18 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Pedidos</span>
                     </Link>
                     
+                                       <Link 
+                        to="/registrogasto" 
+                        onClick={onClose} 
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>💸</span>
+                        <span>Registrar Gastos</span>
+                    </Link>
+ 
+
                     {/* Opción Tasa Delivery */}
                     <Link 
                         to="/delivery" 
@@ -3189,9 +3545,25 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Tasa BCV</span>
                     </Link>
 
+                    
                     <Link to="/estadisticas" onClick={onClose} style={styles.link}>
                         <span style={styles.icon}>📊</span> Estadísticas
                     </Link>
+                    
+                    <Link to="/resumeninventario" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Resumen de Inventario
+                    </Link>
+                    
+                    {/* Acceso Administrativo */}
+                    <a 
+                        onClick={handleAdminAccess} 
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>⚙️</span>
+                        <span>Panel de Control</span>
+                    </a>
                     
                     {/* Opción Acerca de */}
                     <Link 
@@ -3205,16 +3577,7 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Acerca de</span>
                     </Link>
                     
-                    {/* Acceso Administrativo */}
-                    <a 
-                        onClick={handleAdminAccess} 
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>⚙️</span>
-                        <span>Panel de Control</span>
-                    </a>
+                    
                 </nav>
             </div>
         </>
@@ -4224,12 +4587,31 @@ export class NaturaDBClass {
             pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus'
         });
 
+        this.db.version(7).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt',
+            grupos: '++id, nombre, precio, costo_$',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
+            gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago'
+        });
+
+        this.db.version(8).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt, visible',
+            grupos: '++id, nombre, precio, costo_$',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
+            gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago'
+        });
+
         // Direct access references for components [6]
         this.productos = this.db.productos;
         this.grupos = this.db.grupos;
         this.config = this.db.config;
         this.ventas = this.db.ventas;
         this.pedidos = this.db.pedidos;
+        this.gastos = this.db.gastos;
     }
 
     // Initialisation method called by the app entry points [6]
@@ -5070,112 +5452,151 @@ export default DeliveryPage;
 
 FILE: src/pages/Estadisticas.jsx
 ------------------------------
+/* src/pages/Estadisticas.jsx */
 import { useState, useEffect } from 'react';
 import { db } from '../lib/db/database';
 import { getTasaBCV } from '../lib/db/utils/tasaUtil';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  ResponsiveContainer, 
+  CartesianGrid, 
+  Cell,
+  LabelList 
+} from 'recharts';
 import styles from './Estadisticas.module.css';
 
 const Estadisticas = () => {
-    const [datosVentas, setDatosVentas] = useState([]);
-    const [tasa, setTasa] = useState(0);
-    const [rango, setRango] = useState('7d');
-    const [cargando, setCargando] = useState(true);
+  const [datosVentas, setDatosVentas] = useState([]);
+  const [tasa, setTasa] = useState(0);
+  const [rango, setRango] = useState('7d');
+  const [cargando, setCargando] = useState(true);
 
-    useEffect(() => {
-        const cargarData = async () => {
-            setCargando(true);
-            try {
-                const [ventasRaw, valorTasa] = await Promise.all([
-                    db.getAll('ventas'),
-                    getTasaBCV()
-                ]);
-                const filtradas = filtrarPorRango(ventasRaw, rango);
-                setDatosVentas(filtradas);
-                setTasa(valorTasa || 0);
-            } catch (err) {
-                console.error("Error:", err);
-            } finally {
-                setCargando(false);
-            }
-        };
-        cargarData();
-    }, [rango]);
-
-    const filtrarPorRango = (ventas, tipo) => {
-        const ahora = new Date();
-        return ventas.filter(v => {
-            const fechaVenta = new Date(v.fecha);
-            if (tipo === 'hoy') return fechaVenta.toDateString() === ahora.toDateString();
-            if (tipo === '7d') {
-                const limite = new Date();
-                limite.setDate(ahora.getDate() - 7);
-                return fechaVenta >= limite;
-            }
-            return true;
-        });
+  useEffect(() => {
+    const cargarData = async () => {
+      setCargando(true);
+      try {
+        const [ventasRaw, valorTasa] = await Promise.all([
+          db.getAll('ventas'),
+          getTasaBCV()
+        ]);
+        const filtradas = filtrarPorRango(ventasRaw, rango);
+        setDatosVentas(filtradas);
+        setTasa(valorTasa || 0);
+      } catch (err) {
+        console.error("Error:", err);
+      } finally {
+        setCargando(false);
+      }
     };
+    cargarData();
+  }, [rango]);
 
-    const dataGrafico = Object.entries(
-        datosVentas.reduce((acc, v) => {
-            acc[v.nombre] = (acc[v.nombre] || 0) + (v.cantidad || 1);
-            return acc;
-        }, {})
-    ).map(([name, value]) => ({ name, value }))
-     .sort((a, b) => b.value - a.value)
-     .slice(0, 6);
+  const filtrarPorRango = (ventas, tipo) => {
+    const ahora = new Date();
+    return ventas.filter(v => {
+      const fechaVenta = new Date(v.fecha);
+      if (tipo === 'hoy') return fechaVenta.toDateString() === ahora.toDateString();
+      if (tipo === '7d') {
+        const limite = new Date();
+        limite.setDate(ahora.getDate() - 7);
+        return fechaVenta >= limite;
+      }
+      return true;
+    });
+  };
 
-    const ingresosUsd = datosVentas.reduce((acc, v) => acc + (v.precioUsd || 0), 0);
+  // Preparación de datos para la gráfica [3]
+  const dataGrafico = Object.entries(
+    datosVentas.reduce((acc, v) => {
+      acc[v.nombre] = (acc[v.nombre] || 0) + (v.cantidad || 1);
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value }))
+   .sort((a, b) => b.value - a.value)
+   .slice(0, 6);
 
-    if (cargando) return <div className={styles.loading}>Procesando...</div>;
+  const ingresosUsd = datosVentas.reduce((acc, v) => acc + (v.precioUsd || 0), 0);
 
-    return (
-        <div className={styles.container}>
-            <header className={styles.header}>
-                <h2 className={styles.title}>📊 ANALÍTICA DE VENTAS</h2>
-                <div className={styles.selectWrapper}>
-                    <label className={styles.labelRango}>Rango de fecha:</label>
-                    <select value={rango} onChange={(e) => setRango(e.target.value)} className={styles.select}>
-                        <option value="hoy">Ventas de Hoy</option>
-                        <option value="7d">Últimos 7 Días</option>
-                        <option value="mes">Mes Actual</option>
-                    </select>
-                </div>
-            </header>
+  if (cargando) return <div className={styles.loading}>Procesando Analítica...</div>;
 
-            <div className={styles.resumen}>
-                <div className={styles.statCard}>
-                    <span className={styles.statNumber}>${ingresosUsd.toFixed(2)}</span>
-                    <span className={styles.statLabel}>TOTAL USD</span>
-                </div>
-                <div className={styles.statCard}>
-                    <span className={styles.statNumber}>Bs. {(ingresosUsd * tasa).toFixed(2)}</span>
-                    <span className={styles.statLabel}>TOTAL BS</span>
-                </div>
-            </div>
-
-            <div className={styles.chartBox}>
-                <h3 className={styles.chartTitle}>TOP 6: PRODUCTOS ESTRELLA</h3>
-                <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={dataGrafico} margin={{ top: 10, right: 10, left: -25, bottom: 60 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis 
-                            dataKey="name" 
-                            angle={-45} 
-                            textAnchor="end" 
-                            interval={0} 
-                            fontSize={11} 
-                            stroke="#333"
-                            height={80}
-                        />
-                        <YAxis fontSize={12} stroke="#333" />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="#00BFFF" radius={[2]} />
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
+  return (
+    <div className={styles.container}>
+      <h2 className={styles.title}>📊 ANALÍTICA DE VENTAS</h2>
+      
+      {/* Contenedor tipo Card Profesional solicitado */}
+      <div className={styles.mainCard}>
+        
+        <div className={styles.filterBar}>
+          <label className={styles.filterLabel}>Rango de fecha:</label>
+          <select 
+            value={rango} 
+            onChange={(e) => setRango(e.target.value)} 
+            className={styles.select}
+          >
+            <option value="hoy">Ventas de Hoy</option>
+            <option value="7d">Últimos 7 Días</option>
+            <option value="mes">Mes Actual</option>
+          </select>
         </div>
-    );
+
+        <div className={styles.ingresosContainer}>
+          <div className={styles.ingresosCard}>
+            <span className={styles.ingresosValue}>${ingresosUsd.toFixed(2)}</span>
+            <span className={styles.ingresosLabel}>TOTAL USD</span>
+          </div>
+          <div className={styles.ingresosCard}>
+            <span className={styles.ingresosValue}>Bs. {(ingresosUsd * tasa).toFixed(2)}</span>
+            <span className={styles.ingresosLabel}>TOTAL BS</span>
+          </div>
+        </div>
+
+        <div className={styles.chartWrapper}>
+          <h3 className={styles.chartTitle}>TOP 6: PRODUCTOS ESTRELLA</h3>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <BarChart data={dataGrafico} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                <XAxis 
+                  dataKey="name" 
+                  angle={-45} 
+                  textAnchor="end" 
+                  interval={0} 
+                  fontSize={10} 
+                  stroke="#555"
+                  height={70}
+                />
+                <YAxis hide /> {/* Ocultamos el eje Y para un look más limpio ya que tenemos etiquetas superiores */}
+                <Tooltip 
+                  contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                />
+                <Bar 
+                  dataKey="value" 
+                  fill="#00BFFF" 
+                  radius={[4]}
+                  barSize={40}
+                >
+                  {/* Solicitud: Mostrar cantidad en la parte superior de cada barra */}
+                  <LabelList 
+                    dataKey="value" 
+                    position="top" 
+                    style={{ fill: '#2c3e50', fontSize: 12, fontWeight: 'bold' }} 
+                  />
+                  {dataGrafico.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index === 0 ? '#007bff' : '#00BFFF'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
 };
 
 export default Estadisticas;
@@ -5183,226 +5604,126 @@ export default Estadisticas;
 
 FILE: src/pages/Estadisticas.module.css
 ------------------------------
+.container {
+    padding: 20px;
+    padding-bottom: 120px;
+    /* Cambio: Eliminado el fondo rojo de las fuentes [1] por un blanco profesional */
+    background-color: #ffffff; 
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #333;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Título de la Analítica */
+.title {
+    font-size: 1.6rem;
+    color: #2c3e50;
+    font-weight: 800;
+    margin-bottom: 25px;
+    text-align: center;
+    letter-spacing: -0.5px;
+}
+
+/* El componente principal presentado en una Card Profesional */
+.mainCard {
+    background-color: #ffffff;
+    border-radius: 20px; /* Bordes redondeados solicitados */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); /* Sombra profesional */
+    padding: 25px;
+    width: 100%;
+    max-width: 500px; /* Optimizado para el dispositivo Android del host Vercel [2] */
+    border: 1px solid #f0f0f0;
+    box-sizing: border-box;
+}
+
+/* Barra de filtros */
+.filterBar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 25px;
+}
 
 .filterLabel {
-    color: #333;
-    font-weight: bold;
-    font-size: 0.9rem;
+    color: #546e7a;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
 }
 
-
-.grid {
-    display: grid;
-    grid-template-columns: 1fr; 
-    gap: 16px;
-    padding: 0 12px;
-}
-
-.card {
-    position: relative;
-    background-color: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    padding: 15px;
-    cursor: pointer;
-}
-
-.stockBadge {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 14px;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    z-index: 10;
-}
-
-.cardDisabled {
-    opacity: 0.6;
-    filter: grayscale(1);
-    cursor: not-allowed !important;
-}
-
-.productImage {
-.container {
-  padding: 20px;
-  padding-bottom: 280px;
-  background-color: #fafafa;
-  min-height: 100vh;
-  /* Add this to ensure general text is visible */
-  color: #333; 
-}
-
-.filterBar {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding: 0 12px;
-  /* Specifically ensure the label text is dark */
-  color: #2c3e50; 
-  font-weight: bold;
-}
-
+/* Selector de rango de fechas */
 .select {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-  background-color: #fff;
-  /* CRITICAL: Force the text colour to be dark */
-  color: #333; 
-}
-    width: 100%;
-    height: auto;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    padding: 12px 15px;
+    border-radius: 12px;
+    border: 2px solid #eceff1;
+    font-size: 1rem;
+    background-color: #f8fafc;
+    color: #263238; /* Asegura visibilidad del texto solicitado en fuentes [3, 4] */
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-.placeholderName {
-    height: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #f0f0f0;
-    border-radius: 8px;
-    font-weight: bold;
-    color: #555;
-    margin-bottom: 10px;
+.select:focus {
+    outline: none;
+    border-color: #00BFFF; /* Azul Natura */
 }
 
-.productTitle {
-    font-size: 1.1rem;
-    font-weight: bold;
-    margin: 0 0 5px 0;
-    color: #2c3e50;
+/* Bloques de ingresos (USD y BS) */
+.ingresosContainer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 30px;
 }
 
-.cardFooter {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.priceText {
-    color: #28a745;
-    font-weight: bold;
-}
-
-.selectedContainer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background-color: #fff;
+.ingresosCard {
+    background: #f1f8ff;
     padding: 15px;
-    border-top: 2px solid #00BFFF;
-    z-index: 1000;
-}
-
-.selectedHeader {
-    display: flex;
-    justify-content: space-between;
-    font-weight: bold;
-    margin-bottom: 10px;
-    color: #333;
-}
-
-.selectedList {
-    max-height: 120px;
-    overflow-y: auto;
-    margin-bottom: 10px;
-}
-
-.selectedItem {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 10px;
-    background-color: #f8f9fa;
-    margin-bottom: 4px;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    color: #000;
-}
-
-.selectedItem button {
-    background-color: #ff4d4d;
-    color: white;
-    border: none;
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-
-.totalRow {
-    font-size: 1.1rem;
-    font-weight: bold;
+    border-radius: 15px;
     text-align: center;
-    margin: 10px 0;
+    border: 1px solid #e1f5fe;
+}
+
+.ingresosValue {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 800;
     color: #007bff;
 }
 
-.actionButtons {
-    display: flex;
-    gap: 10px;
+.ingresosLabel {
+    font-size: 0.7rem;
+    color: #78909c;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
-.vaciarBtn, .grabarBtn {
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
+/* Contenedor para el gráfico de Recharts [5] */
+.chartWrapper {
+    margin-top: 20px;
+    padding: 15px;
+    background: #fafafa;
+    border-radius: 15px;
+    border: 1px solid #f0f0f0;
 }
 
-.vaciarBtn { background-color: #6c757d; color: white; flex: 1; }
-.grabarBtn { background-color: #28a745; color: white; flex: 2; }
-.grabarBtn:disabled { background-color: #ccc; cursor: not-allowed; }
+.chartTitle {
+    font-size: 0.9rem;
+    color: #455a64;
+    font-weight: 700;
+    margin-bottom: 15px;
+    text-align: center;
+}
 
+/* Estado de carga */
 .loading {
     text-align: center;
     padding: 50px;
-    color: #666;
-}
-
-
-.container {
-  padding: 20px;
-  padding-bottom: 280px;
-  background-color: red;
-  min-height: 100vh;
-  /* Add this to ensure general text is visible */
-  color: #333; 
-}
-
-.filterBar {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding: 0 12px;
-  /* Specifically ensure the label text is dark */
-  color: #2c3e50; 
-  font-weight: bold;
-}
-
-.select {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid blue;
-  font-size: 1rem;
-  background-color: #fff;
-  /* CRITICAL: Force the text colour to be dark */
-  color: #333; 
+    color: #90a4ae;
+    font-weight: 500;
 }
 ************************************************************
 
@@ -5427,8 +5748,8 @@ FILE: src/pages/Home.jsx
 ------------------------------
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { db } from '../lib/db/database.js'; // Acceso a dbTasaBCV [1, 4]
-import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // Utilidad de tasa [1, 5]
+import { db } from '../lib/db/database.js'; // Acceso a dbTasaBCV [4]
+import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // Utilidad de tasa [4]
 import styles from './Home.module.css';
 
 function Home() {
@@ -5440,11 +5761,11 @@ function Home() {
   const [filtroGrupo, setFiltroGrupo] = useState('todos');
   const navigate = useNavigate();
 
-  // Carga inicial de datos optimizada para Android [2, 6]
+  // Carga inicial de datos desde IndexedDB [5]
   useEffect(() => {
     const cargarTodo = async () => {
       try {
-        await db.init(); // Inicializa dbTasaBCV [2, 7]
+        await db.init(); // Inicializa dbTasaBCV [5]
         const [p, g, t] = await Promise.all([
           db.getAll('productos'),
           db.getAll('grupos'),
@@ -5462,12 +5783,16 @@ function Home() {
     cargarTodo();
   }, []);
 
-  // Filtrado de productos por grupo [8, 9]
+  /**
+   * FILTRADO ACTUALIZADO (Sin campo 'visible'):
+   * Se elimina cualquier validación referente a la visibilidad.
+   * Ahora sólo filtra por el grupo seleccionado [1].
+   */
   const productosFiltrados = productos.filter(p => {
     return filtroGrupo === 'todos' || p.grupo === filtroGrupo;
   });
 
-  // Confirmación de seguridad para vaciar selección en móvil [8, 9]
+  // Confirmación para vaciar la lista [1]
   const handleVaciarLista = () => {
     if (listaDeSeleccionados.length === 0) return;
     const confirmar = window.confirm(
@@ -5476,7 +5801,7 @@ function Home() {
     if (confirmar) setListaDeSeleccionados([]);
   };
 
-  // Procesamiento de venta con actualización de stock en tiempo real [10-12]
+  // Procesamiento de venta y actualización de stock [6, 7]
   const handleGrabar = async () => {
     if (listaDeSeleccionados.length === 0) return;
     const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
@@ -5487,7 +5812,7 @@ function Home() {
         const grupoInfo = grupos.find(g => g.nombre === item.grupo);
         const precioUsd = grupoInfo ? grupoInfo.precio : 0;
 
-        // Registrar en tabla ventas [10, 13, 14]
+        // Registrar venta en IndexedDB [7]
         await db.add('ventas', {
           productoId: item.id,
           nombre: item.nombre,
@@ -5497,11 +5822,11 @@ function Home() {
           fecha: new Date().toISOString()
         });
 
-        // Descontar del inventario [11, 14, 15]
+        // Descontar inventario [7, 8]
         await db.updateStock(item.id, -1);
       }
 
-      // Refrescar estado local
+      // Refrescar lista de productos con stock actualizado [7]
       const productosActualizados = await db.getAll('productos');
       setProductos(productosActualizados);
       setListaDeSeleccionados([]);
@@ -5530,7 +5855,7 @@ function Home() {
 
   const { usd, bs } = calcularTotales();
 
-  if (cargando) return <div className={styles.loading}>Cargando tienda...</div>; [16]
+  if (cargando) return <div className={styles.loading}>Cargando tienda...</div>;
 
   return (
     <div className={styles.container}>
@@ -5562,31 +5887,35 @@ function Home() {
               className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
               onClick={() => !esAgotado && seleccionarProducto(p)}
             >
-              <div 
+              <div
                 className={styles.stockBadge}
                 style={{ backgroundColor: esAgotado ? '#ff4d4d' : (esBajoStock ? '#ffa500' : '#28a745') }}
               >
                 {p.stock}
               </div>
-
+              
+              {/* Renderizado de imagen corregido para mostrar el archivo real [2] */}
               {p.imagen ? (
-                <img src={p.imagen} alt={p.nombre} className={styles.productImage} />
+                <img 
+                  src={p.imagen} 
+                  alt={p.nombre} 
+                  className={styles.productImage} 
+                  onError={(e) => { e.target.style.display = 'none'; }} 
+                />
               ) : (
-                <div className={styles.placeholderName}>{p.nombre}</div>
+                <div className={styles.productImagePlaceholder}>{p.nombre}</div>
               )}
 
               <h3 className={styles.productTitle}>{p.nombre}</h3>
-              <div className={styles.cardFooter}>                
-                <span className={styles.priceText}>
-                  ID: {p.id} - $: {precio.toFixed(2)} - Bs.: {(precio * tasa).toFixed(2)}
-                </span>
-              </div>
+              <p className={styles.priceText}>
+                ID: {p.id} - $: {precio.toFixed(2)} - Bs.: {(precio * tasa).toFixed(2)}
+              </p>
             </div>
           );
         })}
       </div>
 
-      {/* Footer fijo optimizado para Android [3, 17, 18] */}
+      {/* Panel inferior fijo [9] */}
       <div className={styles.selectedContainer}>
         <div className={styles.selectedHeader}>
           <span>Items: <strong>{listaDeSeleccionados.length}</strong></span>
@@ -5595,9 +5924,14 @@ function Home() {
 
         <div className={styles.selectedList}>
           {listaDeSeleccionados.map((item, index) => (
-            <div key={index} className={styles.selectedItem}>
+            <div key={`${item.id}-${index}`} className={styles.selectedItem}>
               <span>#{item.id} - {item.nombre}</span>
-              <button onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}>ELIM</button>
+              <button 
+                className={styles.eliminarBtn} 
+                onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}
+              >
+                ELIM
+              </button>
             </div>
           ))}
         </div>
@@ -5607,9 +5941,11 @@ function Home() {
         </div>
 
         <div className={styles.actionButtons}>
-          <button className={styles.vaciarBtn} onClick={handleVaciarLista}>Vaciar</button>
-          <button 
-            className={styles.grabarBtn} 
+          <button className={styles.vaciarBtn} onClick={handleVaciarLista}>
+            Vaciar
+          </button>
+          <button
+            className={styles.grabarBtn}
             onClick={handleGrabar}
             disabled={listaDeSeleccionados.length === 0}
           >

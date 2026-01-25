@@ -25,72 +25,69 @@ export default function Sidebar({ isOpen, onClose }) {
     };
 
     // Estilos definidos como objeto
-    const styles = {
-        sidebar: {
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            height: '100vh',
-            width: '250px',
-            backgroundColor: '#ffffff',
-            boxShadow: '2px 0 10px rgba(0,0,0,0.2)',
-            zIndex: 1001,
-            transition: 'transform 0.3s ease-in-out',
-            display: 'flex',
-            flexDirection: 'column',
-        },
-        overlay: {
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            zIndex: 1000,
-        },
-        header: {
-            padding: '20px',
-            borderBottom: '1px solid #eee',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            backgroundColor: '#00BFFF',
-        },
-        title: { 
-            color: 'white', 
-            margin: 0, 
-            fontSize: '1.2rem' 
-        },
-        closeBtn: { 
-            background: 'none', 
-            border: 'none', 
-            color: 'white', 
-            fontSize: '2rem', 
-            cursor: 'pointer' 
-        },
-        nav: { 
-            display: 'flex', 
-            flexDirection: 'column', 
-            padding: '10px' 
-        },
-        link: {
-            padding: '15px',
-            textDecoration: 'none',
-            color: '#333',
-            fontSize: '1.1rem',
-            borderBottom: '1px solid #f5f5f5',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            transition: 'background-color 0.2s'
-        },
-        icon: {
-            fontSize: '1.2rem',
-            width: '24px',
-            textAlign: 'center'
-        }
-    };
+   const styles = {
+    sidebar: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        height: '100vh',
+        width: '250px',
+        backgroundColor: '#ffffff',
+        boxShadow: '2px 0 10px rgba(0,0,0,0.2)',
+        zIndex: 9999,
+        transition: 'transform 0.3s ease-in-out',
+        display: 'flex',
+        flexDirection: 'column',
+        // Asegura que el sidebar no se mueva si el contenido es largo
+        overflow: 'auto' 
+    },
+    overlay: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        // Subimos el zIndex para que bloquee botones o modales de la UI principal
+        zIndex: 9998, 
+        backdropFilter: 'blur(2px)', // Toque estético moderno
+    },
+    header: {
+        padding: '20px',
+        borderBottom: '1px solid #eee',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#00BFFF',
+        // El header se queda fijo arriba
+        flexShrink: 0,
+       
+    },
+    nav: { 
+        display: 'flex', 
+        flexDirection: 'column', 
+        padding: '10px',
+        // ESTO HACE QUE LA LISTA SEA DESPLAZABLE
+        overflowY: 'auto', 
+        flexGrow: 1,
+        WebkitOverflowScrolling: 'touch', // Scroll suave en móviles
+    },
+    // ... tus otros estilos (title, closeBtn, icon se mantienen igual)
+    link: {
+        padding: '15px',
+        textDecoration: 'none',
+        color: '#333',
+        fontSize: '1.1rem',
+        borderBottom: '1px solid #f5f5f5',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        transition: 'background-color 0.2s',
+        // Evita que el texto se rompa en varias líneas si es largo
+        whiteSpace: 'nowrap', 
+    },
+};
 
     return (
         <>
@@ -134,6 +131,18 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Pedidos</span>
                     </Link>
                     
+                                       <Link 
+                        to="/registrogasto" 
+                        onClick={onClose} 
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>💸</span>
+                        <span>Registrar Gastos</span>
+                    </Link>
+ 
+
                     {/* Opción Tasa Delivery */}
                     <Link 
                         to="/delivery" 
@@ -158,9 +167,25 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Tasa BCV</span>
                     </Link>
 
+                    
                     <Link to="/estadisticas" onClick={onClose} style={styles.link}>
                         <span style={styles.icon}>📊</span> Estadísticas
                     </Link>
+                    
+                    <Link to="/resumeninventario" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Resumen de Inventario
+                    </Link>
+                    
+                    {/* Acceso Administrativo */}
+                    <a 
+                        onClick={handleAdminAccess} 
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>⚙️</span>
+                        <span>Panel de Control</span>
+                    </a>
                     
                     {/* Opción Acerca de */}
                     <Link 
@@ -174,16 +199,7 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Acerca de</span>
                     </Link>
                     
-                    {/* Acceso Administrativo */}
-                    <a 
-                        onClick={handleAdminAccess} 
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>⚙️</span>
-                        <span>Panel de Control</span>
-                    </a>
+                    
                 </nav>
             </div>
         </>
