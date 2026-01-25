@@ -53,7 +53,8 @@ const Importer = {
                         grupo: producto.grupo,
                         stock: Number(producto.stock),
                         imagen: producto.imagen,
-                        createdAt: new Date() // Agregar timestamp
+                        visible: producto.visible ?? true, // <--- AGREGA ESTA LÍNEA
+                        createdAt: new Date()
                     });
                     importados++;
                 } catch (error) {

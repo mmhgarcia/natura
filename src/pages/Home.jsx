@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { db } from '../lib/db/database.js'; // Acceso a dbTasaBCV [4]
-import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // Utilidad de tasa [4]
+import { db } from '../lib/db/database.js'; // Acceso a dbTasaBCV [3]
+import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // Utilidad de tasa [3]
 import styles from './Home.module.css';
 
 function Home() {
@@ -13,11 +13,11 @@ function Home() {
   const [filtroGrupo, setFiltroGrupo] = useState('todos');
   const navigate = useNavigate();
 
-  // Carga inicial de datos desde IndexedDB [5]
+  // Carga inicial de datos desde IndexedDB [4]
   useEffect(() => {
     const cargarTodo = async () => {
       try {
-        await db.init(); // Inicializa dbTasaBCV [5]
+        await db.init(); // Inicializa dbTasaBCV [4]
         const [p, g, t] = await Promise.all([
           db.getAll('productos'),
           db.getAll('grupos'),
@@ -36,15 +36,18 @@ function Home() {
   }, []);
 
   /**
-   * FILTRADO ACTUALIZADO (Sin campo 'visible'):
-   * Se elimina cualquier validación referente a la visibilidad.
-   * Ahora sólo filtra por el grupo seleccionado [1].
+   * FILTRADO ACTUALIZADO Y SEGURO:
+   * 1. Filtra por grupo seleccionado.
+   * 2. Valida visibilidad: Si el campo 'visible' es estrictamente 'false', se oculta.
+   *    Si es 'true' o 'undefined' (registros antiguos), se muestra [2, 5].
    */
   const productosFiltrados = productos.filter(p => {
-    return filtroGrupo === 'todos' || p.grupo === filtroGrupo;
+    const coincideGrupo = filtroGrupo === 'todos' || p.grupo === filtroGrupo;
+    const esVisible = p.visible !== false; 
+    return coincideGrupo && esVisible;
   });
 
-  // Confirmación para vaciar la lista [1]
+  // Confirmación para vaciar la lista [6]
   const handleVaciarLista = () => {
     if (listaDeSeleccionados.length === 0) return;
     const confirmar = window.confirm(
@@ -74,11 +77,11 @@ function Home() {
           fecha: new Date().toISOString()
         });
 
-        // Descontar inventario [7, 8]
+        // Descontar inventario [7]
         await db.updateStock(item.id, -1);
       }
 
-      // Refrescar lista de productos con stock actualizado [7]
+      // Refrescar lista de productos con stock actualizado [8]
       const productosActualizados = await db.getAll('productos');
       setProductos(productosActualizados);
       setListaDeSeleccionados([]);
@@ -111,11 +114,12 @@ function Home() {
 
   return (
     <div className={styles.container}>
+      {/* Selector de Grupos */}
       <div className={styles.filterBar}>
         <label htmlFor="filtro-home">Filtrar por Grupo:</label>
-        <select
-          id="filtro-home"
-          value={filtroGrupo}
+        <select 
+          id="filtro-home" 
+          value={filtroGrupo} 
           onChange={(e) => setFiltroGrupo(e.target.value)}
           className={styles.select}
         >
@@ -126,6 +130,7 @@ function Home() {
         </select>
       </div>
 
+      {/* Grid de Productos [9] */}
       <div className={styles.grid}>
         {productosFiltrados.map(p => {
           const grupoInfo = grupos.find(g => g.nombre === p.grupo);
@@ -134,28 +139,27 @@ function Home() {
           const esBajoStock = p.stock > 0 && p.stock <= 5;
 
           return (
-            <div
-              key={p.id}
+            <div 
+              key={p.id} 
               className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
               onClick={() => !esAgotado && seleccionarProducto(p)}
             >
-              <div
+              <div 
                 className={styles.stockBadge}
                 style={{ backgroundColor: esAgotado ? '#ff4d4d' : (esBajoStock ? '#ffa500' : '#28a745') }}
               >
                 {p.stock}
               </div>
-              
-              {/* Renderizado de imagen corregido para mostrar el archivo real [2] */}
+
               {p.imagen ? (
                 <img 
                   src={p.imagen} 
                   alt={p.nombre} 
-                  className={styles.productImage} 
-                  onError={(e) => { e.target.style.display = 'none'; }} 
+                  className={styles.productImage}
+                  onError={(e) => { e.target.style.display = 'none'; }}
                 />
               ) : (
-                <div className={styles.productImagePlaceholder}>{p.nombre}</div>
+                <div className={styles.imagePlaceholder}>📷 {p.nombre}</div>
               )}
 
               <h3 className={styles.productTitle}>{p.nombre}</h3>
@@ -167,19 +171,19 @@ function Home() {
         })}
       </div>
 
-      {/* Panel inferior fijo [9] */}
+      {/* Panel inferior fijo [10, 11] */}
       <div className={styles.selectedContainer}>
         <div className={styles.selectedHeader}>
           <span>Items: <strong>{listaDeSeleccionados.length}</strong></span>
           <span>Tasa: <strong>{tasa.toFixed(2)}</strong></span>
         </div>
-
+        
         <div className={styles.selectedList}>
           {listaDeSeleccionados.map((item, index) => (
             <div key={`${item.id}-${index}`} className={styles.selectedItem}>
               <span>#{item.id} - {item.nombre}</span>
               <button 
-                className={styles.eliminarBtn} 
+                className={styles.eliminarBtn}
                 onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}
               >
                 ELIM
@@ -196,8 +200,8 @@ function Home() {
           <button className={styles.vaciarBtn} onClick={handleVaciarLista}>
             Vaciar
           </button>
-          <button
-            className={styles.grabarBtn}
+          <button 
+            className={styles.grabarBtn} 
             onClick={handleGrabar}
             disabled={listaDeSeleccionados.length === 0}
           >
