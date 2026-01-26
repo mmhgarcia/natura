@@ -2,6 +2,7 @@ import Dexie from 'dexie';
 import 'dexie-export-import'; // Required for database backup functionality [1, 4]
 
 export class NaturaDBClass {
+
     constructor() {
         // The database is named dbTasaBCV as per project requirements [1, 5]
         this.db = new Dexie('dbTasaBCV');
@@ -73,6 +74,16 @@ export class NaturaDBClass {
             gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago'
         });
 
+        this.db.version(9).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt, visible',
+            grupos: '++id, nombre, precio, costo_$',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
+            gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago',
+            historico_tasas: '++id, fecha_tasa, tasa' // Nueva tabla indexada por fecha y valor
+        });
+
         // Direct access references for components [6]
         this.productos = this.db.productos;
         this.grupos = this.db.grupos;
@@ -80,6 +91,8 @@ export class NaturaDBClass {
         this.ventas = this.db.ventas;
         this.pedidos = this.db.pedidos;
         this.gastos = this.db.gastos;
+        this.historico_tasas = this.db.historico_tasas;
+
     }
 
     // Initialisation method called by the app entry points [6]
@@ -141,6 +154,35 @@ export class NaturaDBClass {
             valor,
             updatedAt: new Date().toISOString()
         });
+    }
+
+    // One shott function para buld data de tasas bcv
+    async cargarDatosInicialesHistorico() {
+        const dataRecaudada = [
+            { fecha_tasa: '2026-01-15', tasa: 344.08 },
+            { fecha_tasa: '2026-01-16', tasa: 344.08 },
+            { fecha_tasa: '2026-01-17', tasa: 341.32 },
+            { fecha_tasa: '2026-01-18', tasa: 341.32 },
+            { fecha_tasa: '2026-01-19', tasa: 344.08 },
+            { fecha_tasa: '2026-01-20', tasa: 346.83 },
+            { fecha_tasa: '2026-01-21', tasa: 349.49 },
+            { fecha_tasa: '2026-01-22', tasa: 352.27 },
+            { fecha_tasa: '2026-01-23', tasa: 355.11 },
+            { fecha_tasa: '2026-01-24', tasa: 355.11 },
+            { fecha_tasa: '2026-01-25', tasa: 355.11 }
+        ];
+
+        try {
+            await this.db.historico_tasas.clear();
+            await this.db.historico_tasas.bulkAdd(dataRecaudada);
+            // Retornamos 'message' para que el Panel lo reconozca
+            return { 
+                success: true, 
+                message: `✅ Se cargaron ${dataRecaudada.length} días al histórico.` 
+            };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
     }
 }
 
