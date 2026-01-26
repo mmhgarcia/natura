@@ -4,6 +4,60 @@
  */
 import { db } from '../database';
 
+/**
+ * Migra las ventas antiguas al formato BI agregando costos y utilidad.
+ */
+export const migrateSalesToBI = async () => {
+  try {
+    // 1. Obtener datos necesarios en paralelo
+    const [allSales, allGroups] = await Promise.all([
+      db.getAll('ventas'),
+      db.getAll('grupos')
+    ]);
+
+    // 2. Filtrar ventas que no tienen snapshot financiero (falta costoUnitarioUsd)
+    const salesToMigrate = allSales.filter(v => v.costoUnitarioUsd === undefined);
+
+    if (salesToMigrate.length === 0) {
+      return { success: true, migratedCount: 0, message: "No hay ventas pendientes por migrar." };
+    }
+
+    let count = 0;
+    for (const venta of salesToMigrate) {
+      // 3. Buscar el costo actual del grupo al que pertenece el producto
+      const grupo = allGroups.find(g => g.nombre.toLowerCase() === venta.grupo.toLowerCase());
+      
+      const costoUnit = grupo?.costo_$ || 0;
+      const precioVenta = venta.precioUsd || 0;
+
+      // 4. Preparar el objeto con el Snapshot Financiero retroactivo
+      const ventaMigrada = {
+        ...venta,
+        costoUnitarioUsd: costoUnit,
+        utilidadUsd: precioVenta - costoUnit,
+        // Si no tiene tasaVenta (ventas muy viejas), podrías asignar 0 o buscar la tasa de esa fecha
+        tasaVenta: venta.tasaVenta || 0, 
+        migratedAt: new Date().toISOString() // Marca de auditoría
+      };
+
+      // 5. Guardar registro actualizado
+      await db.put('ventas', ventaMigrada);
+      count++;
+    }
+
+    return {
+      success: true,
+      migratedCount: count,
+      message: `Se normalizaron ${count} registros de ventas para análisis de BI.`
+    };
+
+  } catch (error) {
+    console.error("Error en la migración de ventas:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+
 export const migrateOrdersToBI = async () => {
   try {
     // 1. Obtener toda la data necesaria en paralelo para optimizar rendimiento

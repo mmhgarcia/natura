@@ -13,6 +13,18 @@ function Home() {
   const [filtroGrupo, setFiltroGrupo] = useState('todos');
   const navigate = useNavigate();
 
+  // Función helper para enriquecer productos con info del grupo
+  const enriquecerProductos = (listaProductos, listaGrupos) => {
+    return listaProductos.map(p => {
+      const grupoInfo = listaGrupos.find(g => g.nombre === p.grupo);
+      return {
+        ...p,
+        precio: grupoInfo ? grupoInfo.precio : 0,
+        costo: grupoInfo ? (grupoInfo.costo_$ || 0) : 0
+      };
+    });
+  };
+
   // Carga inicial de datos desde IndexedDB [4]
   useEffect(() => {
     const cargarTodo = async () => {
@@ -23,8 +35,14 @@ function Home() {
           db.getAll('grupos'),
           getTasaBCV()
         ]);
-        setProductos(p);
+
+        // Guardamos grupos raw por si se necesitan
         setGrupos(g);
+
+        // Enriquecemos productos inmediatamente
+        const productosEnriquecidos = enriquecerProductos(p, g);
+        setProductos(productosEnriquecidos);
+
         setTasa(t || 0);
       } catch (err) {
         console.error("Error initializing Home:", err);
@@ -43,7 +61,7 @@ function Home() {
    */
   const productosFiltrados = productos.filter(p => {
     const coincideGrupo = filtroGrupo === 'todos' || p.grupo === filtroGrupo;
-    const esVisible = p.visible !== false; 
+    const esVisible = p.visible !== false;
     return coincideGrupo && esVisible;
   });
 
@@ -68,11 +86,9 @@ function Home() {
       const transaccionId = `TX-${Date.now()}`;
 
       for (const item of listaDeSeleccionados) {
-        // 2. Buscar la información del grupo para obtener Precio y Costo histórico [4]
-        const grupoInfo = grupos.find(g => g.nombre === item.grupo);
-        
-        const precioUsd = grupoInfo ? grupoInfo.precio : 0;
-        const costoUnitarioUsd = grupoInfo ? (grupoInfo.costo_$ || 0) : 0;
+        // Los datos de precio y costo ya vienen enriquecidos en el item
+        const precioUsd = item.precio || 0;
+        const costoUnitarioUsd = item.costo || 0;
         const utilidadUsd = precioUsd - costoUnitarioUsd;
 
         // 3. Registrar venta con el Snapshot Financiero completo
@@ -95,47 +111,15 @@ function Home() {
 
       // Refrescar estado local
       const productosActualizados = await db.getAll('productos');
-      setProductos(productosActualizados);
+      // Re-enriquecer al recargar
+      const productosEnriquecidos = enriquecerProductos(productosActualizados, grupos);
+      setProductos(productosEnriquecidos);
+
       setListaDeSeleccionados([]);
       alert("✅ Venta procesada con éxito con snapshot financiero.");
 
     } catch (error) {
       console.error("Error en snapshot de venta:", error);
-      alert("❌ Error al procesar la venta.");
-    }
-  };
-
-  // Procesamiento de venta y actualización de stock [6, 7]
-  const __handleGrabar = async () => {
-    if (listaDeSeleccionados.length === 0) return;
-    const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
-    if (!confirmar) return;
-
-    try {
-      for (const item of listaDeSeleccionados) {
-        const grupoInfo = grupos.find(g => g.nombre === item.grupo);
-        const precioUsd = grupoInfo ? grupoInfo.precio : 0;
-
-        // Registrar venta en IndexedDB [7]
-        await db.add('ventas', {
-          productoId: item.id,
-          nombre: item.nombre,
-          grupo: item.grupo,
-          precioUsd: precioUsd,
-          cantidad: 1,
-          fecha: new Date().toISOString()
-        });
-
-        // Descontar inventario [7]
-        await db.updateStock(item.id, -1);
-      }
-
-      // Refrescar lista de productos con stock actualizado [8]
-      const productosActualizados = await db.getAll('productos');
-      setProductos(productosActualizados);
-      setListaDeSeleccionados([]);
-      alert("✅ Venta procesada con éxito.");
-    } catch (error) {
       alert("❌ Error al procesar la venta.");
     }
   };
@@ -151,8 +135,7 @@ function Home() {
   const calcularTotales = () => {
     let usd = 0;
     listaDeSeleccionados.forEach(item => {
-      const grupoInfo = grupos.find(g => g.nombre === item.grupo);
-      usd += grupoInfo ? grupoInfo.precio : 0;
+      usd += item.precio || 0;
     });
     return { usd, bs: usd * tasa };
   };
@@ -166,9 +149,9 @@ function Home() {
       {/* Selector de Grupos */}
       <div className={styles.filterBar}>
         <label htmlFor="filtro-home">Filtrar por Grupo:</label>
-        <select 
-          id="filtro-home" 
-          value={filtroGrupo} 
+        <select
+          id="filtro-home"
+          value={filtroGrupo}
           onChange={(e) => setFiltroGrupo(e.target.value)}
           className={styles.select}
         >
@@ -182,18 +165,17 @@ function Home() {
       {/* Grid de Productos [9] */}
       <div className={styles.grid}>
         {productosFiltrados.map(p => {
-          const grupoInfo = grupos.find(g => g.nombre === p.grupo);
-          const precio = grupoInfo ? grupoInfo.precio : 0;
+          const precio = p.precio || 0;
           const esAgotado = p.stock === 0;
           const esBajoStock = p.stock > 0 && p.stock <= 5;
 
           return (
-            <div 
-              key={p.id} 
+            <div
+              key={p.id}
               className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
               onClick={() => !esAgotado && seleccionarProducto(p)}
             >
-              <div 
+              <div
                 className={styles.stockBadge}
                 style={{ backgroundColor: esAgotado ? '#ff4d4d' : (esBajoStock ? '#ffa500' : '#28a745') }}
               >
@@ -201,9 +183,9 @@ function Home() {
               </div>
 
               {p.imagen ? (
-                <img 
-                  src={p.imagen} 
-                  alt={p.nombre} 
+                <img
+                  src={p.imagen}
+                  alt={p.nombre}
                   className={styles.productImage}
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
@@ -226,12 +208,12 @@ function Home() {
           <span>Items: <strong>{listaDeSeleccionados.length}</strong></span>
           <span>Tasa: <strong>{tasa.toFixed(2)}</strong></span>
         </div>
-        
+
         <div className={styles.selectedList}>
           {listaDeSeleccionados.map((item, index) => (
             <div key={`${item.id}-${index}`} className={styles.selectedItem}>
               <span>#{item.id} - {item.nombre}</span>
-              <button 
+              <button
                 className={styles.eliminarBtn}
                 onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}
               >
@@ -249,8 +231,8 @@ function Home() {
           <button className={styles.vaciarBtn} onClick={handleVaciarLista}>
             Vaciar
           </button>
-          <button 
-            className={styles.grabarBtn} 
+          <button
+            className={styles.grabarBtn}
             onClick={handleGrabar}
             disabled={listaDeSeleccionados.length === 0}
           >

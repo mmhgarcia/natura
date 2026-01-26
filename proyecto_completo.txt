@@ -1732,156 +1732,193 @@ FILE: src/components/Panel/Panel.jsx
 // src/components/Panel/Panel.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { db } from "../../lib/db/database"; // Referencia a la base de datos dbTasaBCV [1, 2]
-import { useGrupos } from "./hooks/useGrupos"; // [3]
-import { useProductos } from "./hooks/useProductos"; // [4]
-import { exportDatabase } from "../../lib/db/utils/exportService"; // [3, 5]
-import { migrateOrdersToBI } from "../../lib/db/utils/migrationService"; // [3, 6]
-import styles from "./Panel.module.css"; // [3, 7]
+import { db } from "../../lib/db/database"; 
+import { useGrupos } from "./hooks/useGrupos"; 
+import { useProductos } from "./hooks/useProductos"; 
+import { exportDatabase } from "../../lib/db/utils/exportService"; 
+import { 
+  migrateOrdersToBI, 
+  migrateSalesToBI // Fase 2: Nueva importación para transformación de ventas
+} from "../../lib/db/utils/migrationService"; 
+import styles from "./Panel.module.css"; 
 
 export default function Panel() {
-    const navigate = useNavigate(); // [3]
-    const { importarGrupos } = useGrupos(); // [3]
-    const { importarProductos } = useProductos(); // [4]
+  const navigate = useNavigate(); 
+  const { importarGrupos } = useGrupos(); 
+  const { importarProductos } = useProductos(); 
 
-    // Estados para control de procesos de carga
-    const [isExporting, setIsExporting] = useState(false); // [4]
-    const [isMigrating, setIsMigrating] = useState(false); // [4]
-    const [isLoadingHistory, setIsLoadingHistory] = useState(false); // Nuevo estado Fase 1
+  // Estados para control de procesos
+  const [isExporting, setIsExporting] = useState(false); 
+  const [isMigrating, setIsMigrating] = useState(false); // Pedidos
+  const [isMigratingSales, setIsMigratingSales] = useState(false); // Fase 2: Ventas
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false); 
 
-    /**
-     * Maneja la exportación de la base de datos a un archivo JSON [5, 8]
-     */
-    const handleExport = async () => {
-        setIsExporting(true);
-        const result = await exportDatabase();
-        if (result.success) {
-            alert("✅ Copia de seguridad guardada en Descargas"); // [4]
-        } else {
-            alert("❌ Error al exportar: " + (result.error?.message || "Error desconocido"));
-        }
-        setIsExporting(false);
-    };
-
-    /**
-     * Ejecuta la migración de pedidos antiguos al formato BI detallado [6, 9]
-     */
-    const handleMigrateBI = async () => {
-        const mensajeConfirmacion = "⚠️ ¿Deseas iniciar la migración de pedidos al formato BI?\n\n" +
-            "Esta acción transformará los pedidos antiguos para habilitar la analítica financiera."; // [9]
-        
-        if (!window.confirm(mensajeConfirmacion)) return;
-
-        setIsMigrating(true);
-        try {
-            const result = await migrateOrdersToBI();
-            if (result.success) {
-                alert(result.message); // [10]
-            } else {
-                alert("❌ Error en la migración: " + result.error);
-            }
-        } catch (error) {
-            alert("❌ Error crítico: " + error.message);
-        } finally {
-            setIsMigrating(false);
-        }
-    };
-
-    /**
-     * Fase 1 Rediseño: Carga masiva de los 11 días de histórico recolectados
-     */
-    const handleLoadHistory = async () => {
-      if (!window.confirm("¿Deseas cargar los 11 días de histórico de tasas BCV?")) return;
-      
-      setIsLoadingHistory(true);
-      try {
-          // Ejecutamos la carga en IndexedDB [1]
-          const result = await db.cargarDatosInicialesHistorico();
-          
-          if (result.success) {
-              // Ahora result.message existe y no será undefined
-              alert(result.message); 
-          } else {
-              alert("❌ Error: " + result.error);
-          }
-      } catch (err) {
-          alert("❌ Error crítico: " + err.message);
-      } finally {
-          setIsLoadingHistory(false);
-      }
+  /**
+   * Maneja la exportación de la base de datos a un archivo JSON [4, 5]
+   */
+  const handleExport = async () => {
+    setIsExporting(true);
+    const result = await exportDatabase();
+    if (result.success) {
+      alert("✅ Copia de seguridad guardada en Descargas"); 
+    } else {
+      alert("❌ Error al exportar: " + (result.error?.message || "Error desconocido"));
+    }
+    setIsExporting(false);
   };
 
-    /**
-     * Importación masiva de grupos desde el archivo grupos.json [11, 12]
-     */
-    const handleImportGrupos = async () => {
-        if (!window.confirm("¿Importar grupos iniciales? Se borrarán los actuales.")) return;
-        const result = await importarGrupos();
+  /**
+   * Fase 2: Ejecuta la migración de ventas antiguas al formato BI [Plan de Mejoras]
+   * Agrega costos y utilidades retroactivas a la tabla 'ventas'.
+   */
+  const handleMigrateSalesBI = async () => {
+    const mensajeConfirmacion = "📈 ¿Deseas normalizar el historial de VENTAS para BI?\n\n" +
+      "Se asignarán costos y utilidades a las ventas pasadas basándose en los grupos actuales.";
+    
+    if (!window.confirm(mensajeConfirmacion)) return;
+
+    setIsMigratingSales(true);
+    try {
+      const result = await migrateSalesToBI();
+      if (result.success) {
         alert(result.message);
-    };
+      } else {
+        alert("❌ Error: " + result.error);
+      }
+    } catch (error) {
+      alert("❌ Error crítico: " + error.message);
+    } finally {
+      setIsMigratingSales(false);
+    }
+  };
 
-    return (
-        <div className={styles.container}>
-            <h1 className={styles.title}>PANEL DE CONTROL</h1>
+  /**
+   * Ejecuta la migración de pedidos antiguos al formato BI detallado [6, 7]
+   */
+  const handleMigrateBI = async () => {
+    const mensajeConfirmacion = "⚠️ ¿Deseas iniciar la migración de pedidos al formato BI?\n\n" +
+      "Esta acción transformará los pedidos antiguos para habilitar la analítica financiera."; 
 
-            <div className={styles.buttons}>
-                {/* Gestión de Datos y Backups */}
-                <button 
-                    className={styles.button} 
-                    onClick={handleExport} 
-                    disabled={isExporting}
-                >
-                    {isExporting ? "⌛ Exportando..." : "📤 Exportar DB"}
-                </button>
+    if (!window.confirm(mensajeConfirmacion)) return;
 
-                {/* Migración Analítica BI */}
-                <button 
-                    className={styles.button} 
-                    onClick={handleMigrateBI} 
-                    disabled={isMigrating}
-                    style={{ backgroundColor: '#6a1b9a' }} // Púrpura para BI [13]
-                >
-                    {isMigrating ? "⚙️ Migrando..." : "📊 Migrar Pedidos a BI"}
-                </button>
+    setIsMigrating(true);
+    try {
+      const result = await migrateOrdersToBI();
+      if (result.success) {
+        alert(result.message); 
+      } else {
+        alert("❌ Error en la migración: " + result.error);
+      }
+    } catch (error) {
+      alert("❌ Error crítico: " + error.message);
+    } finally {
+      setIsMigrating(false);
+    }
+  };
 
-                {/* NUEVO: Carga de Histórico de Tasas (Fase 1) */}
-                <button 
-                    className={styles.button} 
-                    onClick={handleLoadHistory}
-                    disabled={isLoadingHistory}
-                    style={{ backgroundColor: '#f39c12' }} // Naranja para histórico
-                >
-                    {isLoadingHistory ? "⚙️ Cargando..." : "📈 Cargar Histórico BCV"}
-                </button>
+  /**
+   * Carga masiva de los días de histórico de tasas BCV recolectados [8, 9]
+   */
+  const handleLoadHistory = async () => {
+    if (!window.confirm("¿Deseas cargar el histórico de tasas BCV?")) return;
+    setIsLoadingHistory(true);
+    try {
+      const result = await db.cargarDatosInicialesHistorico();
+      if (result.success) {
+        alert(result.message);
+      } else {
+        alert("❌ Error: " + result.error);
+      }
+    } catch (err) {
+      alert("❌ Error crítico: " + err.message);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
-                {/* Importación de Configuración Inicial */}
-                <button className={styles.button} onClick={handleImportGrupos}>
-                    📥 Cargar Datos Iniciales (Grupos)
-                </button>
+  /**
+   * Importación masiva de grupos iniciales [10, 11]
+   */
+  const handleImportGrupos = async () => {
+    if (!window.confirm("¿Importar grupos iniciales? Se borrarán los actuales.")) return;
+    const result = await importarGrupos();
+    alert(result.message);
+  };
 
-                {/* Accesos Directos a Módulos [13] */}
-                <button className={styles.button} onClick={() => navigate("/tasabcv")}>
-                    💰 Tasa BCV
-                </button>
+  return (
+    <div className={styles.container}>
+      <h1 className={styles.title}>PANEL DE CONTROL</h1>
 
-                <button className={styles.button} onClick={() => navigate("/admingrupos")}>
-                    🍦 Grupos
-                </button>
+      <div className={styles.buttons}>
+        {/* Gestión de Datos y Backups [4] */}
+        <button 
+          className={styles.button} 
+          onClick={handleExport} 
+          disabled={isExporting}
+        >
+          {isExporting ? "⌛ Exportando..." : "📤 Exportar DB"}
+        </button>
 
-                <button className={styles.button} onClick={() => navigate("/adminproductos")}>
-                    📦 Productos
-                </button>
+        {/* Fase 2: Migración Analítica de Ventas (Snapshot Financiero) */}
+        <button 
+          className={styles.button} 
+          onClick={handleMigrateSalesBI}
+          disabled={isMigratingSales}
+          style={{ backgroundColor: '#4a148c' }} // Púrpura oscuro para diferenciar
+        >
+          {isMigratingSales ? "⚙️ Transformando..." : "📈 Migrar Ventas a BI"}
+        </button>
 
-                {/* Botón Regresar [14] */}
-                <button 
-                    className={`${styles.button} ${styles.back}`} 
-                    onClick={() => navigate("/")}
-                >
-                    ↩️ Regresar
-                </button>
-            </div>
-        </div>
-    );
+        {/* Migración Analítica de Pedidos [3] */}
+        <button 
+          className={styles.button} 
+          onClick={handleMigrateBI} 
+          disabled={isMigrating}
+          style={{ backgroundColor: '#6a1b9a' }} 
+        >
+          {isMigrating ? "⚙️ Migrando..." : "📊 Migrar Pedidos a BI"}
+        </button>
+
+        {/* Carga de Histórico de Tasas [3] */}
+        <button 
+          className={styles.button} 
+          onClick={handleLoadHistory} 
+          disabled={isLoadingHistory}
+          style={{ backgroundColor: '#f39c12' }} 
+        >
+          {isLoadingHistory ? "⚙️ Cargando..." : "📉 Cargar Histórico BCV"}
+        </button>
+
+        {/* Importación de Configuración Inicial [12] */}
+        <button className={styles.button} onClick={handleImportGrupos}>
+          📥 Cargar Datos Iniciales (Grupos)
+        </button>
+
+        <hr style={{ width: '80%', margin: '20px 0', opacity: 0.2 }} />
+
+        {/* Accesos Directos a Módulos [12] */}
+        <button className={styles.button} onClick={() => navigate("/tasabcv")}>
+          💰 Tasa BCV
+        </button>
+
+        <button className={styles.button} onClick={() => navigate("/admingrupos")}>
+          🍦 Grupos
+        </button>
+
+        <button className={styles.button} onClick={() => navigate("/adminproductos")}>
+          📦 Productos
+        </button>
+
+        {/* Botón Regresar [12] */}
+        <button 
+          className={`${styles.button} ${styles.back}`} 
+          onClick={() => navigate("/")}
+        >
+          ↩️ Regresar
+        </button>
+      </div>
+    </div>
+  );
 }
 ************************************************************
 
@@ -4459,9 +4496,8 @@ export class NaturaDBClass {
 
         this.db.version(9).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt, visible',
-            grupos: '++id, nombre, precio, costo_$',
-            config: 'clave',
-            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            grupos: '++id, nombre, precio, costo_$',            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad, utilidadUsd, tasaVenta, costoUnitarioUsd',
             pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
             gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago',
             historico_tasas: '++id, fecha_tasa, tasa' // Nueva tabla indexada por fecha y valor
@@ -5122,6 +5158,60 @@ FILE: src/lib/db/utils/migrationService.js
  * Realiza una captura de precios y costos actuales para pedidos antiguos.
  */
 import { db } from '../database';
+
+/**
+ * Migra las ventas antiguas al formato BI agregando costos y utilidad.
+ */
+export const migrateSalesToBI = async () => {
+  try {
+    // 1. Obtener datos necesarios en paralelo
+    const [allSales, allGroups] = await Promise.all([
+      db.getAll('ventas'),
+      db.getAll('grupos')
+    ]);
+
+    // 2. Filtrar ventas que no tienen snapshot financiero (falta costoUnitarioUsd)
+    const salesToMigrate = allSales.filter(v => v.costoUnitarioUsd === undefined);
+
+    if (salesToMigrate.length === 0) {
+      return { success: true, migratedCount: 0, message: "No hay ventas pendientes por migrar." };
+    }
+
+    let count = 0;
+    for (const venta of salesToMigrate) {
+      // 3. Buscar el costo actual del grupo al que pertenece el producto
+      const grupo = allGroups.find(g => g.nombre.toLowerCase() === venta.grupo.toLowerCase());
+      
+      const costoUnit = grupo?.costo_$ || 0;
+      const precioVenta = venta.precioUsd || 0;
+
+      // 4. Preparar el objeto con el Snapshot Financiero retroactivo
+      const ventaMigrada = {
+        ...venta,
+        costoUnitarioUsd: costoUnit,
+        utilidadUsd: precioVenta - costoUnit,
+        // Si no tiene tasaVenta (ventas muy viejas), podrías asignar 0 o buscar la tasa de esa fecha
+        tasaVenta: venta.tasaVenta || 0, 
+        migratedAt: new Date().toISOString() // Marca de auditoría
+      };
+
+      // 5. Guardar registro actualizado
+      await db.put('ventas', ventaMigrada);
+      count++;
+    }
+
+    return {
+      success: true,
+      migratedCount: count,
+      message: `Se normalizaron ${count} registros de ventas para análisis de BI.`
+    };
+
+  } catch (error) {
+    console.error("Error en la migración de ventas:", error);
+    return { success: false, error: error.message };
+  }
+};
+
 
 export const migrateOrdersToBI = async () => {
   try {
@@ -5807,8 +5897,57 @@ function Home() {
     if (confirmar) setListaDeSeleccionados([]);
   };
 
-  // Procesamiento de venta y actualización de stock [6, 7]
   const handleGrabar = async () => {
+    if (listaDeSeleccionados.length === 0) return;
+
+    const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
+    if (!confirmar) return;
+
+    try {
+      // 1. Generar un ID de transacción único para todo el grupo de helados vendidos
+      // Esto permite analizar el "Ticket Promedio" en BI
+      const transaccionId = `TX-${Date.now()}`;
+
+      for (const item of listaDeSeleccionados) {
+        // 2. Buscar la información del grupo para obtener Precio y Costo histórico [4]
+        const grupoInfo = grupos.find(g => g.nombre === item.grupo);
+        
+        const precioUsd = grupoInfo ? grupoInfo.precio : 0;
+        const costoUnitarioUsd = grupoInfo ? (grupoInfo.costo_$ || 0) : 0;
+        const utilidadUsd = precioUsd - costoUnitarioUsd;
+
+        // 3. Registrar venta con el Snapshot Financiero completo
+        await db.add('ventas', {
+          productoId: item.id,
+          nombre: item.nombre,
+          grupo: item.grupo,
+          precioUsd: precioUsd,
+          costoUnitarioUsd: costoUnitarioUsd, // Nuevo campo: costo del momento
+          utilidadUsd: utilidadUsd,           // Nuevo campo: ganancia real
+          tasaVenta: tasa,                    // Nuevo campo: tasa BCV usada [6]
+          transaccionId: transaccionId,       // Nuevo campo: vínculo de grupo
+          cantidad: 1,
+          fecha: new Date().toISOString()     // Referencia temporal ISO [3]
+        });
+
+        // 4. Actualizar stock en la base de datos [3]
+        await db.updateStock(item.id, -1);
+      }
+
+      // Refrescar estado local
+      const productosActualizados = await db.getAll('productos');
+      setProductos(productosActualizados);
+      setListaDeSeleccionados([]);
+      alert("✅ Venta procesada con éxito con snapshot financiero.");
+
+    } catch (error) {
+      console.error("Error en snapshot de venta:", error);
+      alert("❌ Error al procesar la venta.");
+    }
+  };
+
+  // Procesamiento de venta y actualización de stock [6, 7]
+  const __handleGrabar = async () => {
     if (listaDeSeleccionados.length === 0) return;
     const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
     if (!confirmar) return;

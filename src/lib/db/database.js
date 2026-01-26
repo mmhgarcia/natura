@@ -76,9 +76,8 @@ export class NaturaDBClass {
 
         this.db.version(9).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt, visible',
-            grupos: '++id, nombre, precio, costo_$',
-            config: 'clave',
-            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
+            grupos: '++id, nombre, precio, costo_$',            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad, utilidadUsd, tasaVenta, costoUnitarioUsd',
             pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
             gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago',
             historico_tasas: '++id, fecha_tasa, tasa' // Nueva tabla indexada por fecha y valor
