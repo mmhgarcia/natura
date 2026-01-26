@@ -56,8 +56,57 @@ function Home() {
     if (confirmar) setListaDeSeleccionados([]);
   };
 
-  // Procesamiento de venta y actualización de stock [6, 7]
   const handleGrabar = async () => {
+    if (listaDeSeleccionados.length === 0) return;
+
+    const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
+    if (!confirmar) return;
+
+    try {
+      // 1. Generar un ID de transacción único para todo el grupo de helados vendidos
+      // Esto permite analizar el "Ticket Promedio" en BI
+      const transaccionId = `TX-${Date.now()}`;
+
+      for (const item of listaDeSeleccionados) {
+        // 2. Buscar la información del grupo para obtener Precio y Costo histórico [4]
+        const grupoInfo = grupos.find(g => g.nombre === item.grupo);
+        
+        const precioUsd = grupoInfo ? grupoInfo.precio : 0;
+        const costoUnitarioUsd = grupoInfo ? (grupoInfo.costo_$ || 0) : 0;
+        const utilidadUsd = precioUsd - costoUnitarioUsd;
+
+        // 3. Registrar venta con el Snapshot Financiero completo
+        await db.add('ventas', {
+          productoId: item.id,
+          nombre: item.nombre,
+          grupo: item.grupo,
+          precioUsd: precioUsd,
+          costoUnitarioUsd: costoUnitarioUsd, // Nuevo campo: costo del momento
+          utilidadUsd: utilidadUsd,           // Nuevo campo: ganancia real
+          tasaVenta: tasa,                    // Nuevo campo: tasa BCV usada [6]
+          transaccionId: transaccionId,       // Nuevo campo: vínculo de grupo
+          cantidad: 1,
+          fecha: new Date().toISOString()     // Referencia temporal ISO [3]
+        });
+
+        // 4. Actualizar stock en la base de datos [3]
+        await db.updateStock(item.id, -1);
+      }
+
+      // Refrescar estado local
+      const productosActualizados = await db.getAll('productos');
+      setProductos(productosActualizados);
+      setListaDeSeleccionados([]);
+      alert("✅ Venta procesada con éxito con snapshot financiero.");
+
+    } catch (error) {
+      console.error("Error en snapshot de venta:", error);
+      alert("❌ Error al procesar la venta.");
+    }
+  };
+
+  // Procesamiento de venta y actualización de stock [6, 7]
+  const __handleGrabar = async () => {
     if (listaDeSeleccionados.length === 0) return;
     const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
     if (!confirmar) return;
