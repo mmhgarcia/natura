@@ -35,43 +35,9 @@ export function useTasaBCV() {
         loadTasa();
     }, []);
 
-    /**
-     * Guarda la tasa. Se mantiene la escritura en la tabla 'config' como
-     * mecanismo de respaldo (fallback) para compatibilidad con el sistema [3, 4].
-     */
-    const saveTasa = async (valor) => {
-        try {
-            // Normalizar: reemplazar coma por punto
-            const tasaNormalizada = String(valor).replace(',', '.');
-            const tasaNumero = parseFloat(tasaNormalizada);
-
-            // Verificar que sea un número válido
-            if (isNaN(tasaNumero)) {
-                console.error('Valor no es un número:', valor);
-                return false;
-            }
-
-            // Guardar en IndexedDB - Tabla config (mantenido para fallback de Fase 2) [5]
-            await db.config.put({
-                clave: 'tasa',
-                valor: tasaNumero,
-                updatedAt: new Date().toISOString(),
-                tipo: 'decimal'
-            });
-
-            console.log('Tasa de respaldo guardada en config:', tasaNumero);
-            setTasa(tasaNormalizada); // Actualiza el estado local para la UI
-            return true;
-        } catch (error) {
-            console.error('Error guardando tasa:', error);
-            return false;
-        }
-    };
-
     return { 
         tasa, 
         setTasa, 
-        saveTasa, 
         loading 
     };
 }
