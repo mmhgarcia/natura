@@ -68,6 +68,7 @@ ESTRUCTURA DEL PROYECTO: natura
         📄 Importer.js
         📄 deliveryUtil.js
         📄 exportService.js
+        📄 migrationService.js
         📄 tasaUtil.js
     📁 types/
   📄 main.jsx
@@ -892,7 +893,18 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
             delivery_tasa: pedido.delivery_tasa !== undefined ? pedido.delivery_tasa : (deliveryValor || 0)
           });
 
-          if (pedido.items) setCantidades(pedido.items);
+          // Soporte para ambos formatos (Diccionario antiguo o Array BI nuevo)
+          if (pedido.items) {
+            if (Array.isArray(pedido.items)) {
+              const dict = {};
+              pedido.items.forEach(item => {
+                dict[item.productoId] = item.cantidad;
+              });
+              setCantidades(dict);
+            } else {
+              setCantidades(pedido.items);
+            }
+          }
           setAplicarDelivery(pedido.delivery_aplicado ?? true);
         } else {
           const ultimoPedido = await db.pedidos.orderBy('id').last();
@@ -909,7 +921,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
         console.error("Error cargando datos:", err);
       }
     };
-
     cargarDatos();
   }, [pedido]);
 
@@ -930,9 +941,9 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
       });
 
       const cargoDelivery = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
-      const totalPedidoUSD = costoTotalUSD + cargoDelivery;
+      const totalPedidoUSD = ingresoEstimadoUSD + cargoDelivery; // Total venta + delivery
       const tasaNum = parseFloat(formData.tasa) || 0;
-      const utilidadUSD = ingresoEstimadoUSD - totalPedidoUSD;
+      const utilidadUSD = ingresoEstimadoUSD - (costoTotalUSD + cargoDelivery);
 
       setTotales({ usd: totalPedidoUSD, bs: totalPedidoUSD * tasaNum });
       setUtilidad({ usd: utilidadUSD, bs: utilidadUSD * tasaNum });
@@ -946,7 +957,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
       const nuevaTasa = await db.getConfigValue('tasa');
       const nuevoDelivery = await db.getConfigValue('delivery');
       const gruposActualizados = await db.getAll('grupos');
-      
       setListaGrupos(gruposActualizados);
       setFormData(prev => ({
         ...prev,
@@ -970,14 +980,36 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     if (esVisualizacion) return;
 
     const mensaje = pedido
-      ? `¿Estás seguro de que deseas ACTUALIZAR los cambios en el pedido #${formData.numero_pedido}?`
-      : `¿Deseas GRABAR el nuevo pedido #${formData.numero_pedido}?`;
+      ? `¿Actualizar cambios en el pedido #${formData.numero_pedido}?`
+      : `¿Grabar el nuevo pedido #${formData.numero_pedido}?`;
 
     if (!window.confirm(mensaje)) return;
 
+    // --- TRANSFORMACIÓN PARA BI ---
+    // Creamos una captura histórica de precios y costos
+    const itemsBI = Object.entries(cantidades)
+      .filter(([_, qty]) => qty > 0)
+      .map(([prodId, qty]) => {
+        const prod = productos.find(p => p.id === parseInt(prodId));
+        const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === prod.grupo.toLowerCase());
+        const precioUnit = grupo?.precio || 0;
+        const costoUnit = grupo?.costo_$ || 0;
+
+        return {
+          productoId: parseInt(prodId),
+          nombre: prod.nombre,
+          grupo: prod.grupo,
+          cantidad: qty,
+          precioUnitario: precioUnit,
+          costoUnitario: costoUnit,
+          subtotalUsd: qty * precioUnit,
+          utilidadUsd: qty * (precioUnit - costoUnit)
+        };
+      });
+
     const pedidoData = {
       ...formData,
-      items: cantidades,
+      items: itemsBI, // Guardado como Array de objetos detallados
       total_usd: totales.usd,
       total_bs: totales.bs,
       delivery_aplicado: aplicarDelivery,
@@ -998,10 +1030,16 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     }
   };
 
+  // REGLA DE FILTRADO: Visible === true (o undefined) O que ya tenga cantidad seleccionada
   const productosAgrupados = productos.reduce((acc, prod) => {
-    const grupo = prod.grupo || 'Otros';
-    if (!acc[grupo]) acc[grupo] = [];
-    acc[grupo].push(prod);
+    const esVisible = prod.visible !== false;
+    const tieneCantidad = (cantidades[prod.id] || 0) > 0;
+
+    if (esVisible || tieneCantidad) {
+      const grupo = prod.grupo || 'Otros';
+      if (!acc[grupo]) acc[grupo] = [];
+      acc[grupo].push(prod);
+    }
     return acc;
   }, {});
 
@@ -1017,18 +1055,13 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
           <div className={styles.topRow}>
             <div className={styles.inputGroup}>
               <label className={styles.label}>Pedido #</label>
-              <input
-                type="text"
-                value={formData.numero_pedido}
-                readOnly
-                className={styles.inputSmall}
-              />
+              <input type="text" value={formData.numero_pedido} readOnly className={styles.inputSmall} />
             </div>
             <div className={styles.inputGroup}>
               <label className={styles.label}>Fecha</label>
-              <input
-                type="date"
-                value={formData.fecha_pedido}
+              <input 
+                type="date" 
+                value={formData.fecha_pedido} 
                 onChange={(e) => setFormData({...formData, fecha_pedido: e.target.value})}
                 className={esVisualizacion ? styles.inputReadOnly : styles.inputSmall}
                 disabled={esVisualizacion}
@@ -1049,10 +1082,10 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
           <div className={styles.infoBar}>
             <span>Tasa: {formData.tasa || '---'}</span>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <input
-                type="checkbox"
-                checked={aplicarDelivery}
+            <label>
+              <input 
+                type="checkbox" 
+                checked={aplicarDelivery} 
                 onChange={(e) => setAplicarDelivery(e.target.checked)}
                 className={styles.checkbox}
                 disabled={esVisualizacion}
@@ -1068,30 +1101,23 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                 <div key={grupo}>
                   <div className={styles.groupTitle}>{grupo.toUpperCase()}</div>
                   {items.map((prod) => {
-                    // Lógica de colores de stock del componente Home [2]
-                    const esAgotado = prod.stock === 0;
-                    const esBajoStock = prod.stock > 0 && prod.stock <= 5;
-                    const badgeColor = esAgotado ? '#ff4d4d' : (esBajoStock ? '#ffa500' : '#28a745');
-
+                    const badgeColor = prod.stock === 0 ? '#ff4d4d' : (prod.stock <= 5 ? '#ffa500' : '#28a745');
                     return (
                       <div key={prod.id} className={styles.productItem}>
-                        <div 
-                          className={styles.stockBadgeSmall} 
-                          style={{ backgroundColor: badgeColor }}
-                        >
+                        <div className={styles.stockBadgeSmall} style={{ backgroundColor: badgeColor }}>
                           {prod.stock}
                         </div>
                         <span className={styles.productName}>{prod.nombre}</span>
                         <div className={styles.quantityControl}>
-                          <button
-                            type="button"
+                          <button 
+                            type="button" 
                             className={styles.qtyBtn}
                             onClick={() => setCantidades({...cantidades, [prod.id]: Math.max(0, (cantidades[prod.id] || 0) - 1)})}
                             disabled={esVisualizacion}
                           >-</button>
                           <span>{cantidades[prod.id] || 0}</span>
-                          <button
-                            type="button"
+                          <button 
+                            type="button" 
                             className={styles.qtyBtn}
                             onClick={() => setCantidades({...cantidades, [prod.id]: (cantidades[prod.id] || 0) + 1})}
                             disabled={esVisualizacion}
@@ -1107,13 +1133,13 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
           <div className={styles.utilidadBar}>
             <div className={styles.utilidadBox}>
-              <span className={styles.utilidadLabel}>UTILIDAD EST. $</span>
+              <span className={styles.totalLabel}>UTILIDAD EST. $</span>
               <span style={{ fontWeight: 'bold', color: utilidad.usd >= 0 ? '#28a745' : '#f44336' }}>
                 ${utilidad.usd.toFixed(2)}
               </span>
             </div>
             <div className={styles.utilidadBox}>
-              <span className={styles.utilidadLabel}>UTILIDAD EST. BS</span>
+              <span className={styles.totalLabel}>UTILIDAD EST. BS</span>
               <span style={{ fontWeight: 'bold', color: utilidad.bs >= 0 ? '#28a745' : '#f44336' }}>
                 Bs. {utilidad.bs.toFixed(2)}
               </span>
@@ -1121,12 +1147,8 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
           </div>
 
           <div className={styles.footer}>
-            <button type="button" className={styles.limpiarBtn} onClick={handleLimpiar} disabled={esVisualizacion}>
-              Limpiar
-            </button>
-            <button type="button" className={styles.recalcularBtn} onClick={handleRecalcular}>
-              Recalcular
-            </button>
+            <button type="button" onClick={handleLimpiar} className={styles.limpiarBtn}>Limpiar</button>
+            <button type="button" onClick={handleRecalcular} className={styles.recalcularBtn}>Recalcular</button>
             {!esVisualizacion && (
               <button type="submit" className={styles.grabarBtn}>
                 {pedido ? "Actualizar" : "Grabar"}
@@ -1715,49 +1737,97 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGrupos } from "./hooks/useGrupos";
 import { useProductos } from "./hooks/useProductos";
-import { exportDatabase } from "../../lib/db/utils/exportService"; // Importar servicio
+import { exportDatabase } from "../../lib/db/utils/exportService"; 
+// 1. Importar el servicio de migración creado en la Fase 3
+import { migrateOrdersToBI } from "../../lib/db/utils/migrationService";
 import styles from "./Panel.module.css";
 
 export default function Panel() {
-    const navigate = useNavigate();
-    const { importarGrupos } = useGrupos();
-    const { importarProductos } = useProductos();
-    const [isExporting, setIsExporting] = useState(false);
+  const navigate = useNavigate();
+  const { importarGrupos } = useGrupos();
+  const { importarProductos } = useProductos();
+  const [isExporting, setIsExporting] = useState(false);
+  // Estado para controlar la ejecución de la migración
+  const [isMigrating, setIsMigrating] = useState(false);
 
-    const handleExport = async () => {
-        setIsExporting(true);
-        const result = await exportDatabase();
-        if (result.success) {
-            alert("✅ Copia de seguridad guardada en Descargas");
-        } else {
-            alert("❌ Error al exportar: " + (result.error?.message || "Error desconocido"))
-        }
-        setIsExporting(false);
-    };
+  const handleExport = async () => {
+    setIsExporting(true);
+    const result = await exportDatabase();
+    if (result.success) {
+      alert("✅ Copia de seguridad guardada en Descargas");
+    } else {
+      alert("❌ Error al exportar: " + (result.error?.message || "Error desconocido"));
+    }
+    setIsExporting(false);
+  };
 
-    return (
-        <div className={styles.container}>
-            <h1 className={styles.title}>PANEL DE CONTROL</h1>
+  // 2. Vincular Función de Migración con Feedback
+  const handleMigrateBI = async () => {
+    // Feedback de Usuario: Confirmación para evitar ejecuciones accidentales
+    const mensajeConfirmacion = "⚠️ ¿Deseas iniciar la migración de pedidos al formato BI?\n\n" +
+                               "Esta acción transformará los pedidos antiguos para habilitar la analítica financiera. " +
+                               "Se recomienda realizar un backup previo.";
+    
+    if (!window.confirm(mensajeConfirmacion)) return;
 
-            <div className={styles.buttons}>
-                <button className={`${styles.button} ${styles.primary}`} onClick={handleExport} disabled={isExporting}>
-                    {isExporting ? "⌛ Exportando..." : "📤 Exportar DB"}
-                </button>
+    setIsMigrating(true);
+    try {
+      const result = await migrateOrdersToBI();
+      
+      if (result.success) {
+        // Feedback de Usuario: Alerta informativa con el éxito de la operación
+        alert(result.message);
+      } else {
+        alert("❌ Error en la migración: " + result.error);
+      }
+    } catch (error) {
+      alert("❌ Error crítico: " + error.message);
+    } finally {
+      setIsMigrating(false);
+    }
+  };
 
-                <button className={`${styles.button} ${styles.primary}`} onClick={importarGrupos}>
-                    📥 Cargar Datos Iniciales
-                </button>
+  return (
+    <div className={styles.container}>
+      <h1 className={styles.title}>PANEL DE CONTROL</h1>
+      
+      <div className={styles.buttons}>
+        <button className={styles.button} onClick={handleExport} disabled={isExporting}>
+          {isExporting ? "⌛ Exportando..." : "📤 Exportar DB"}
+        </button>
 
-                <button className={styles.button} onClick={() => navigate("/tasabcv")}>Tasa BCV</button>
-                <button className={styles.button} onClick={() => navigate("/admingrupos")}>Grupos</button>
-                <button className={styles.button} onClick={() => navigate("/adminproductos")}>Productos</button>
+        {/* 3. Nuevo Botón de Migración con estilo styles.button */}
+        <button 
+          className={styles.button} 
+          onClick={handleMigrateBI} 
+          disabled={isMigrating}
+          style={{ backgroundColor: '#6a1b9a' }} // Color púrpura para diferenciar función BI
+        >
+          {isMigrating ? "⚙️ Migrando..." : "📊 Migrar Pedidos a BI"}
+        </button>
 
-                <button className={`${styles.button} ${styles.back}`} onClick={() => navigate("/")}>
-                    ↩️ Regresar
-                </button>
-            </div>
-        </div>
-    );
+        <button className={styles.button} onClick={importarGrupos}>
+          📥 Cargar Datos Iniciales (Grupos)
+        </button>
+
+        <button className={styles.button} onClick={() => navigate("/tasabcv")}>
+          💰 Tasa BCV
+        </button>
+
+        <button className={styles.button} onClick={() => navigate("/admingrupos")}>
+          🍦 Grupos
+        </button>
+
+        <button className={styles.button} onClick={() => navigate("/adminproductos")}>
+          📦 Productos
+        </button>
+
+        <button className={`${styles.button} ${styles.back}`} onClick={() => navigate("/")}>
+          ↩️ Regresar
+        </button>
+      </div>
+    </div>
+  );
 }
 ************************************************************
 
@@ -1955,7 +2025,7 @@ FILE: src/components/Pedidos.jsx
 ------------------------------
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../lib/db/database'; 
+import { db } from '../lib/db/database';
 import GestionPedido from './GestionPedido';
 import styles from './Pedidos.module.css';
 
@@ -1971,17 +2041,16 @@ const PedidosComponente = () => {
   const cargarRegistros = async () => {
     try {
       setLoading(true);
-      const datos = await db.getAll('pedidos'); // [14]
+      const datos = await db.getAll('pedidos'); [5]
       const datosOrdenados = datos.sort((a, b) => {
         const numA = parseInt(a.numero_pedido) || 0;
         const numB = parseInt(b.numero_pedido) || 0;
         return numB - numA;
       });
       setListaPedidos(datosOrdenados);
-
       const activos = datosOrdenados.filter(p => p.estatus === 'Activo' || !p.estatus).length;
       const cerrados = datosOrdenados.filter(p => p.estatus === 'Cerrado').length;
-      setStats({ pedidosActivos: activos, pedidosCerrados: cerrados }); // [9]
+      setStats({ pedidosActivos: activos, pedidosCerrados: cerrados });
     } catch (error) {
       console.error("Error al cargar pedidos:", error);
     } finally {
@@ -1993,50 +2062,49 @@ const PedidosComponente = () => {
     cargarRegistros();
   }, []);
 
+  // --- ACTUALIZACIÓN FASE 5: Lógica para Array de Items (BI) ---
   const handleExportTxt = async (pedido, e) => {
     e.stopPropagation();
     try {
-      const todosLosProductos = await db.getAll('productos'); // [1]
-      
       let contenido = `PEDIDO NATURA ICE\n`;
       contenido += `==============================\n\n`;
       contenido += `Numero: #${pedido.numero_pedido}\n`;
       contenido += `Fecha: ${new Date(pedido.fecha_pedido).toLocaleDateString('es-ES')}\n`;
+      contenido += `Tasa BCV: ${pedido.tasa}\n`;
       contenido += `==============================\n`;
       contenido += `PRODUCTOS SOLICITADOS:\n`;
       contenido += `==============================\n\n`;
 
       let totalUnidades = 0;
-      Object.entries(pedido.items).forEach(([id, qty]) => {
-        const prod = todosLosProductos.find(p => p.id === parseInt(id));
-        if (prod && qty > 0) {
-          contenido += `${qty} ${prod.nombre}\n`;
-          totalUnidades += qty;
+
+      // CAMBIO CLAVE: Recorremos directamente el array de BI [Snapshot histórico]
+      pedido.items.forEach((item) => {
+        if (item.cantidad > 0) {
+          // El nombre ya viene en el item, no hace falta buscar en la tabla 'productos'
+          contenido += `${item.cantidad} x ${item.nombre}\n`;
+          totalUnidades += item.cantidad;
         }
       });
 
-      // Lógica de delivery según datos del pedido [4, 5]
       const costoDelivery = pedido.delivery_aplicado ? (parseFloat(pedido.delivery_tasa) || 0) : 0;
-
+      
       contenido += `\n==============================\n`;
-      contenido += `RESUMEN:\n`; // Sección actualizada según solicitud
+      contenido += `RESUMEN:\n`;
       contenido += `==============================\n\n`;
-      contenido += `Tasa BCV: ${pedido.tasa}\n`;
       contenido += `Total Unidades: ${totalUnidades}\n`;
-      contenido += `Delivery: ${costoDelivery}\n`;
+      contenido += `Delivery: ${costoDelivery.toFixed(2)}\n`;
       contenido += `----------------------------\n`;
       contenido += `Total USD + Deliv: $${(pedido.total_usd).toFixed(2)}\n`;
-      contenido += `Total Bs: ${pedido.total_bs.toFixed(2)}\n\n`;
-
+      contenido += `Total Bs: Bs. ${pedido.total_bs.toFixed(2)}\n\n`;
+      
       contenido += `==============================\n`;
       contenido += `INFORMACION:\n`;
       contenido += `==============================\n\n`;
-      contenido += `Contacto: Sra. Magali (Corocito)\n`;
-      contenido += `==============================\n`;
+      contenido += `Distribuidor: Natura Ice\n`;
       contenido += `Generado: ${new Date().toLocaleDateString('es-ES')}\n`;
       contenido += `==============================\n`;
 
-      const blob = new Blob([contenido], { type: 'text/plain' }); // [3]
+      const blob = new Blob([contenido], { type: 'text/plain' }); [6]
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -2045,33 +2113,40 @@ const PedidosComponente = () => {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+
     } catch (error) {
       console.error("Error exportando pedido:", error);
       alert("No se pudo generar el archivo de texto.");
     }
   };
 
+  // --- ACTUALIZACIÓN FASE 5: Recepción de pedido con items detallados ---
   const handleRecibirPedido = async (pedido, e) => {
     e.stopPropagation();
     if (pedido.estatus === 'Cerrado' || isProcessing) return;
 
-    const confirmar = window.confirm(`¿Marcar Pedido #${pedido.numero_pedido} como RECIBIDO?`);
+    const confirmar = window.confirm(`¿Marcar Pedido #${pedido.numero_pedido} como RECIBIDO?\nSe actualizará el stock.`);
     if (!confirmar) return;
 
     setIsProcessing(true);
     try {
       await db.db.transaction('rw', [db.productos, db.pedidos], async () => {
-        for (const [id, cantidad] of Object.entries(pedido.items)) {
-          await db.updateStock(parseInt(id), cantidad); // [8, 15]
+        // CAMBIO CLAVE: Iteración sobre el array de objetos detallados
+        for (const item of pedido.items) {
+          // Usamos el productoId guardado en el snapshot del item [2, 7]
+          await db.updateStock(item.productoId, item.cantidad);
         }
+        
         await db.pedidos.update(pedido.id, {
           estatus: 'Cerrado',
           updatedAt: new Date().toISOString()
         });
       });
-      alert("✅ Inventario actualizado.");
+
+      alert("✅ Inventario actualizado exitosamente.");
       await cargarRegistros();
     } catch (error) {
+      console.error("Error al recibir pedido:", error);
       alert(`❌ Error: ${error.message}`);
     } finally {
       setIsProcessing(false);
@@ -2081,7 +2156,6 @@ const PedidosComponente = () => {
   const handleEliminar = async (pedido, e) => {
     e.stopPropagation();
     if (pedido.estatus === 'Cerrado' || isProcessing) return;
-
     if (window.confirm(`¿Eliminar pedido #${pedido.numero_pedido}?`)) {
       await db.del('pedidos', pedido.id);
       cargarRegistros();
@@ -2128,12 +2202,10 @@ const PedidosComponente = () => {
                   {p.estatus === 'Cerrado' ? '✅ RECIBIDO' : '🟢 PENDIENTE'}
                 </span>
               </div>
-
               <div className={styles.tasaRow}>
                 <span className={styles.tasaLabel}>💰 Tasa:</span>
                 <span className={styles.tasaValue}>{p.tasa || '---'}</span>
               </div>
-
               <div className={styles.cardBody}>
                 <span className={styles.cardDate}>{new Date(p.fecha_pedido).toLocaleDateString('es-ES')}</span>
                 <div style={{ textAlign: 'right' }}>
@@ -2147,14 +2219,13 @@ const PedidosComponente = () => {
                   className={styles.actionBtn} 
                   onClick={(e) => { e.stopPropagation(); setPedidoSeleccionado(p); setModalOpen(true); }}
                   disabled={p.estatus === 'Cerrado'}
-                >
-                  ✏️
-                </button>
-
-                <button className={styles.actionBtn} onClick={(e) => handleExportTxt(p, e)} title="Exportar para Proveedor" style={{ backgroundColor: '#fff3cd' }}>
-                  📄
-                </button>
-
+                >✏️</button>
+                <button 
+                  className={styles.actionBtn} 
+                  onClick={(e) => handleExportTxt(p, e)} 
+                  title="Exportar para Proveedor"
+                  style={{ backgroundColor: '#fff3cd' }}
+                >📄</button>
                 <button 
                   className={styles.actionBtn} 
                   onClick={(e) => handleRecibirPedido(p, e)}
@@ -2163,10 +2234,11 @@ const PedidosComponente = () => {
                 >
                   {isProcessing && p.id === pedidoSeleccionado?.id ? '⌛' : '📥'}
                 </button>
-
-                <button className={styles.deleteBtn} onClick={(e) => handleEliminar(p, e)} disabled={p.estatus === 'Cerrado'}>
-                  🗑️
-                </button>
+                <button 
+                  className={styles.actionBtn} 
+                  onClick={(e) => handleEliminar(p, e)} 
+                  disabled={p.estatus === 'Cerrado'}
+                >🗑️</button>
               </div>
             </div>
           ))
@@ -5233,6 +5305,91 @@ export const exportDatabase = async () => {
 };
 ************************************************************
 
+FILE: src/lib/db/utils/migrationService.js
+------------------------------
+/**
+ * Servicio de migración para convertir pedidos al formato detallado de BI.
+ * Realiza una captura de precios y costos actuales para pedidos antiguos.
+ */
+import { db } from '../database';
+
+export const migrateOrdersToBI = async () => {
+  try {
+    // 1. Obtener toda la data necesaria en paralelo para optimizar rendimiento
+    const [allOrders, allProducts, allGroups] = await Promise.all([
+      db.getAll('pedidos'),
+      db.getAll('productos'),
+      db.getAll('grupos')
+    ]);
+
+    // 2. Filtrar pedidos que aún tienen el formato antiguo (items no es un Array)
+    const ordersToMigrate = allOrders.filter(p => p.items && !Array.isArray(p.items));
+
+    if (ordersToMigrate.length === 0) {
+      return { success: true, migratedCount: 0, message: "No hay pedidos pendientes por migrar." };
+    }
+
+    let count = 0;
+
+    for (const pedido of ordersToMigrate) {
+      // 3. Lógica de Transformación de Items
+      const itemsBI = Object.entries(pedido.items).map(([prodId, qty]) => {
+        const prod = allProducts.find(p => p.id === parseInt(prodId));
+        // Buscamos el grupo ignorando mayúsculas/minúsculas para mayor seguridad
+        const grupo = prod 
+          ? allGroups.find(g => g.nombre.toLowerCase() === prod.grupo.toLowerCase()) 
+          : null;
+
+        const precioUnit = grupo?.precio || 0;
+        const costoUnit = grupo?.costo_$ || 0;
+
+        return {
+          productoId: parseInt(prodId),
+          nombre: prod?.nombre || "Producto no encontrado",
+          grupo: prod?.grupo || "Otros",
+          cantidad: qty,
+          precioUnitario: precioUnit,
+          costoUnitario: costoUnit,
+          subtotalUsd: qty * precioUnit,
+          utilidadUsd: qty * (precioUnit - costoUnit)
+        };
+      });
+
+      // 4. Recalcular totales para asegurar consistencia BI
+      const subtotalVentaUsd = itemsBI.reduce((sum, item) => sum + item.subtotalUsd, 0);
+      const costoEnvio = pedido.delivery_aplicado ? (parseFloat(pedido.delivery_tasa) || 0) : 0;
+      
+      const nuevoTotalUsd = subtotalVentaUsd + costoEnvio;
+      const tasaActual = parseFloat(pedido.tasa) || 0;
+
+      // 5. Preparar objeto migrado
+      const pedidoMigrado = {
+        ...pedido,
+        items: itemsBI, // Reemplazamos el diccionario por el Array BI
+        total_usd: nuevoTotalUsd,
+        total_bs: nuevoTotalUsd * tasaActual,
+        updatedAt: new Date().toISOString(),
+        migratedAt: new Date().toISOString() // Marca de auditoría
+      };
+
+      // 6. Actualización Masiva (Registro por registro para seguridad en IndexedDB)
+      await db.put('pedidos', pedidoMigrado);
+      count++;
+    }
+
+    return { 
+      success: true, 
+      migratedCount: count, 
+      message: `Se migraron ${count} pedidos exitosamente al formato BI.` 
+    };
+
+  } catch (error) {
+    console.error("Error en la migración de pedidos:", error);
+    return { success: false, error: error.message };
+  }
+};
+************************************************************
+
 FILE: src/lib/db/utils/tasaUtil.js
 ------------------------------
 // src/lib/db/utils/tasaUtil.js
@@ -5455,87 +5612,114 @@ FILE: src/pages/Estadisticas.jsx
 ------------------------------
 /* src/pages/Estadisticas.jsx */
 import { useState, useEffect } from 'react';
-import { db } from '../lib/db/database';
-import { getTasaBCV } from '../lib/db/utils/tasaUtil';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  ResponsiveContainer, 
-  CartesianGrid, 
+import { db } from '../lib/db/database'; // [3]
+import { getTasaBCV } from '../lib/db/utils/tasaUtil'; // [4, 5]
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
   Cell,
-  LabelList 
-} from 'recharts';
-import styles from './Estadisticas.module.css';
+  LabelList
+} from 'recharts'; // [5, 6]
+import styles from './Estadisticas.module.css'; // [5, 7]
 
 const Estadisticas = () => {
-  const [datosVentas, setDatosVentas] = useState([]);
+  const [datosBI, setDatosBI] = useState([]);
   const [tasa, setTasa] = useState(0);
   const [rango, setRango] = useState('7d');
   const [cargando, setCargando] = useState(true);
+  const [metricas, setMetricas] = useState({ ventaTotalUsd: 0, utilidadTotalUsd: 0 });
 
   useEffect(() => {
-    const cargarData = async () => {
+    const cargarAnaliticaBI = async () => {
       setCargando(true);
       try {
-        const [ventasRaw, valorTasa] = await Promise.all([
-          db.getAll('ventas'),
+        // 1. Obtenemos pedidos y tasa en paralelo para optimizar en Android [8, 9]
+        const [pedidosRaw, valorTasa] = await Promise.all([
+          db.getAll('pedidos'),
           getTasaBCV()
         ]);
-        const filtradas = filtrarPorRango(ventasRaw, rango);
-        setDatosVentas(filtradas);
+
+        // 2. Filtramos solo pedidos 'Cerrados' (Ventas efectivas) [2]
+        const pedidosCerrados = pedidosRaw.filter(p => p.estatus === 'Cerrado');
+        
+        // 3. Filtramos por el rango de tiempo seleccionado [9]
+        const filtrados = filtrarPorRango(pedidosCerrados, rango);
+
+        // 4. Procesamiento de datos para BI: Agregación por producto
+        const acumulado = {};
+        let ventaSum = 0;
+        let utilidadSum = 0;
+
+        filtrados.forEach(pedido => {
+          ventaSum += (pedido.total_usd || 0);
+          
+          // Iteramos los items (formato Array BI sugerido en fases anteriores)
+          if (Array.isArray(pedido.items)) {
+            pedido.items.forEach(item => {
+              if (!acumulado[item.nombre]) {
+                acumulado[item.nombre] = { name: item.nombre, utilidad: 0, cantidad: 0 };
+              }
+              acumulado[item.nombre].utilidad += (item.utilidadUsd || 0);
+              acumulado[item.nombre].cantidad += (item.cantidad || 0);
+              utilidadSum += (item.utilidadUsd || 0);
+            });
+          }
+        });
+
+        // 5. Preparar datos para el gráfico (Top 6 por utilidad) [10]
+        const dataGrafico = Object.values(acumulado)
+          .sort((a, b) => b.utilidad - a.utilidad)
+          .slice(0, 6);
+
+        setDatosBI(dataGrafico);
+        setMetricas({ ventaTotalUsd: ventaSum, utilidadTotalUsd: utilidadSum });
         setTasa(valorTasa || 0);
+
       } catch (err) {
-        console.error("Error:", err);
+        console.error("Error cargando analítica BI:", err);
       } finally {
         setCargando(false);
       }
     };
-    cargarData();
+
+    cargarAnaliticaBI();
   }, [rango]);
 
-  const filtrarPorRango = (ventas, tipo) => {
+  const filtrarPorRango = (pedidos, tipo) => {
     const ahora = new Date();
-    return ventas.filter(v => {
-      const fechaVenta = new Date(v.fecha);
-      if (tipo === 'hoy') return fechaVenta.toDateString() === ahora.toDateString();
+    return pedidos.filter(p => {
+      const fechaPedido = new Date(p.fecha_pedido);
+      if (tipo === 'hoy') return fechaPedido.toDateString() === ahora.toDateString();
       if (tipo === '7d') {
         const limite = new Date();
         limite.setDate(ahora.getDate() - 7);
-        return fechaVenta >= limite;
+        return fechaPedido >= limite;
+      }
+      if (tipo === 'mes') {
+        return fechaPedido.getMonth() === ahora.getMonth() && 
+               fechaPedido.getFullYear() === ahora.getFullYear();
       }
       return true;
     });
   };
 
-  // Preparación de datos para la gráfica [3]
-  const dataGrafico = Object.entries(
-    datosVentas.reduce((acc, v) => {
-      acc[v.nombre] = (acc[v.nombre] || 0) + (v.cantidad || 1);
-      return acc;
-    }, {})
-  ).map(([name, value]) => ({ name, value }))
-   .sort((a, b) => b.value - a.value)
-   .slice(0, 6);
-
-  const ingresosUsd = datosVentas.reduce((acc, v) => acc + (v.precioUsd || 0), 0);
-
-  if (cargando) return <div className={styles.loading}>Procesando Analítica...</div>;
+  if (cargando) return <div className={styles.loading}>Procesando Inteligencia de Negocio...</div>;
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>📊 ANALÍTICA DE VENTAS</h2>
-      
-      {/* Contenedor tipo Card Profesional solicitado */}
+      <h1 className={styles.title}>📊 ANALÍTICA FINANCIERA (BI)</h1>
+
       <div className={styles.mainCard}>
-        
         <div className={styles.filterBar}>
-          <label className={styles.filterLabel}>Rango de fecha:</label>
+          <label className={styles.filterLabel}>Periodo de Análisis:</label>
           <select 
             value={rango} 
-            onChange={(e) => setRango(e.target.value)} 
+            onChange={(e) => setRango(e.target.value)}
             className={styles.select}
           >
             <option value="hoy">Ventas de Hoy</option>
@@ -5546,48 +5730,46 @@ const Estadisticas = () => {
 
         <div className={styles.ingresosContainer}>
           <div className={styles.ingresosCard}>
-            <span className={styles.ingresosValue}>${ingresosUsd.toFixed(2)}</span>
-            <span className={styles.ingresosLabel}>TOTAL USD</span>
+            <span className={styles.ingresosLabel}>VENTA TOTAL ($)</span>
+            <span className={styles.ingresosValue}>${metricas.ventaTotalUsd.toFixed(2)}</span>
           </div>
-          <div className={styles.ingresosCard}>
-            <span className={styles.ingresosValue}>Bs. {(ingresosUsd * tasa).toFixed(2)}</span>
-            <span className={styles.ingresosLabel}>TOTAL BS</span>
+          <div className={styles.ingresosCard} style={{ backgroundColor: '#e8f5e9' }}>
+            <span className={styles.ingresosLabel} style={{ color: '#2e7d32' }}>UTILIDAD NETA ($)</span>
+            <span className={styles.ingresosValue} style={{ color: '#2e7d32' }}>
+              ${metricas.utilidadTotalUsd.toFixed(2)}
+            </span>
           </div>
         </div>
 
         <div className={styles.chartWrapper}>
-          <h3 className={styles.chartTitle}>TOP 6: PRODUCTOS ESTRELLA</h3>
+          <h3 className={styles.chartTitle}>TOP 6: RENTABILIDAD POR PRODUCTO</h3>
           <div style={{ width: '100%', height: 300 }}>
             <ResponsiveContainer>
-              <BarChart data={dataGrafico} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+              <BarChart data={datosBI} margin={{ top: 20, right: 30, left: 0, bottom: 70 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis 
                   dataKey="name" 
                   angle={-45} 
                   textAnchor="end" 
                   interval={0} 
-                  fontSize={10} 
+                  fontSize={10}
                   stroke="#555"
-                  height={70}
+                  height={80}
                 />
-                <YAxis hide /> {/* Ocultamos el eje Y para un look más limpio ya que tenemos etiquetas superiores */}
+                <YAxis hide />
                 <Tooltip 
                   contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                  formatter={(value) => [`$${value.toFixed(2)}`, 'Utilidad']}
                 />
-                <Bar 
-                  dataKey="value" 
-                  fill="#00BFFF" 
-                  radius={[4]}
-                  barSize={40}
-                >
-                  {/* Solicitud: Mostrar cantidad en la parte superior de cada barra */}
+                <Bar dataKey="utilidad" fill="#00BFFF" radius={[11]} barSize={35}>
                   <LabelList 
-                    dataKey="value" 
+                    dataKey="utilidad" 
                     position="top" 
-                    style={{ fill: '#2c3e50', fontSize: 12, fontWeight: 'bold' }} 
+                    formatter={(v) => `$${v.toFixed(2)}`}
+                    style={{ fill: '#2c3e50', fontSize: 11, fontWeight: 'bold' }} 
                   />
-                  {dataGrafico.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === 0 ? '#007bff' : '#00BFFF'} />
+                  {datosBI.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index === 0 ? '#FFD700' : '#00BFFF'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -5595,6 +5777,15 @@ const Estadisticas = () => {
           </div>
         </div>
 
+        <div className={styles.ingresosContainer} style={{ marginTop: '20px' }}>
+           <div className={styles.ingresosCard} style={{ gridColumn: 'span 2', background: '#fff3e0' }}>
+            <span className={styles.ingresosLabel} style={{ color: '#ef6c00' }}>UTILIDAD ESTIMADA EN BOLÍVARES</span>
+            <span className={styles.ingresosValue} style={{ color: '#ef6c00' }}>
+              Bs. {(metricas.utilidadTotalUsd * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+            </span>
+            <small style={{ fontSize: '0.7rem', color: '#666' }}>Tasa: {tasa.toFixed(2)}</small>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -44,7 +44,18 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
             delivery_tasa: pedido.delivery_tasa !== undefined ? pedido.delivery_tasa : (deliveryValor || 0)
           });
 
-          if (pedido.items) setCantidades(pedido.items);
+          // Soporte para ambos formatos (Diccionario antiguo o Array BI nuevo)
+          if (pedido.items) {
+            if (Array.isArray(pedido.items)) {
+              const dict = {};
+              pedido.items.forEach(item => {
+                dict[item.productoId] = item.cantidad;
+              });
+              setCantidades(dict);
+            } else {
+              setCantidades(pedido.items);
+            }
+          }
           setAplicarDelivery(pedido.delivery_aplicado ?? true);
         } else {
           const ultimoPedido = await db.pedidos.orderBy('id').last();
@@ -61,7 +72,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
         console.error("Error cargando datos:", err);
       }
     };
-
     cargarDatos();
   }, [pedido]);
 
@@ -82,9 +92,9 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
       });
 
       const cargoDelivery = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
-      const totalPedidoUSD = costoTotalUSD + cargoDelivery;
+      const totalPedidoUSD = ingresoEstimadoUSD + cargoDelivery; // Total venta + delivery
       const tasaNum = parseFloat(formData.tasa) || 0;
-      const utilidadUSD = ingresoEstimadoUSD - totalPedidoUSD;
+      const utilidadUSD = ingresoEstimadoUSD - (costoTotalUSD + cargoDelivery);
 
       setTotales({ usd: totalPedidoUSD, bs: totalPedidoUSD * tasaNum });
       setUtilidad({ usd: utilidadUSD, bs: utilidadUSD * tasaNum });
@@ -98,7 +108,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
       const nuevaTasa = await db.getConfigValue('tasa');
       const nuevoDelivery = await db.getConfigValue('delivery');
       const gruposActualizados = await db.getAll('grupos');
-      
       setListaGrupos(gruposActualizados);
       setFormData(prev => ({
         ...prev,
@@ -122,14 +131,36 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     if (esVisualizacion) return;
 
     const mensaje = pedido
-      ? `¿Estás seguro de que deseas ACTUALIZAR los cambios en el pedido #${formData.numero_pedido}?`
-      : `¿Deseas GRABAR el nuevo pedido #${formData.numero_pedido}?`;
+      ? `¿Actualizar cambios en el pedido #${formData.numero_pedido}?`
+      : `¿Grabar el nuevo pedido #${formData.numero_pedido}?`;
 
     if (!window.confirm(mensaje)) return;
 
+    // --- TRANSFORMACIÓN PARA BI ---
+    // Creamos una captura histórica de precios y costos
+    const itemsBI = Object.entries(cantidades)
+      .filter(([_, qty]) => qty > 0)
+      .map(([prodId, qty]) => {
+        const prod = productos.find(p => p.id === parseInt(prodId));
+        const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === prod.grupo.toLowerCase());
+        const precioUnit = grupo?.precio || 0;
+        const costoUnit = grupo?.costo_$ || 0;
+
+        return {
+          productoId: parseInt(prodId),
+          nombre: prod.nombre,
+          grupo: prod.grupo,
+          cantidad: qty,
+          precioUnitario: precioUnit,
+          costoUnitario: costoUnit,
+          subtotalUsd: qty * precioUnit,
+          utilidadUsd: qty * (precioUnit - costoUnit)
+        };
+      });
+
     const pedidoData = {
       ...formData,
-      items: cantidades,
+      items: itemsBI, // Guardado como Array de objetos detallados
       total_usd: totales.usd,
       total_bs: totales.bs,
       delivery_aplicado: aplicarDelivery,
@@ -150,10 +181,16 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     }
   };
 
+  // REGLA DE FILTRADO: Visible === true (o undefined) O que ya tenga cantidad seleccionada
   const productosAgrupados = productos.reduce((acc, prod) => {
-    const grupo = prod.grupo || 'Otros';
-    if (!acc[grupo]) acc[grupo] = [];
-    acc[grupo].push(prod);
+    const esVisible = prod.visible !== false;
+    const tieneCantidad = (cantidades[prod.id] || 0) > 0;
+
+    if (esVisible || tieneCantidad) {
+      const grupo = prod.grupo || 'Otros';
+      if (!acc[grupo]) acc[grupo] = [];
+      acc[grupo].push(prod);
+    }
     return acc;
   }, {});
 
@@ -169,18 +206,13 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
           <div className={styles.topRow}>
             <div className={styles.inputGroup}>
               <label className={styles.label}>Pedido #</label>
-              <input
-                type="text"
-                value={formData.numero_pedido}
-                readOnly
-                className={styles.inputSmall}
-              />
+              <input type="text" value={formData.numero_pedido} readOnly className={styles.inputSmall} />
             </div>
             <div className={styles.inputGroup}>
               <label className={styles.label}>Fecha</label>
-              <input
-                type="date"
-                value={formData.fecha_pedido}
+              <input 
+                type="date" 
+                value={formData.fecha_pedido} 
                 onChange={(e) => setFormData({...formData, fecha_pedido: e.target.value})}
                 className={esVisualizacion ? styles.inputReadOnly : styles.inputSmall}
                 disabled={esVisualizacion}
@@ -201,10 +233,10 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
           <div className={styles.infoBar}>
             <span>Tasa: {formData.tasa || '---'}</span>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <input
-                type="checkbox"
-                checked={aplicarDelivery}
+            <label>
+              <input 
+                type="checkbox" 
+                checked={aplicarDelivery} 
                 onChange={(e) => setAplicarDelivery(e.target.checked)}
                 className={styles.checkbox}
                 disabled={esVisualizacion}
@@ -220,30 +252,23 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                 <div key={grupo}>
                   <div className={styles.groupTitle}>{grupo.toUpperCase()}</div>
                   {items.map((prod) => {
-                    // Lógica de colores de stock del componente Home [2]
-                    const esAgotado = prod.stock === 0;
-                    const esBajoStock = prod.stock > 0 && prod.stock <= 5;
-                    const badgeColor = esAgotado ? '#ff4d4d' : (esBajoStock ? '#ffa500' : '#28a745');
-
+                    const badgeColor = prod.stock === 0 ? '#ff4d4d' : (prod.stock <= 5 ? '#ffa500' : '#28a745');
                     return (
                       <div key={prod.id} className={styles.productItem}>
-                        <div 
-                          className={styles.stockBadgeSmall} 
-                          style={{ backgroundColor: badgeColor }}
-                        >
+                        <div className={styles.stockBadgeSmall} style={{ backgroundColor: badgeColor }}>
                           {prod.stock}
                         </div>
                         <span className={styles.productName}>{prod.nombre}</span>
                         <div className={styles.quantityControl}>
-                          <button
-                            type="button"
+                          <button 
+                            type="button" 
                             className={styles.qtyBtn}
                             onClick={() => setCantidades({...cantidades, [prod.id]: Math.max(0, (cantidades[prod.id] || 0) - 1)})}
                             disabled={esVisualizacion}
                           >-</button>
                           <span>{cantidades[prod.id] || 0}</span>
-                          <button
-                            type="button"
+                          <button 
+                            type="button" 
                             className={styles.qtyBtn}
                             onClick={() => setCantidades({...cantidades, [prod.id]: (cantidades[prod.id] || 0) + 1})}
                             disabled={esVisualizacion}
@@ -259,13 +284,13 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
           <div className={styles.utilidadBar}>
             <div className={styles.utilidadBox}>
-              <span className={styles.utilidadLabel}>UTILIDAD EST. $</span>
+              <span className={styles.totalLabel}>UTILIDAD EST. $</span>
               <span style={{ fontWeight: 'bold', color: utilidad.usd >= 0 ? '#28a745' : '#f44336' }}>
                 ${utilidad.usd.toFixed(2)}
               </span>
             </div>
             <div className={styles.utilidadBox}>
-              <span className={styles.utilidadLabel}>UTILIDAD EST. BS</span>
+              <span className={styles.totalLabel}>UTILIDAD EST. BS</span>
               <span style={{ fontWeight: 'bold', color: utilidad.bs >= 0 ? '#28a745' : '#f44336' }}>
                 Bs. {utilidad.bs.toFixed(2)}
               </span>
@@ -273,12 +298,8 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
           </div>
 
           <div className={styles.footer}>
-            <button type="button" className={styles.limpiarBtn} onClick={handleLimpiar} disabled={esVisualizacion}>
-              Limpiar
-            </button>
-            <button type="button" className={styles.recalcularBtn} onClick={handleRecalcular}>
-              Recalcular
-            </button>
+            <button type="button" onClick={handleLimpiar} className={styles.limpiarBtn}>Limpiar</button>
+            <button type="button" onClick={handleRecalcular} className={styles.recalcularBtn}>Recalcular</button>
             {!esVisualizacion && (
               <button type="submit" className={styles.grabarBtn}>
                 {pedido ? "Actualizar" : "Grabar"}

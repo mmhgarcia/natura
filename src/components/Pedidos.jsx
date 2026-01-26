@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../lib/db/database'; 
+import { db } from '../lib/db/database';
 import GestionPedido from './GestionPedido';
 import styles from './Pedidos.module.css';
 
@@ -16,17 +16,16 @@ const PedidosComponente = () => {
   const cargarRegistros = async () => {
     try {
       setLoading(true);
-      const datos = await db.getAll('pedidos'); // [14]
+      const datos = await db.getAll('pedidos'); [5]
       const datosOrdenados = datos.sort((a, b) => {
         const numA = parseInt(a.numero_pedido) || 0;
         const numB = parseInt(b.numero_pedido) || 0;
         return numB - numA;
       });
       setListaPedidos(datosOrdenados);
-
       const activos = datosOrdenados.filter(p => p.estatus === 'Activo' || !p.estatus).length;
       const cerrados = datosOrdenados.filter(p => p.estatus === 'Cerrado').length;
-      setStats({ pedidosActivos: activos, pedidosCerrados: cerrados }); // [9]
+      setStats({ pedidosActivos: activos, pedidosCerrados: cerrados });
     } catch (error) {
       console.error("Error al cargar pedidos:", error);
     } finally {
@@ -38,50 +37,49 @@ const PedidosComponente = () => {
     cargarRegistros();
   }, []);
 
+  // --- ACTUALIZACIÓN FASE 5: Lógica para Array de Items (BI) ---
   const handleExportTxt = async (pedido, e) => {
     e.stopPropagation();
     try {
-      const todosLosProductos = await db.getAll('productos'); // [1]
-      
       let contenido = `PEDIDO NATURA ICE\n`;
       contenido += `==============================\n\n`;
       contenido += `Numero: #${pedido.numero_pedido}\n`;
       contenido += `Fecha: ${new Date(pedido.fecha_pedido).toLocaleDateString('es-ES')}\n`;
+      contenido += `Tasa BCV: ${pedido.tasa}\n`;
       contenido += `==============================\n`;
       contenido += `PRODUCTOS SOLICITADOS:\n`;
       contenido += `==============================\n\n`;
 
       let totalUnidades = 0;
-      Object.entries(pedido.items).forEach(([id, qty]) => {
-        const prod = todosLosProductos.find(p => p.id === parseInt(id));
-        if (prod && qty > 0) {
-          contenido += `${qty} ${prod.nombre}\n`;
-          totalUnidades += qty;
+
+      // CAMBIO CLAVE: Recorremos directamente el array de BI [Snapshot histórico]
+      pedido.items.forEach((item) => {
+        if (item.cantidad > 0) {
+          // El nombre ya viene en el item, no hace falta buscar en la tabla 'productos'
+          contenido += `${item.cantidad} x ${item.nombre}\n`;
+          totalUnidades += item.cantidad;
         }
       });
 
-      // Lógica de delivery según datos del pedido [4, 5]
       const costoDelivery = pedido.delivery_aplicado ? (parseFloat(pedido.delivery_tasa) || 0) : 0;
-
+      
       contenido += `\n==============================\n`;
-      contenido += `RESUMEN:\n`; // Sección actualizada según solicitud
+      contenido += `RESUMEN:\n`;
       contenido += `==============================\n\n`;
-      contenido += `Tasa BCV: ${pedido.tasa}\n`;
       contenido += `Total Unidades: ${totalUnidades}\n`;
-      contenido += `Delivery: ${costoDelivery}\n`;
+      contenido += `Delivery: ${costoDelivery.toFixed(2)}\n`;
       contenido += `----------------------------\n`;
       contenido += `Total USD + Deliv: $${(pedido.total_usd).toFixed(2)}\n`;
-      contenido += `Total Bs: ${pedido.total_bs.toFixed(2)}\n\n`;
-
+      contenido += `Total Bs: Bs. ${pedido.total_bs.toFixed(2)}\n\n`;
+      
       contenido += `==============================\n`;
       contenido += `INFORMACION:\n`;
       contenido += `==============================\n\n`;
-      contenido += `Contacto: Sra. Magali (Corocito)\n`;
-      contenido += `==============================\n`;
+      contenido += `Distribuidor: Natura Ice\n`;
       contenido += `Generado: ${new Date().toLocaleDateString('es-ES')}\n`;
       contenido += `==============================\n`;
 
-      const blob = new Blob([contenido], { type: 'text/plain' }); // [3]
+      const blob = new Blob([contenido], { type: 'text/plain' }); [6]
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -90,33 +88,40 @@ const PedidosComponente = () => {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+
     } catch (error) {
       console.error("Error exportando pedido:", error);
       alert("No se pudo generar el archivo de texto.");
     }
   };
 
+  // --- ACTUALIZACIÓN FASE 5: Recepción de pedido con items detallados ---
   const handleRecibirPedido = async (pedido, e) => {
     e.stopPropagation();
     if (pedido.estatus === 'Cerrado' || isProcessing) return;
 
-    const confirmar = window.confirm(`¿Marcar Pedido #${pedido.numero_pedido} como RECIBIDO?`);
+    const confirmar = window.confirm(`¿Marcar Pedido #${pedido.numero_pedido} como RECIBIDO?\nSe actualizará el stock.`);
     if (!confirmar) return;
 
     setIsProcessing(true);
     try {
       await db.db.transaction('rw', [db.productos, db.pedidos], async () => {
-        for (const [id, cantidad] of Object.entries(pedido.items)) {
-          await db.updateStock(parseInt(id), cantidad); // [8, 15]
+        // CAMBIO CLAVE: Iteración sobre el array de objetos detallados
+        for (const item of pedido.items) {
+          // Usamos el productoId guardado en el snapshot del item [2, 7]
+          await db.updateStock(item.productoId, item.cantidad);
         }
+        
         await db.pedidos.update(pedido.id, {
           estatus: 'Cerrado',
           updatedAt: new Date().toISOString()
         });
       });
-      alert("✅ Inventario actualizado.");
+
+      alert("✅ Inventario actualizado exitosamente.");
       await cargarRegistros();
     } catch (error) {
+      console.error("Error al recibir pedido:", error);
       alert(`❌ Error: ${error.message}`);
     } finally {
       setIsProcessing(false);
@@ -126,7 +131,6 @@ const PedidosComponente = () => {
   const handleEliminar = async (pedido, e) => {
     e.stopPropagation();
     if (pedido.estatus === 'Cerrado' || isProcessing) return;
-
     if (window.confirm(`¿Eliminar pedido #${pedido.numero_pedido}?`)) {
       await db.del('pedidos', pedido.id);
       cargarRegistros();
@@ -173,12 +177,10 @@ const PedidosComponente = () => {
                   {p.estatus === 'Cerrado' ? '✅ RECIBIDO' : '🟢 PENDIENTE'}
                 </span>
               </div>
-
               <div className={styles.tasaRow}>
                 <span className={styles.tasaLabel}>💰 Tasa:</span>
                 <span className={styles.tasaValue}>{p.tasa || '---'}</span>
               </div>
-
               <div className={styles.cardBody}>
                 <span className={styles.cardDate}>{new Date(p.fecha_pedido).toLocaleDateString('es-ES')}</span>
                 <div style={{ textAlign: 'right' }}>
@@ -192,14 +194,13 @@ const PedidosComponente = () => {
                   className={styles.actionBtn} 
                   onClick={(e) => { e.stopPropagation(); setPedidoSeleccionado(p); setModalOpen(true); }}
                   disabled={p.estatus === 'Cerrado'}
-                >
-                  ✏️
-                </button>
-
-                <button className={styles.actionBtn} onClick={(e) => handleExportTxt(p, e)} title="Exportar para Proveedor" style={{ backgroundColor: '#fff3cd' }}>
-                  📄
-                </button>
-
+                >✏️</button>
+                <button 
+                  className={styles.actionBtn} 
+                  onClick={(e) => handleExportTxt(p, e)} 
+                  title="Exportar para Proveedor"
+                  style={{ backgroundColor: '#fff3cd' }}
+                >📄</button>
                 <button 
                   className={styles.actionBtn} 
                   onClick={(e) => handleRecibirPedido(p, e)}
@@ -208,10 +209,11 @@ const PedidosComponente = () => {
                 >
                   {isProcessing && p.id === pedidoSeleccionado?.id ? '⌛' : '📥'}
                 </button>
-
-                <button className={styles.deleteBtn} onClick={(e) => handleEliminar(p, e)} disabled={p.estatus === 'Cerrado'}>
-                  🗑️
-                </button>
+                <button 
+                  className={styles.actionBtn} 
+                  onClick={(e) => handleEliminar(p, e)} 
+                  disabled={p.estatus === 'Cerrado'}
+                >🗑️</button>
               </div>
             </div>
           ))
