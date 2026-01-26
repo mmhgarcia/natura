@@ -1,120 +1,177 @@
-// src/pages/TasaBCV.jsx
-import { useState } from 'react';
-import { useTasaBCV } from "../lib/db/hooks/useTasaBCV";
-import styles from './TasaBCV.module.css'; // Opcional
+import { useState, useEffect } from 'react';
+import { db } from "../lib/db/database"; 
+import styles from './TasaBCV.module.css';
 
 export default function TasaBCV() {
-  const { tasa, setTasa, saveTasa, loading } = useTasaBCV();
+  const [historico, setHistorico] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editandoId, setEditandoId] = useState(null);
+  
+  // Estado para el formulario (Add/Edit)
+  const [formData, setFormData] = useState({
+    fecha_tasa: new Date().toISOString().split('T'),
+    tasa: ''
+  });
+  
   const [message, setMessage] = useState('');
 
-  // Manejar cambio de input
-  const handleChange = (e) => {
-    let valor = e.target.value;
-    
-    // Permitir solo números y un punto decimal
-    valor = valor.replace(/[^0-9.]/g, '');
-    
-    // Asegurar solo un punto decimal
-    const puntos = valor.split('.').length - 1;
-    if (puntos > 1) {
-      // Si hay más de un punto, mantener solo el primero
-      const partes = valor.split('.');
-      valor = partes[0] + '.' + partes.slice(1).join('');
+  // 1. READ: Cargar historial al iniciar
+  useEffect(() => {
+    cargarHistorico();
+  }, []);
+
+  const cargarHistorico = async () => {
+    try {
+      setLoading(true);
+      // Consulta directa a la tabla de historial
+      const datos = await db.getAll('historico_tasas');
+      // Ordenar por fecha descendente para mostrar lo más nuevo arriba
+      setHistorico(datos.sort((a, b) => new Date(b.fecha_tasa) - new Date(a.fecha_tasa)));
+    } catch (err) {
+      console.error("Error cargando historial:", err);
+    } finally {
+      setLoading(false);
     }
-    
-    setTasa(valor);
   };
 
-  // Manejar envío del formulario
+  // 2. CREATE / UPDATE
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!tasa.trim()) {
-      setMessage('⚠️ Ingresa un valor para la tasa');
-      return;
-    }
+    if (!formData.tasa || !formData.fecha_tasa) return;
 
-    // Convertir a número para validación
-    const tasaNumero = parseFloat(tasa.replace(',', '.'));
-    
-    if (isNaN(tasaNumero) || tasaNumero <= 0) {
-      setMessage('❌ Ingresa un número válido mayor que 0');
-      return;
-    }
+    const dataToSave = {
+      fecha_tasa: formData.fecha_tasa,
+      tasa: parseFloat(formData.tasa)
+    };
 
-    setMessage('💾 Guardando...');
-    
-    const success = await saveTasa(tasa);
-    
-    if (success) {
-      setMessage(`✅ Tasa BCV guardada: $${tasaNumero.toFixed(2)}`);
+    try {
+      if (editandoId) {
+        // Operación de actualización (Update)
+        await db.put('historico_tasas', { ...dataToSave, id: editandoId });
+        setMessage('✅ Registro actualizado');
+      } else {
+        // Operación de creación (Create)
+        await db.add('historico_tasas', dataToSave);
+        setMessage('✅ Nueva tasa agregada');
+      }
       
-      // Limpiar mensaje después de 3 segundos
+      resetForm();
+      cargarHistorico();
       setTimeout(() => setMessage(''), 3000);
-    } else {
-      setMessage('❌ Error al guardar la tasa');
+    } catch (err) {
+      setMessage('❌ Error al guardar');
     }
   };
 
-  if (loading) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.loading}>⏳ Cargando tasa BCV...</div>
-      </div>
-    );
-  }
+  // 3. DELETE
+  const handleEliminar = async (id) => {
+    if (window.confirm("¿Deseas eliminar este registro de forma permanente?")) {
+      await db.del('historico_tasas', id);
+      cargarHistorico();
+    }
+  };
+
+  const startEdit = (reg) => {
+    setEditandoId(reg.id);
+    setFormData({ 
+      fecha_tasa: reg.fecha_tasa, 
+      tasa: reg.tasa.toString() 
+    });
+  };
+
+  const resetForm = () => {
+    setEditandoId(null);
+    setFormData({ 
+      fecha_tasa: new Date().toISOString().split('T'), 
+      tasa: '' 
+    });
+  };
+
+  if (loading) return <div className={styles.loading}>Cargando historial...</div>;
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>💰 Tasa BCV</h1>
-      
-      <div className={styles.currentRate}>
-        {tasa ? (
-          <>
-            <span>Tasa actual: </span>
-            <strong>${parseFloat(tasa).toFixed(2)}</strong>
-          </>
-        ) : (
-          <span>No hay tasa configurada</span>
-        )}
+      {/* Encabezado con estilo GestionPedido */}
+      <div className={styles.header}>
+        <h2 className={styles.title}>📈 GESTIÓN DE TASAS BCV</h2>
       </div>
 
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <div className={styles.inputGroup}>
-          <label htmlFor="tasa">Nueva Tasa BCV:</label>
-          <input
-            id="tasa"
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9]*[.]?[0-9]*"
-            placeholder="Ej: 36.50"
-            value={tasa}
-            onChange={handleChange}
-            className={styles.input}
-          />
-          <small className={styles.hint}>
-            Usa punto decimal (ej: 36.50)
-          </small>
-        </div>
-
-        {message && (
-          <div className={`${styles.message} ${
-            message.includes('✅') ? styles.success : 
-            message.includes('⚠️') ? styles.warning : 
-            styles.error
-          }`}>
-            {message}
+      <div className={styles.content}>
+        {/* Formulario CRUD */}
+        <form onSubmit={handleSubmit}>
+          <div className={styles.topRow}>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Fecha de Tasa</label>
+              <input 
+                type="date" 
+                value={formData.fecha_tasa} 
+                onChange={(e) => setFormData({...formData, fecha_tasa: e.target.value})}
+                className={styles.inputSmall}
+              />
+            </div>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Valor Tasa (Bs.)</label>
+              <input 
+                type="number" 
+                step="0.01" 
+                value={formData.tasa} 
+                onChange={(e) => setFormData({...formData, tasa: e.target.value})}
+                placeholder="0.00"
+                className={styles.inputSmall}
+              />
+            </div>
           </div>
-        )}
 
-        <button 
-          type="submit" 
-          className={styles.button}
-          disabled={!tasa.trim()}
-        >
-          💾 Guardar Tasa
-        </button>
-      </form>
+          <div className={styles.footer}>
+            <button type="submit" className={styles.grabarBtn}>
+              {editandoId ? "ACTUALIZAR" : "GRABAR"}
+            </button>
+            {editandoId && (
+              <button type="button" onClick={resetForm} className={styles.limpiarBtn}>
+                CANCELAR
+              </button>
+            )}
+          </div>
+          {message && <div className={styles.infoBar}>{message}</div>}
+        </form>
+
+        {/* Listado de Datos con estilo Product List */}
+        <div className={styles.productListContainer}>
+          <div className={styles.productListHeader}>REGISTROS EN HISTORICO</div>
+          <div className={styles.productList}>
+            {historico.length === 0 ? (
+              <div className={styles.productName} style={{ textAlign: 'center', padding: '20px' }}>
+                No hay registros en el historial.
+              </div>
+            ) : (
+              historico.map(reg => (
+                <div key={reg.id} className={styles.productItem}>
+                  <div className={styles.productName}>
+                    <strong>{reg.fecha_tasa}</strong> — Bs. {reg.tasa.toFixed(2)}
+                  </div>
+                  <div className={styles.quantityControl}>
+                    <button 
+                      onClick={() => startEdit(reg)} 
+                      className={styles.qtyBtn}
+                      title="Editar"
+                    >
+                      ✏️
+                    </button>
+                    <button 
+                      onClick={() => handleEliminar(reg.id)} 
+                      className={styles.qtyBtn}
+                      style={{ color: '#f44336' }}
+                      title="Eliminar"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

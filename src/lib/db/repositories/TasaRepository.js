@@ -4,24 +4,23 @@ import { db } from "../database";
 const TASA_KEY = 'tasa';
 
 export const TasaRepository = {
-  async getTasa() {
-    // Busca en la tabla 'config' que es la correcta según el esquema
-    return await db.getConfigValue(TASA_KEY);
-  },
+    async getTasa() {
+        // CAMBIO: Ya no busca solo en la tabla 'config' [8]
+        // Ahora obtiene la más reciente del histórico [5]
+        return await db.getUltimaTasaBCV();
+    },
 
-  async saveTasa(valor) {
-    // Usa el método setConfigValue definido en NaturaDBClass
-    return await db.setConfigValue(TASA_KEY, Number(valor));
-  },
+    async saveTasa(valor) {
+        // Mantenemos la escritura en config para compatibilidad con versiones previas [9]
+        return 0;   // await db.setConfigValue('tasa', Number(valor));
+    },
 
-  async convertirABs(valorenDolar) {
-    const valor = await db.getConfigValue(TASA_KEY);
-    
-    if (!valor || typeof valor !== "number") {
-      console.warn("Tasa no configurada en DB. Retornando 0.");
-      return 0;
+    async convertirABs(valorenDolar) {
+        const valor = await this.getTasa(); // Usa el nuevo método dinámico
+        if (!valor || typeof valor !== "number") {
+            console.warn("Tasa no encontrada. Retornando 0.");
+            return 0;
+        }
+        return valor * Number(valorenDolar || 0);
     }
-    
-    return valor * Number(valorenDolar || 0);
-  }
 };

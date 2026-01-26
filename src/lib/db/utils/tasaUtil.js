@@ -3,12 +3,13 @@ import { db } from '../database.js'; // This is correct if the file is in /utils
 
 export async function getTasaBCV() {
   try {
-    const valor = await db.getConfigValue('tasa');
-    return valor ? parseFloat(valor) : null;
-  } catch (error) {
-    console.error('Error obteniendo tasa desde utils:', error);
-    return null;
-  }
+        // CAMBIO: Ahora llama al método que prioriza el histórico [5, 6]
+        const valor = await db.getUltimaTasaBCV();
+        return valor ? parseFloat(valor) : 0;
+    } catch (error) {
+        console.error('Error obteniendo tasa desde utils:', error);
+        return null;
+    }
 }
 
 export async function calcularEnDolares(bs, tasa = null) {

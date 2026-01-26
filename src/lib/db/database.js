@@ -121,6 +121,26 @@ export class NaturaDBClass {
         return await query.toArray();
     }
 
+    async getUltimaTasaBCV() {
+        try {
+            // Buscamos en el histórico ordenando por fecha_tasa
+            const ultimaEntrada = await this.db.historico_tasas
+                .orderBy('fecha_tasa')
+                .last(); // Obtiene el registro con la fecha más reciente
+
+            if (ultimaEntrada) {
+                return ultimaEntrada.tasa;
+            }
+
+            // Fallback: Si el histórico está vacío, buscamos en la tabla config antigua
+            const antiguaTasa = 0;  //await this.getConfigValue('tasa');
+            return antiguaTasa;
+        } catch (error) {
+            console.error("Error obteniendo tasa reciente:", error);
+            return 0;
+        }
+    }
+    
     async put(table, data) {
         return await this.db[table].put(data);
     }
