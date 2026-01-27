@@ -3,7 +3,7 @@
   padding: 15px;
   padding-bottom: 280px; /* Espacio para el panel fijo inferior */
   background-color: #fafafa;
-  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic Viewport Height para móviles */
   width: 100%;
   box-sizing: border-box;
   color: #333;
@@ -61,6 +61,11 @@
   transform: scale(0.98); /* Feedback táctil para Android */
 }
 
+/* Mejora táctil para evitar zoom y retrasos */
+button, .card, select {
+  touch-action: manipulation;
+}
+
 .stockBadge {
   position: absolute;
   top: -8px;
@@ -114,7 +119,7 @@
   padding: 15px;
   border-top: 2px solid #00BFFF;
   box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-  z-index: 1000;
+  z-index: 9999; /* Asegurar que esté por encima de todo */
   width: 100%;
   box-sizing: border-box;
 }
