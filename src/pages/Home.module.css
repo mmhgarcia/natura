@@ -169,12 +169,14 @@ button, .card, select {
   flex: 1; 
 }
 
+
 /* Actualización: Fondo verde y ancho igualado (flex: 1) */
 .grabarBtn { 
   background-color: #28a745; 
   color: white; 
   flex: 1; 
 }
+
 
 .grabarBtn:disabled { 
   background-color: #ccc; 
