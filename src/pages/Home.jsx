@@ -14,9 +14,11 @@ function Home() {
   const navigate = useNavigate();
 
   // Función helper para enriquecer productos con info del grupo
+  // Optimización: Usamos un Map para reducir la complejidad de O(N*M) a O(N) [BI/Performance]
   const enriquecerProductos = (listaProductos, listaGrupos) => {
+    const gruposMap = new Map(listaGrupos.map(g => [g.nombre, g]));
     return listaProductos.map(p => {
-      const grupoInfo = listaGrupos.find(g => g.nombre === p.grupo);
+      const grupoInfo = gruposMap.get(p.grupo);
       return {
         ...p,
         precio: grupoInfo ? grupoInfo.precio : 0,
@@ -81,46 +83,62 @@ function Home() {
     if (!confirmar) return;
 
     try {
-      // 1. Generar un ID de transacción único para todo el grupo de helados vendidos
-      // Esto permite analizar el "Ticket Promedio" en BI
+      // 1. Validar Stock ANTES de iniciar la transacción [Producción/Robustez]
+      // Agrupamos por producto para validar la suma de lo seleccionado
+      const conteoPorProducto = listaDeSeleccionados.reduce((acc, p) => {
+        acc[p.id] = (acc[p.id] || 0) + 1;
+        return acc;
+      }, {});
+
+      for (const [id, cantidad] of Object.entries(conteoPorProducto)) {
+        const pOriginal = productos.find(p => p.id === id);
+        if (!pOriginal || pOriginal.stock < cantidad) {
+          alert(`❌ Stock insuficiente para: ${pOriginal?.nombre || id}. Disponible: ${pOriginal?.stock || 0}`);
+          return;
+        }
+      }
+
+      // 2. Generar un ID de transacción único para análisis de BI
       const transaccionId = `TX-${Date.now()}`;
 
-      for (const item of listaDeSeleccionados) {
-        // Los datos de precio y costo ya vienen enriquecidos en el item
-        const precioUsd = item.precio || 0;
-        const costoUnitarioUsd = item.costo || 0;
-        const utilidadUsd = precioUsd - costoUnitarioUsd;
+      // 3. Procesar venta ATÓMICA [Producción/Integridad]
+      // Usamos la tabla 'ventas' y 'productos' en la transacción
+      await db.transaction('rw', [db.ventas, db.productos], async () => {
+        for (const item of listaDeSeleccionados) {
+          const precioUsd = item.precio || 0;
+          const costoUnitarioUsd = item.costo || 0;
+          const utilidadUsd = precioUsd - costoUnitarioUsd;
 
-        // 3. Registrar venta con el Snapshot Financiero completo
-        await db.add('ventas', {
-          productoId: item.id,
-          nombre: item.nombre,
-          grupo: item.grupo,
-          precioUsd: precioUsd,
-          costoUnitarioUsd: costoUnitarioUsd, // Nuevo campo: costo del momento
-          utilidadUsd: utilidadUsd,           // Nuevo campo: ganancia real
-          tasaVenta: tasa,                    // Nuevo campo: tasa BCV usada [6]
-          transaccionId: transaccionId,       // Nuevo campo: vínculo de grupo
-          cantidad: 1,
-          fecha: new Date().toISOString()     // Referencia temporal ISO [3]
-        });
+          // Snapshot Financiero
+          await db.add('ventas', {
+            productoId: item.id,
+            nombre: item.nombre,
+            grupo: item.grupo,
+            precioUsd: precioUsd,
+            costoUnitarioUsd: costoUnitarioUsd,
+            utilidadUsd: utilidadUsd,
+            tasaVenta: tasa,
+            transaccionId: transaccionId,
+            cantidad: 1,
+            fecha: new Date().toISOString()
+          });
 
-        // 4. Actualizar stock en la base de datos [3]
-        await db.updateStock(item.id, -1);
-      }
+          // Actualizar stock
+          await db.updateStock(item.id, -1);
+        }
+      });
 
       // Refrescar estado local
       const productosActualizados = await db.getAll('productos');
-      // Re-enriquecer al recargar
       const productosEnriquecidos = enriquecerProductos(productosActualizados, grupos);
       setProductos(productosEnriquecidos);
 
       setListaDeSeleccionados([]);
-      alert("✅ Venta procesada con éxito con snapshot financiero.");
+      alert("✅ Venta procesada con éxito con snapshot financiero y transaccionalidad.");
 
     } catch (error) {
       console.error("Error en snapshot de venta:", error);
-      alert("❌ Error al procesar la venta.");
+      alert("❌ Error al procesar la venta. Los cambios no se aplicaron.");
     }
   };
 

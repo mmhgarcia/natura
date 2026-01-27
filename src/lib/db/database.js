@@ -40,7 +40,7 @@ export class NaturaDBClass {
         // Version 5 - Added cost field (costo_$) to groups for price management [3]
         this.db.version(5).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt',
-            grupos: '++id, nombre, precio, costo_$', 
+            grupos: '++id, nombre, precio, costo_$',
             config: 'clave',
             ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
             pedidos: '++id, numero_pedido, fecha_pedido, tasa'
@@ -76,7 +76,7 @@ export class NaturaDBClass {
 
         this.db.version(9).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt, visible',
-            grupos: '++id, nombre, precio, costo_$',            config: 'clave',
+            grupos: '++id, nombre, precio, costo_$', config: 'clave',
             ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad, utilidadUsd, tasaVenta, costoUnitarioUsd',
             pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
             gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago',
@@ -101,6 +101,11 @@ export class NaturaDBClass {
             console.log("Database dbTasaBCV opened successfully.");
         }
         return this;
+    }
+
+    // Transaction helper to ensure atomicity [BI/Production Readiness]
+    async transaction(mode, tables, callback) {
+        return await this.db.transaction(mode, tables, callback);
     }
 
     // Generic CRUD methods used across the application [6, 7]
@@ -139,7 +144,7 @@ export class NaturaDBClass {
             return 0;
         }
     }
-    
+
     async put(table, data) {
         return await this.db[table].put(data);
     }
@@ -195,9 +200,9 @@ export class NaturaDBClass {
             await this.db.historico_tasas.clear();
             await this.db.historico_tasas.bulkAdd(dataRecaudada);
             // Retornamos 'message' para que el Panel lo reconozca
-            return { 
-                success: true, 
-                message: `✅ Se cargaron ${dataRecaudada.length} días al histórico.` 
+            return {
+                success: true,
+                message: `✅ Se cargaron ${dataRecaudada.length} días al histórico.`
             };
         } catch (error) {
             return { success: false, error: error.message };
