@@ -7,7 +7,8 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    overflow-x: hidden; /* Evita el recorte derecho */
+    overflow-x: hidden;
+    /* Evita el recorte derecho */
 }
 
 .header {
@@ -35,7 +36,8 @@
     font-size: 1.2rem;
     font-weight: bold;
     flex: 1;
-    margin-right: 20px; /* Margen derecho del literal solicitado */
+    margin-right: 20px;
+    /* Margen derecho del literal solicitado */
 }
 
 /* Botón "+" corregido para ser circular */
@@ -50,8 +52,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 0; /* Elimina padding que causa elipse */
-    flex-shrink: 0; /* Evita que se aplaste en el contenedor flex */
+    padding: 0;
+    /* Elimina padding que causa elipse */
+    flex-shrink: 0;
+    /* Evita que se aplaste en el contenedor flex */
     box-sizing: border-box;
 }
 
@@ -98,8 +102,17 @@
     border-radius: 8px;
 }
 
-.statNumber { font-size: 1.1rem; font-weight: bold; color: #7f8c8d; }
-.statLabel { font-size: 0.65rem; color: #95a5a6; text-transform: uppercase; }
+.statNumber {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #7f8c8d;
+}
+
+.statLabel {
+    font-size: 0.65rem;
+    color: #95a5a6;
+    text-transform: uppercase;
+}
 
 .listaCards {
     display: flex;
@@ -123,16 +136,62 @@
     box-sizing: border-box;
 }
 
-.cardHeader { display: flex; justify-content: space-between; align-items: center; }
-.orderNumber { font-size: 1.1rem; font-weight: 800; color: #2c3e50; }
-.statusBadge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; font-weight: bold; }
-.statusPendiente { background-color: #d5f4e6; color: #27ae60; }
-.statusCerrado { background-color: #e8f4fc; color: #3498db; }
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
-.cardBody { display: flex; justify-content: space-between; align-items: flex-end; }
-.cardDate { font-size: 0.9rem; color: #7f8c8d; }
-.totalUsd { font-size: 1.5rem; font-weight: 900; color: #28a745; }
-.totalBs { font-size: 0.85rem; color: #7f8c8d; }
+.orderNumber {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #2c3e50;
+}
+
+.statusBadge {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+.statusPendiente {
+    background-color: #d5f4e6;
+    color: #27ae60;
+}
+
+.statusCerrado {
+    background-color: #e8f4fc;
+    color: #3498db;
+}
+
+.cardBody {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.cardDate {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+}
+
+.totalUsd {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #28a745;
+}
+
+.utilidadUsdCard {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #9c27b0;
+}
+
+.totalBs {
+    font-size: 0.85rem;
+    color: #7f8c8d;
+}
 
 .cardActions {
     display: flex;
@@ -141,7 +200,8 @@
     border-top: 1px solid #eee;
 }
 
-.actionBtn, .deleteBtn {
+.actionBtn,
+.deleteBtn {
     flex: 1;
     padding: 10px;
     border-radius: 8px;
@@ -152,4 +212,7 @@
     justify-content: center;
 }
 
-.deleteBtn { color: #f44336; border-color: #ffcdd2; }
+.deleteBtn {
+    color: #f44336;
+    border-color: #ffcdd2;
+}

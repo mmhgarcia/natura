@@ -26,7 +26,7 @@ export const migrateSalesToBI = async () => {
     for (const venta of salesToMigrate) {
       // 3. Buscar el costo actual del grupo al que pertenece el producto
       const grupo = allGroups.find(g => g.nombre.toLowerCase() === venta.grupo.toLowerCase());
-      
+
       const costoUnit = grupo?.costo_$ || 0;
       const precioVenta = venta.precioUsd || 0;
 
@@ -36,7 +36,7 @@ export const migrateSalesToBI = async () => {
         costoUnitarioUsd: costoUnit,
         utilidadUsd: precioVenta - costoUnit,
         // Si no tiene tasaVenta (ventas muy viejas), podrías asignar 0 o buscar la tasa de esa fecha
-        tasaVenta: venta.tasaVenta || 0, 
+        tasaVenta: venta.tasaVenta || 0,
         migratedAt: new Date().toISOString() // Marca de auditoría
       };
 
@@ -67,8 +67,9 @@ export const migrateOrdersToBI = async () => {
       db.getAll('grupos')
     ]);
 
-    // 2. Filtrar pedidos que aún tienen el formato antiguo (items no es un Array)
-    const ordersToMigrate = allOrders.filter(p => p.items && !Array.isArray(p.items));
+    // 2. Filtrar pedidos que aún tienen el formato antiguo (items no es un Array) 
+    // MODIFICACIÓN: Ahora permitimos migrar todos para corregir discrepancias de cálculos anteriores
+    const ordersToMigrate = allOrders; // Procesamos todos los pedidos para asegurar consistencia
 
     if (ordersToMigrate.length === 0) {
       return { success: true, migratedCount: 0, message: "No hay pedidos pendientes por migrar." };
@@ -77,12 +78,18 @@ export const migrateOrdersToBI = async () => {
     let count = 0;
 
     for (const pedido of ordersToMigrate) {
-      // 3. Lógica de Transformación de Items
-      const itemsBI = Object.entries(pedido.items).map(([prodId, qty]) => {
-        const prod = allProducts.find(p => p.id === parseInt(prodId));
+      // 3. Lógica de Transformación de Items (Maneja tanto Formato Antiguo como BI)
+      const itemsSnapshot = Array.isArray(pedido.items)
+        ? pedido.items
+        : Object.entries(pedido.items || {}).map(([id, qty]) => ({ productoId: parseInt(id), cantidad: qty }));
+
+      const itemsBI = itemsSnapshot.map((item) => {
+        const prodId = item.productoId;
+        const qty = item.cantidad;
+        const prod = allProducts.find(p => p.id === prodId);
         // Buscamos el grupo ignorando mayúsculas/minúsculas para mayor seguridad
-        const grupo = prod 
-          ? allGroups.find(g => g.nombre.toLowerCase() === prod.grupo.toLowerCase()) 
+        const grupo = prod
+          ? allGroups.find(g => g.nombre.toLowerCase() === prod.grupo.toLowerCase())
           : null;
 
         const precioUnit = grupo?.precio || 0;
@@ -101,20 +108,26 @@ export const migrateOrdersToBI = async () => {
       });
 
       // 4. Recalcular totales para asegurar consistencia BI
+      const subtotalCostoUsd = itemsBI.reduce((sum, item) => sum + (item.cantidad * item.costoUnitario), 0);
       const subtotalVentaUsd = itemsBI.reduce((sum, item) => sum + item.subtotalUsd, 0);
       const costoEnvio = pedido.delivery_aplicado ? (parseFloat(pedido.delivery_tasa) || 0) : 0;
-      
-      const nuevoTotalUsd = subtotalVentaUsd + costoEnvio;
+
+      const totalInversionUsd = subtotalCostoUsd + costoEnvio;
+      const totalVentaUsd = subtotalVentaUsd; // La venta no suele incluir el delivery pagado al proveedor
       const tasaActual = parseFloat(pedido.tasa) || 0;
 
       // 5. Preparar objeto migrado
       const pedidoMigrado = {
         ...pedido,
-        items: itemsBI, // Reemplazamos el diccionario por el Array BI
-        total_usd: nuevoTotalUsd,
-        total_bs: nuevoTotalUsd * tasaActual,
+        items: itemsBI,
+        total_usd: totalInversionUsd, // Ahora es Costo + Delivery
+        total_bs: totalInversionUsd * tasaActual,
+        venta_usd: totalVentaUsd,
+        venta_bs: totalVentaUsd * tasaActual,
+        utilidad_usd: totalVentaUsd - totalInversionUsd,
+        utilidad_bs: (totalVentaUsd - totalInversionUsd) * tasaActual,
         updatedAt: new Date().toISOString(),
-        migratedAt: new Date().toISOString() // Marca de auditoría
+        migratedAt: new Date().toISOString()
       };
 
       // 6. Actualización Masiva (Registro por registro para seguridad en IndexedDB)
@@ -122,10 +135,10 @@ export const migrateOrdersToBI = async () => {
       count++;
     }
 
-    return { 
-      success: true, 
-      migratedCount: count, 
-      message: `Se migraron ${count} pedidos exitosamente al formato BI.` 
+    return {
+      success: true,
+      migratedCount: count,
+      message: `Se migraron ${count} pedidos exitosamente al formato BI.`
     };
 
   } catch (error) {

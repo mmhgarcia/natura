@@ -17,7 +17,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     const [listaGrupos, setListaGrupos] = useState([]);
     const [cantidades, setCantidades] = useState({});
     const [aplicarDelivery, setAplicarDelivery] = useState(true);
-    const [totales, setTotales] = useState({ usd: 0, bs: 0 });
+    const [totales, setTotales] = useState({ usd: 0, bs: 0, ventaUsd: 0, ventaBs: 0 });
     const [utilidad, setUtilidad] = useState({ usd: 0, bs: 0 });
 
     const esVisualizacion = !!pedido && pedido.estatus === 'Cerrado';
@@ -79,26 +79,33 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
     useEffect(() => {
         const calcularFinanzas = () => {
-            let costoTotalUSD = 0;
-            let ingresoEstimadoUSD = 0;
+            let costoMercanciaUSD = 0;
+            let ventaEstimadaUSD = 0;
 
             Object.entries(cantidades).forEach(([prodId, qty]) => {
                 const producto = productos.find(p => p.id === parseInt(prodId));
                 if (producto && qty > 0) {
                     const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === producto.grupo.toLowerCase());
                     if (grupo) {
-                        costoTotalUSD += qty * (grupo.costo_$ || 0);
-                        ingresoEstimadoUSD += qty * (grupo.precio || 0);
+                        costoMercanciaUSD += qty * (grupo.costo_$ || 0);
+                        ventaEstimadaUSD += qty * (grupo.precio || 0);
                     }
                 }
             });
 
             const cargoDelivery = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
-            const totalPedidoUSD = ingresoEstimadoUSD + cargoDelivery;
+            const totalInversionUSD = costoMercanciaUSD + cargoDelivery;
             const tasaNum = parseFloat(formData.tasa) || 0;
-            const utilidadUSD = ingresoEstimadoUSD - (costoTotalUSD + cargoDelivery);
+            const utilidadUSD = ventaEstimadaUSD - totalInversionUSD;
 
-            setTotales({ usd: totalPedidoUSD, bs: totalPedidoUSD * tasaNum });
+            const ventaEstimadaBS = ventaEstimadaUSD * tasaNum;
+
+            setTotales({
+                usd: totalInversionUSD,
+                bs: totalInversionUSD * tasaNum,
+                ventaUsd: ventaEstimadaUSD,
+                ventaBs: ventaEstimadaBS
+            });
             setUtilidad({ usd: utilidadUSD, bs: utilidadUSD * tasaNum });
         };
 
@@ -166,6 +173,10 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
             items: itemsBI,
             total_usd: totales.usd,
             total_bs: totales.bs,
+            venta_usd: totales.ventaUsd,
+            venta_bs: totales.ventaBs,
+            utilidad_usd: utilidad.usd,
+            utilidad_bs: utilidad.bs,
             delivery_aplicado: aplicarDelivery,
             updatedAt: new Date().toISOString()
         };
@@ -211,10 +222,10 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                         </div>
                         <div className={styles.inputGroup}>
                             <label className={styles.label}>Fecha</label>
-                            <input 
-                                type="date" 
-                                value={formData.fecha_pedido} 
-                                onChange={(e) => setFormData({...formData, fecha_pedido: e.target.value})}
+                            <input
+                                type="date"
+                                value={formData.fecha_pedido}
+                                onChange={(e) => setFormData({ ...formData, fecha_pedido: e.target.value })}
                                 className={esVisualizacion ? styles.inputReadOnly : styles.inputSmall}
                                 disabled={esVisualizacion}
                             />
@@ -223,22 +234,33 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
                     <div className={styles.totalsBar}>
                         <div className={styles.totalBox}>
-                            <span className={styles.totalLabel}>TOTAL PEDIDO $</span>
+                            <span className={styles.totalLabel}>INVERSIÓN TOTAL $</span>
                             <span className={styles.totalValue}>{totales.usd.toFixed(2)}</span>
                         </div>
                         <div className={styles.totalBox}>
-                            <span className={styles.totalLabel}>TOTAL PEDIDO BS</span>
+                            <span className={styles.totalLabel}>VENTA ESTIMADA $</span>
+                            <span className={styles.ventaValue}>{totales.ventaUsd.toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <div className={styles.totalsBar}>
+                        <div className={styles.totalBox}>
+                            <span className={styles.totalLabel}>INVERSIÓN TOTAL BS</span>
                             <span className={styles.totalValue}>{totales.bs.toFixed(2)}</span>
+                        </div>
+                        <div className={styles.totalBox}>
+                            <span className={styles.totalLabel}>VENTA ESTIMADA BS</span>
+                            <span className={styles.ventaValue}>{totales.ventaBs.toFixed(2)}</span>
                         </div>
                     </div>
 
                     <div className={styles.infoBar}>
                         <span>Tasa: {formData.tasa || '---'}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <input 
-                                type="checkbox" 
-                                checked={aplicarDelivery} 
-                                onChange={(e) => setAplicarDelivery(e.target.checked)} 
+                            <input
+                                type="checkbox"
+                                checked={aplicarDelivery}
+                                onChange={(e) => setAplicarDelivery(e.target.checked)}
                                 className={styles.checkbox}
                                 disabled={esVisualizacion}
                             />
@@ -259,17 +281,17 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                                                 <div className={styles.stockBadgeSmall} style={{ backgroundColor: badgeColor }}>{prod.stock}</div>
                                                 <div className={styles.productName}>{prod.nombre}</div>
                                                 <div className={styles.quantityControl}>
-                                                    <button 
-                                                        type="button" 
-                                                        className={styles.qtyBtn} 
-                                                        onClick={() => setCantidades({...cantidades, [prod.id]: Math.max(0, (cantidades[prod.id] || 0) - 1)})}
+                                                    <button
+                                                        type="button"
+                                                        className={styles.qtyBtn}
+                                                        onClick={() => setCantidades({ ...cantidades, [prod.id]: Math.max(0, (cantidades[prod.id] || 0) - 1) })}
                                                         disabled={esVisualizacion}
                                                     >-</button>
                                                     <span>{cantidades[prod.id] || 0}</span>
-                                                    <button 
-                                                        type="button" 
-                                                        className={styles.qtyBtn} 
-                                                        onClick={() => setCantidades({...cantidades, [prod.id]: (cantidades[prod.id] || 0) + 1})}
+                                                    <button
+                                                        type="button"
+                                                        className={styles.qtyBtn}
+                                                        onClick={() => setCantidades({ ...cantidades, [prod.id]: (cantidades[prod.id] || 0) + 1 })}
                                                         disabled={esVisualizacion}
                                                     >+</button>
                                                 </div>

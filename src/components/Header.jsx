@@ -8,20 +8,20 @@ export default function Header() {
         <header style={styles.header}>
             <div style={styles.nav}>
                 {/* Botón Tipo Side Menu (Hamburguesa) */}
-                <button 
-                    onClick={() => setIsMenuOpen(true)} 
+                <button
+                    onClick={() => setIsMenuOpen(true)}
                     style={styles.menuBtn}
                 >
                     ☰
                 </button>
-                
+
                 <h1 style={styles.brand}>Natura Ice</h1>
                 <div style={{ width: '40px' }} /> {/* Espaciador para centrar título */}
             </div>
 
-            <Sidebar 
-                isOpen={isMenuOpen} 
-                onClose={() => setIsMenuOpen(false)} 
+            <Sidebar
+                isOpen={isMenuOpen}
+                onClose={() => setIsMenuOpen(false)}
             />
         </header>
     );
@@ -34,7 +34,7 @@ const styles = {
         borderBottom: '1px solid #dee2e6',
         position: 'sticky',
         top: 0,
-        zIndex: 10000  
+        zIndex: 10000
     },
     nav: {
         display: 'flex',
@@ -46,7 +46,8 @@ const styles = {
         background: 'none',
         border: 'none',
         color: '#007bff',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        marginLeft: '0px'
     },
     brand: {
         fontSize: '1.8rem',

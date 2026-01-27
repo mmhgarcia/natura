@@ -8,7 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 11000;
 }
 
 .modal {
@@ -89,7 +89,8 @@
 .totalLabel {
   font-size: 11px;
   font-weight: bold;
-  color: #000; /* Se agrega color negro para cumplir con la solicitud */
+  color: #000;
+  /* Se agrega color negro para cumplir con la solicitud */
 }
 
 .totalValue {
@@ -98,13 +99,21 @@
   color: #007bff;
 }
 
+.ventaValue {
+  font-size: 14px;
+  font-weight: bold;
+  color: #9c27b0;
+  /* Un color purpura para diferenciar de la inversión */
+}
+
 .infoBar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 13px;
   font-weight: bold;
-  color: #000; /* Se agrega color negro para cumplir con la solicitud */
+  color: #000;
+  /* Se agrega color negro para cumplir con la solicitud */
 }
 
 .productListContainer {
@@ -131,7 +140,8 @@
   font-weight: bold;
   background-color: #f1f1f1;
   padding: 6px 10px;
-  color: #000; /* Se agrega para que el texto del grupo sea negro */
+  color: #000;
+  /* Se agrega para que el texto del grupo sea negro */
 }
 
 .productItem {
@@ -156,13 +166,18 @@
 .quantityControl {
   display: flex;
   align-items: center;
-  gap: 8px;           /* Aumentado ligeramente para mejor separación */
-  
+  gap: 8px;
+  /* Aumentado ligeramente para mejor separación */
+
   /* Propiedades para hacer visible la cantidad */
-  color: #000;        /* Color negro para el número */
-  font-weight: bold;  /* Resalta la cantidad */
-  font-size: 16px;    /* Tamaño de fuente legible */
-  min-width: 25px;    /* Espacio mínimo para que el número no se mueva */
+  color: #000;
+  /* Color negro para el número */
+  font-weight: bold;
+  /* Resalta la cantidad */
+  font-size: 16px;
+  /* Tamaño de fuente legible */
+  min-width: 25px;
+  /* Espacio mínimo para que el número no se mueva */
   justify-content: center;
 }
 
@@ -172,7 +187,8 @@
   background-color: #eee;
   border: 1px solid #ccc;
   font-weight: bold;
-  color: #000; /* Se añade color negro para los signos + y - */
+  color: #000;
+  /* Se añade color negro para los signos + y - */
 }
 
 .qtyBtn {
@@ -181,14 +197,19 @@
   background-color: #eee;
   border: 1px solid #ccc;
   font-weight: bold;
-  color: #000;          /* Signos en color negro (solicitud anterior) */
-  
+  color: #000;
+  /* Signos en color negro (solicitud anterior) */
+
   /* Nuevas propiedades para centrado */
   display: flex;
-  align-items: center;  /* Centrado vertical */
-  justify-content: center; /* Centrado horizontal */
-  padding: 0;           /* Elimina paddings por defecto que puedan desviar el signo */
-  line-height: normal;  /* Asegura que el interlineado no afecte la posición */
+  align-items: center;
+  /* Centrado vertical */
+  justify-content: center;
+  /* Centrado horizontal */
+  padding: 0;
+  /* Elimina paddings por defecto que puedan desviar el signo */
+  line-height: normal;
+  /* Asegura que el interlineado no afecte la posición */
 }
 
 .utilidadBar {
@@ -216,8 +237,11 @@
   width: 100%;
 }
 
-.limpiarBtn, .recalcularBtn, .grabarBtn {
-  flex: 1; /* Esto asegura que los 3 botones tengan el mismo ancho */
+.limpiarBtn,
+.recalcularBtn,
+.grabarBtn {
+  flex: 1;
+  /* Esto asegura que los 3 botones tengan el mismo ancho */
   padding: 12px 5px;
   border: none;
   border-radius: 4px;
@@ -261,16 +285,17 @@
 }
 
 .productName {
-  color: #666; 
-  flex: 1; 
+  color: #666;
+  flex: 1;
   margin-left: 10px;
-  font-size: 14px; /* Se reduce la fuente a 14px (2px menos que el estándar de 16px del componente) */
+  font-size: 14px;
+  /* Se reduce la fuente a 14px (2px menos que el estándar de 16px del componente) */
 }
 
 .utilidadLabel {
   font-size: 11px;
   font-weight: bold;
-  color: #000; /* Negro solicitado */
+  color: #000;
+  /* Negro solicitado */
   /* Aquí podrías añadir un estilo diferente, como otro color o margen */
 }
-

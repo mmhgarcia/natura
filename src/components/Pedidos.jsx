@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/db/database';
 import GestionPedido from './GestionPedido';
+import { formatDate } from '../lib/utils.js';
 import styles from './Pedidos.module.css';
 
 const PedidosComponente = () => {
@@ -16,7 +17,7 @@ const PedidosComponente = () => {
   const cargarRegistros = async () => {
     try {
       setLoading(true);
-      const datos = await db.getAll('pedidos'); [5]
+      const datos = await db.getAll('pedidos');
       const datosOrdenados = datos.sort((a, b) => {
         const numA = parseInt(a.numero_pedido) || 0;
         const numB = parseInt(b.numero_pedido) || 0;
@@ -44,7 +45,7 @@ const PedidosComponente = () => {
       let contenido = `PEDIDO NATURA ICE\n`;
       contenido += `==============================\n\n`;
       contenido += `Numero: #${pedido.numero_pedido}\n`;
-      contenido += `Fecha: ${new Date(pedido.fecha_pedido).toLocaleDateString('es-ES')}\n`;
+      contenido += `Fecha: ${formatDate(pedido.fecha_pedido)}\n`;
       contenido += `Tasa BCV: ${pedido.tasa}\n`;
       contenido += `==============================\n`;
       contenido += `PRODUCTOS SOLICITADOS:\n`;
@@ -62,7 +63,7 @@ const PedidosComponente = () => {
       });
 
       const costoDelivery = pedido.delivery_aplicado ? (parseFloat(pedido.delivery_tasa) || 0) : 0;
-      
+
       contenido += `\n==============================\n`;
       contenido += `RESUMEN:\n`;
       contenido += `==============================\n\n`;
@@ -71,7 +72,7 @@ const PedidosComponente = () => {
       contenido += `----------------------------\n`;
       contenido += `Total USD + Deliv: $${(pedido.total_usd).toFixed(2)}\n`;
       contenido += `Total Bs: Bs. ${pedido.total_bs.toFixed(2)}\n\n`;
-      
+
       contenido += `==============================\n`;
       contenido += `INFORMACION:\n`;
       contenido += `==============================\n\n`;
@@ -79,7 +80,7 @@ const PedidosComponente = () => {
       contenido += `Generado: ${new Date().toLocaleDateString('es-ES')}\n`;
       contenido += `==============================\n`;
 
-      const blob = new Blob([contenido], { type: 'text/plain' }); [6]
+      const blob = new Blob([contenido], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -111,7 +112,7 @@ const PedidosComponente = () => {
           // Usamos el productoId guardado en el snapshot del item [2, 7]
           await db.updateStock(item.productoId, item.cantidad);
         }
-        
+
         await db.pedidos.update(pedido.id, {
           estatus: 'Cerrado',
           updatedAt: new Date().toISOString()
@@ -165,10 +166,10 @@ const PedidosComponente = () => {
           <p className={styles.loading}>Cargando registros...</p>
         ) : (
           listaPedidos.map((p) => (
-            <div 
-              key={p.id} 
+            <div
+              key={p.id}
               className={styles.pedidoCard}
-              onClick={() => { if(!isProcessing) { setPedidoSeleccionado(p); setModalOpen(true); } }}
+              onClick={() => { if (!isProcessing) { setPedidoSeleccionado(p); setModalOpen(true); } }}
               style={{ borderLeftColor: p.estatus === 'Cerrado' ? '#3498db' : '#27ae60' }}
             >
               <div className={styles.cardHeader}>
@@ -182,36 +183,36 @@ const PedidosComponente = () => {
                 <span className={styles.tasaValue}>{p.tasa || '---'}</span>
               </div>
               <div className={styles.cardBody}>
-                <span className={styles.cardDate}>{new Date(p.fecha_pedido).toLocaleDateString('es-ES')}</span>
+                <span className={styles.cardDate}>{formatDate(p.fecha_pedido)}</span>
                 <div style={{ textAlign: 'right' }}>
-                  <div className={styles.totalUsd}>${p.total_usd?.toFixed(2)}</div>
-                  <div className={styles.totalBs}>Bs. {p.total_bs?.toFixed(2)}</div>
+                  <div className={styles.totalUsd}>Inv: ${p.total_usd?.toFixed(2)}</div>
+                  <div className={styles.utilidadUsdCard}>Util: ${p.utilidad_usd?.toFixed(2)}</div>
                 </div>
               </div>
 
               <div className={styles.cardActions}>
-                <button 
-                  className={styles.actionBtn} 
+                <button
+                  className={styles.actionBtn}
                   onClick={(e) => { e.stopPropagation(); setPedidoSeleccionado(p); setModalOpen(true); }}
                   disabled={p.estatus === 'Cerrado'}
                 >✏️</button>
-                <button 
-                  className={styles.actionBtn} 
-                  onClick={(e) => handleExportTxt(p, e)} 
+                <button
+                  className={styles.actionBtn}
+                  onClick={(e) => handleExportTxt(p, e)}
                   title="Exportar para Proveedor"
                   style={{ backgroundColor: '#fff3cd' }}
                 >📄</button>
-                <button 
-                  className={styles.actionBtn} 
+                <button
+                  className={styles.actionBtn}
                   onClick={(e) => handleRecibirPedido(p, e)}
                   disabled={p.estatus === 'Cerrado' || isProcessing}
                   style={{ opacity: (p.estatus === 'Cerrado' || isProcessing) ? 0.3 : 1 }}
                 >
                   {isProcessing && p.id === pedidoSeleccionado?.id ? '⌛' : '📥'}
                 </button>
-                <button 
-                  className={styles.actionBtn} 
-                  onClick={(e) => handleEliminar(p, e)} 
+                <button
+                  className={styles.actionBtn}
+                  onClick={(e) => handleEliminar(p, e)}
                   disabled={p.estatus === 'Cerrado'}
                 >🗑️</button>
               </div>
@@ -221,10 +222,10 @@ const PedidosComponente = () => {
       </div>
 
       {modalOpen && (
-        <GestionPedido 
-          pedido={pedidoSeleccionado} 
-          onClose={() => { setModalOpen(false); cargarRegistros(); }} 
-          onSave={cargarRegistros} 
+        <GestionPedido
+          pedido={pedidoSeleccionado}
+          onClose={() => { setModalOpen(false); cargarRegistros(); }}
+          onSave={cargarRegistros}
         />
       )}
     </div>
