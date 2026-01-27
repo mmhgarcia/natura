@@ -1,28 +1,49 @@
-.container { padding: 20px; }
+.container {
+  padding: 20px;
+}
+
 .grid {
   display: grid;
-  grid-template-columns: 1fr; /* Una columna en móvil */
+  grid-template-columns: 1fr;
+  /* Una columna en móvil */
   gap: 15px;
 }
+
 .card {
   background: #fff;
   padding: 15px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
 }
-.valorCosto { color: #e74c3c; font-size: 1.5rem; font-weight: bold; }
-.valorVenta { color: #3498db; font-size: 1.5rem; font-weight: bold; }
-.valorGanancia { color: #2ecc71; font-size: 1.8rem; font-weight: bold; }
 
-label{
-    color: black;
+.valorCosto {
+  color: #e74c3c;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.valorVenta {
+  color: #3498db;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.valorGanancia {
+  color: #2ecc71;
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+label {
+  color: black;
 }
 
 .highlightBs {
   background-color: #f8f9fa;
-  border-left: 5px solid #ff9800; /* Color naranja para resaltar moneda local */
+  border-left: 5px solid #ff9800;
+  /* Color naranja para resaltar moneda local */
 }
 
 .valorBs {
@@ -39,18 +60,65 @@ label{
 }
 
 .sidebar {
-  position: fixed; /* Crucial para que no se mueva al hacer scroll */
+  position: fixed;
+  /* Crucial para que no se mueva al hacer scroll */
   top: 0;
   left: 0;
   height: 100vh;
-  width: 280px; /* O el ancho que prefieras */
+  width: 280px;
+  /* O el ancho que prefieras */
   background-color: #ffffff;
-  
+
   /* Elevación máxima */
-  z-index: 9999; 
-  
+  z-index: 9999;
+
   /* Sombra para dar profundidad y separar visualmente del fondo */
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
-  
+
   transition: transform 0.3s ease-in-out;
+}
+
+/* Advertencias de calidad de datos */
+.advertencias {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  color: #856404;
+}
+
+.advertencias ul {
+  margin: 10px 0 0 20px;
+  padding: 0;
+}
+
+.advertencias li {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+/* Info box para productos excluidos */
+.infoBox {
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  border-radius: 8px;
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  color: #0c5460;
+  font-size: 14px;
+}
+
+/* Warning badge para productos huérfanos */
+.warning {
+  display: block;
+  color: #ff6b6b;
+  font-size: 12px;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.titulo {
+  color: #fff;
+  margin-bottom: 20px;
 }

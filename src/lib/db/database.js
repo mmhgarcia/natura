@@ -136,12 +136,18 @@ export class NaturaDBClass {
                 return ultimaEntrada.tasa;
             }
 
-            // Fallback: Si el histórico está vacío, buscamos en la tabla config antigua
-            const antiguaTasa = 0;  //await this.getConfigValue('tasa');
-            return antiguaTasa;
+            // Fallback: Intentar config antigua, si no existe usar última tasa conocida
+            const configTasa = await this.getConfigValue('tasa');
+            if (configTasa && configTasa > 0) {
+                return configTasa;
+            }
+
+            // Último fallback: Usar última tasa conocida del histórico hardcoded
+            console.warn('⚠️ No hay tasa BCV en BD. Usando tasa por defecto.');
+            return 355.11; // Última tasa conocida del histórico inicial
         } catch (error) {
             console.error("Error obteniendo tasa reciente:", error);
-            return 0;
+            return 355.11; // Fallback seguro en caso de error
         }
     }
 
