@@ -1,36 +1,170 @@
-.formContainer {
-  padding: 20px;
-  background: #fff;
+/* RegistroGasto.module.css - Refined UI */
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 11000;
+}
+
+.modal {
+  background-color: #ffffff;
+  width: 95%;
+  max-width: 480px;
+  max-height: 95vh;
+  padding: 0px 20px 20px 20px;
   border-radius: 12px;
-  margin: 10px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
-.inputGroup {
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #00BFFF;
+  /* BLUE DIVISION LINE - REINFORCED */
   margin-bottom: 15px;
+  padding-bottom: 5px;
 }
 
-.inputGroup label {
-  display: block;
-  font-weight: bold;
-  margin-bottom: 5px;
+.title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #2c3e50;
+  text-transform: uppercase;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 32px;
+  cursor: pointer;
   color: #333;
 }
 
-.inputGroup input, .inputGroup select {
-  width: 100%;
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  overflow-y: auto;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #7f8c8d;
+  /* SOFT GREY - REFINED */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.inputField,
+.selectField {
   padding: 12px;
-  border: 1px solid #ccc;
   border-radius: 8px;
-  font-size: 16px; /* Evita zoom automático en iOS/Android */
+  border: 1px solid #dcdde1;
+  background-color: #f8faff;
+  /* LIGHT AND FRIENDLY BACKGROUND - REINFORCED */
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  color: #2f3640;
+  transition: all 0.2s ease;
+}
+
+.inputField:focus,
+.selectField:focus {
+  outline: none;
+  border-color: #00BFFF;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 191, 255, 0.1);
+}
+
+.inputRow {
+  display: flex;
+  gap: 12px;
+}
+
+.inputRow>div {
+  flex: 1;
+}
+
+.tasaHighlight {
+  background-color: #ebf5fb;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #d6eaf8;
+  font-size: 14px;
+  color: #2980b9;
+  font-weight: 700;
+  text-align: center;
+}
+
+.montoBsDisplay {
+  font-size: 20px;
+  font-weight: 800;
+  color: #27ae60;
+  text-align: center;
+  padding: 8px;
+  background-color: #eafaf1;
+  border-radius: 8px;
+  border: 1px solid #d5f5e3;
+}
+
+.footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
 }
 
 .btnGuardar {
-  width: 100%;
-  padding: 15px;
-  background-color: #e74c3c;
+  flex: 2;
+  padding: 14px;
+  background-color: #2ecc71;
+  /* SUCCESS GREEN - REINFORCED */
   color: white;
   border: none;
   border-radius: 8px;
-  font-weight: bold;
+  font-weight: 800;
   font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-transform: uppercase;
+}
+
+.btnGuardar:hover {
+  background-color: #27ae60;
+}
+
+.btnCancelar {
+  flex: 1;
+  padding: 14px;
+  background-color: #bdc3c7;
+  /* SOFT GREY BUTTON */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btnCancelar:hover {
+  background-color: #95a5a6;
 }

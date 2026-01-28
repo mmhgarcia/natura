@@ -219,38 +219,6 @@ export default function Sidebar({ isOpen, onClose }) {
                     </Link>
                     */}
 
-
-
-                    {/* Botones Fake solicitados */}
-                    <Link
-                        to="#"
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>✨</span>
-                        <span>Fake Button 1</span>
-                    </Link>
-
-                    <Link
-                        to="#"
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>⭐</span>
-                        <span>Fake Button 2</span>
-                    </Link>
-
-                    <Link
-                        to="#"
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>🔥</span>
-                        <span>Fake Button 3</span>
-                    </Link>
                 </nav>
             </div>
         </>
