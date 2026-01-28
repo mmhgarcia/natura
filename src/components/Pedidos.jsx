@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/db/database';
 import GestionPedido from './GestionPedido';
 import { formatDate } from '../lib/utils.js';
+import { ORDER_STATUS } from '../lib/constants';
 import styles from './Pedidos.module.css';
+
 
 const PedidosComponente = () => {
   const navigate = useNavigate();
@@ -17,15 +19,20 @@ const PedidosComponente = () => {
   const cargarRegistros = async () => {
     try {
       setLoading(true);
-      const datos = await db.getAll('pedidos');
-      const datosOrdenados = datos.sort((a, b) => {
-        const numA = parseInt(a.numero_pedido) || 0;
-        const numB = parseInt(b.numero_pedido) || 0;
-        return numB - numA;
-      });
+
+      // OPTIMIZACIÓN: Usar el índice de Dexie para traer los pedidos ya ordenados por ID (o número)
+      // Como el ID es autoincremental, el orden inverso del ID suele coincidir con el tiempo.
+      // Si queremos exactitud por numero_pedido, usamos ese índice.
+      const datosOrdenados = await db.db.pedidos
+        .orderBy('id')
+        .reverse()
+        .toArray();
+
       setListaPedidos(datosOrdenados);
-      const activos = datosOrdenados.filter(p => p.estatus === 'Activo' || !p.estatus).length;
-      const cerrados = datosOrdenados.filter(p => p.estatus === 'Cerrado').length;
+
+      const activos = datosOrdenados.filter(p => !p.estatus || p.estatus === ORDER_STATUS.ACTIVE).length;
+      const cerrados = datosOrdenados.filter(p => p.estatus === ORDER_STATUS.CLOSED).length;
+
       setStats({ pedidosActivos: activos, pedidosCerrados: cerrados });
     } catch (error) {
       console.error("Error al cargar pedidos:", error);
@@ -99,7 +106,7 @@ const PedidosComponente = () => {
   // --- ACTUALIZACIÓN FASE 5: Recepción de pedido con items detallados ---
   const handleRecibirPedido = async (pedido, e) => {
     e.stopPropagation();
-    if (pedido.estatus === 'Cerrado' || isProcessing) return;
+    if (pedido.estatus === ORDER_STATUS.CLOSED || isProcessing) return;
 
     const confirmar = window.confirm(`¿Marcar Pedido #${pedido.numero_pedido} como RECIBIDO?\nSe actualizará el stock.`);
     if (!confirmar) return;
@@ -114,7 +121,7 @@ const PedidosComponente = () => {
         }
 
         await db.pedidos.update(pedido.id, {
-          estatus: 'Cerrado',
+          estatus: ORDER_STATUS.CLOSED,
           updatedAt: new Date().toISOString()
         });
       });
@@ -131,7 +138,7 @@ const PedidosComponente = () => {
 
   const handleEliminar = async (pedido, e) => {
     e.stopPropagation();
-    if (pedido.estatus === 'Cerrado' || isProcessing) return;
+    if (pedido.estatus === ORDER_STATUS.CLOSED || isProcessing) return;
     if (window.confirm(`¿Eliminar pedido #${pedido.numero_pedido}?`)) {
       await db.del('pedidos', pedido.id);
       cargarRegistros();
@@ -170,23 +177,25 @@ const PedidosComponente = () => {
               key={p.id}
               className={styles.pedidoCard}
               onClick={() => { if (!isProcessing) { setPedidoSeleccionado(p); setModalOpen(true); } }}
-              style={{ borderLeftColor: p.estatus === 'Cerrado' ? '#3498db' : '#27ae60' }}
+              style={{ '--status-color': p.estatus === ORDER_STATUS.CLOSED ? '#4f46e5' : '#f39c12' }}
             >
               <div className={styles.cardHeader}>
                 <span className={styles.orderNumber}>#{p.numero_pedido}</span>
-                <span className={`${styles.statusBadge} ${p.estatus === 'Cerrado' ? styles.statusCerrado : styles.statusPendiente}`}>
-                  {p.estatus === 'Cerrado' ? '✅ RECIBIDO' : '🟢 PENDIENTE'}
+                <span className={`${styles.statusBadge} ${p.estatus === ORDER_STATUS.CLOSED ? styles.statusCerrado : styles.statusPendiente}`}>
+                  {p.estatus === ORDER_STATUS.CLOSED ? 'Recibido' : 'Pendiente'}
                 </span>
               </div>
+
               <div className={styles.tasaRow}>
-                <span className={styles.tasaLabel}>💰 Tasa:</span>
-                <span className={styles.tasaValue}>{p.tasa || '---'}</span>
+                <span>Tasa BCV:</span>
+                <span>{p.tasa || '---'}</span>
               </div>
+
               <div className={styles.cardBody}>
                 <span className={styles.cardDate}>{formatDate(p.fecha_pedido)}</span>
-                <div style={{ textAlign: 'right' }}>
-                  <div className={styles.totalUsd}>Inv: ${p.total_usd?.toFixed(2)}</div>
-                  <div className={styles.utilidadUsdCard}>Util: ${p.utilidad_usd?.toFixed(2)}</div>
+                <div className={styles.totalSection}>
+                  <span className={styles.totalUsd}>${p.total_usd?.toFixed(2)}</span>
+                  <div className={styles.utilidadUsdCard}>+${p.utilidad_usd?.toFixed(2)} UTIL.</div>
                 </div>
               </div>
 
@@ -194,26 +203,27 @@ const PedidosComponente = () => {
                 <button
                   className={styles.actionBtn}
                   onClick={(e) => { e.stopPropagation(); setPedidoSeleccionado(p); setModalOpen(true); }}
-                  disabled={p.estatus === 'Cerrado'}
+                  disabled={p.estatus === ORDER_STATUS.CLOSED}
+                  title="Editar"
                 >✏️</button>
                 <button
                   className={styles.actionBtn}
                   onClick={(e) => handleExportTxt(p, e)}
-                  title="Exportar para Proveedor"
-                  style={{ backgroundColor: '#fff3cd' }}
+                  title="Exportar TXT"
                 >📄</button>
                 <button
                   className={styles.actionBtn}
                   onClick={(e) => handleRecibirPedido(p, e)}
-                  disabled={p.estatus === 'Cerrado' || isProcessing}
-                  style={{ opacity: (p.estatus === 'Cerrado' || isProcessing) ? 0.3 : 1 }}
+                  disabled={p.id === pedidoSeleccionado?.id && isProcessing}
+                  title="Recibir Pedido"
                 >
                   {isProcessing && p.id === pedidoSeleccionado?.id ? '⌛' : '📥'}
                 </button>
                 <button
                   className={styles.actionBtn}
                   onClick={(e) => handleEliminar(p, e)}
-                  disabled={p.estatus === 'Cerrado'}
+                  disabled={p.estatus === ORDER_STATUS.CLOSED}
+                  title="Eliminar"
                 >🗑️</button>
               </div>
             </div>

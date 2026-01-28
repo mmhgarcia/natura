@@ -3,137 +3,142 @@
     flex-direction: column;
     width: 100vw;
     min-height: 100vh;
-    background-color: #f5f7fa;
+    background: #f8fafc;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     overflow-x: hidden;
-    /* Evita el recorte derecho */
+    font-family: 'Inter', sans-serif;
 }
 
 .header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    padding: 15px 20px;
-    background-color: #2c3e50;
-    color: white;
+    padding: 24px 32px;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
     position: sticky;
     top: 0;
     z-index: 100;
-    width: 100%;
-    box-sizing: border-box;
 }
 
 .backArrow {
-    background: none;
+    background: #f1f5f9;
     border: none;
-    color: white;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
     font-size: 24px;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
     margin-right: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.backArrow:hover {
+    background: #e2e8f0;
+    color: #0f172a;
 }
 
 .title {
-    font-size: 1.2rem;
-    font-weight: bold;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.5px;
     flex: 1;
-    margin-right: 20px;
-    /* Margen derecho del literal solicitado */
 }
 
-/* Botón "+" corregido para ser circular */
 .addBtnCircle {
-    width: 45px;
-    height: 45px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    background-color: #27ae60;
+    background: #27ae60;
     color: white;
     border: none;
     font-size: 28px;
+    font-weight: 900;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 0;
-    /* Elimina padding que causa elipse */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 15px -3px rgba(39, 174, 96, 0.3);
     flex-shrink: 0;
-    /* Evita que se aplaste en el contenedor flex */
-    box-sizing: border-box;
+    padding: 0;
 }
 
-/* Estilo para la Tasa BCV dentro de la card */
-.tasaRow {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    background-color: #fcf8e3;
-    border-radius: 6px;
-    border: 1px solid #faebcc;
-    width: fit-content;
-    margin: 5px 0;
-}
-
-.tasaLabel {
-    font-size: 0.8rem;
-    color: #8a6d3b;
-    font-weight: 600;
-}
-
-.tasaValue {
-    font-size: 0.9rem;
-    color: #2c3e50;
-    font-weight: 800;
+.addBtnCircle:hover {
+    background: #2ecc71;
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 15px 20px -3px rgba(39, 174, 96, 0.4);
 }
 
 .statsBar {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    padding: 15px;
-    background-color: white;
-    border-bottom: 1px solid #eaeaea;
+    gap: 12px;
+    padding: 24px 32px;
 }
 
 .statCard {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 10px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
+    padding: 16px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+    border: 1px solid #f1f5f9;
 }
 
 .statNumber {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: #7f8c8d;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
 }
 
 .statLabel {
     font-size: 0.65rem;
-    color: #95a5a6;
+    font-weight: 700;
+    color: #94a3b8;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
 }
 
 .listaCards {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    padding: 15px;
-    width: 100%;
-    box-sizing: border-box;
+    gap: 16px;
+    padding: 0 32px 32px 32px;
 }
 
 .pedidoCard {
-    background-color: white;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    border-left: 6px solid #00BFFF;
+    background: white;
+    border-radius: 32px;
+    padding: 24px 32px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    width: 100%;
-    box-sizing: border-box;
+    gap: 20px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pedidoCard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 35px rgba(0, 0, 0, 0.08);
+    border-color: #cbd5e1;
 }
 
 .cardHeader {
@@ -143,76 +148,111 @@
 }
 
 .orderNumber {
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: #2c3e50;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
 }
 
 .statusBadge {
-    font-size: 0.75rem;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-weight: bold;
+    font-size: 0.7rem;
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .statusPendiente {
-    background-color: #d5f4e6;
-    color: #27ae60;
+    background: #fff4e5;
+    color: #f39c12;
 }
 
 .statusCerrado {
-    background-color: #e8f4fc;
-    color: #3498db;
+    background: #eef2ff;
+    color: #4f46e5;
 }
 
-.cardBody {
+.tasaRow {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
+    padding: 12px 16px;
+    background: #eef2ff;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #4338ca;
+}
+
+
+
+.cardBody {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
 }
 
 .cardDate {
     font-size: 0.9rem;
-    color: #7f8c8d;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.totalSection {
+    background: #f0fdf4;
+    padding: 12px 20px;
+    border-radius: 20px;
+    border: 1px solid #dcfce7;
+    text-align: center;
 }
 
 .totalUsd {
-    font-size: 1.2rem;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
     font-weight: 800;
-    color: #28a745;
+    color: #166534;
+    display: block;
 }
 
 .utilidadUsdCard {
-    font-size: 1.1rem;
+    font-size: 0.65rem;
     font-weight: 700;
-    color: #9c27b0;
-}
-
-.totalBs {
-    font-size: 0.85rem;
-    color: #7f8c8d;
+    color: #15803d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
 }
 
 .cardActions {
-    display: flex;
-    gap: 8px;
-    padding-top: 10px;
-    border-top: 1px solid #eee;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
 }
 
-.actionBtn,
-.deleteBtn {
-    flex: 1;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    background-color: #f8f9fa;
-    font-size: 1.2rem;
+.actionBtn {
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    font-size: 1.1rem;
     display: flex;
     justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.deleteBtn {
-    color: #f44336;
-    border-color: #ffcdd2;
+.actionBtn:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-2px);
+}
+
+.actionBtn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
 }
