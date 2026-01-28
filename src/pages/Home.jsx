@@ -91,7 +91,7 @@ function Home() {
       }, {});
 
       for (const [id, cantidad] of Object.entries(conteoPorProducto)) {
-        const pOriginal = productos.find(p => p.id === id);
+        const pOriginal = productos.find(p => String(p.id) === id);
         if (!pOriginal || pOriginal.stock < cantidad) {
           alert(`❌ Stock insuficiente para: ${pOriginal?.nombre || id}. Disponible: ${pOriginal?.stock || 0}`);
           return;
