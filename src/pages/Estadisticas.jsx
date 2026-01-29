@@ -71,6 +71,8 @@ const Estadisticas = () => {
         });
 
         // 5. Procesar Gastos y Retiros
+        let gastosOperativosSum = 0;
+        let retirosPersonalesSum = 0;
         let inversionesSum = 0;
 
         gastosFiltrados.forEach(g => {
