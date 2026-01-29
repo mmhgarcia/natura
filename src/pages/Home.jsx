@@ -5,6 +5,36 @@ import { getTasaBCV } from '../lib/db/utils/tasaUtil.js';
 import styles from './Home.module.css';
 import FreezerLayout from "../components/FreezerLayout/FreezerLayout.jsx";
 
+const getConstructedImagePath = (nombre) => {
+    const cleanName = nombre.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove accents
+        .replace(/\s+/g, ""); // Remove spaces
+    return `/outputs/small/${cleanName}_400.webp`;
+};
+
+const ProductImage = ({ product, className }) => {
+    const [src, setSrc] = useState(product.imagen || getConstructedImagePath(product.nombre));
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        setSrc(product.imagen || getConstructedImagePath(product.nombre));
+        setError(false);
+    }, [product]);
+
+    if (error) {
+        return <div className={className}>📷 {product.nombre}</div>;
+    }
+
+    return (
+        <img
+            src={src}
+            alt={product.nombre}
+            className={className}
+            onError={() => setError(true)}
+        />
+    );
+};
+
 function Home() {
     const [productos, setProductos] = useState([]);
     const [grupos, setGrupos] = useState([]);
@@ -12,7 +42,7 @@ function Home() {
     const [tasa, setTasa] = useState(0);
     const [cargando, setCargando] = useState(true);
     const [filtroGrupo, setFiltroGrupo] = useState('todos');
-    
+
     // Estado para controlar la visibilidad del modal del Freezer
     const [isFreezerOpen, setIsFreezerOpen] = useState(false);
 
@@ -134,21 +164,18 @@ function Home() {
                 {productosFiltrados.map(p => {
                     const precio = p.precio || 0;
                     const esAgotado = p.stock === 0;
+                    const badgeColor = p.stock === 0 ? '#ff4d4d' : (p.stock <= 5 ? '#ffa500' : '#28a745');
                     return (
                         <div
                             key={p.id}
                             className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
                             onClick={() => !esAgotado && seleccionarProducto(p)}
                         >
-                            <div className={styles.stockBadge}>{p.stock}</div>
-                            {p.imagen ? (
-                                <img src={p.imagen} alt={p.nombre} className={styles.productImage} />
-                            ) : (
-                                <div className={styles.productImage}>📷 {p.nombre}</div>
-                            )}
+                            <div className={styles.stockBadge} style={{ backgroundColor: badgeColor }}>{p.stock}</div>
+                            <ProductImage product={p} className={styles.productImage} />
                             <h3 className={styles.productTitle}>{p.nombre}</h3>
                             <p className={styles.priceText}>
-                                $: {precio.toFixed(2)} - Bs.: {(precio * tasa).toFixed(2)}
+                                $: {precio.toFixed(2)} - Bs.: {(precio * tasa).toFixed(2)} - Stock: {p.stock}
                             </p>
                         </div>
                     );
@@ -156,8 +183,8 @@ function Home() {
             </div>
 
             <div className={styles.selectedContainer}>
-                <div 
-                    className={styles.selectedHeader} 
+                <div
+                    className={styles.selectedHeader}
                     onClick={() => setIsFreezerOpen(true)}
                     style={{ cursor: 'pointer' }}
                 >
@@ -183,9 +210,9 @@ function Home() {
                     <button className={styles.grabarBtn} onClick={handleGrabar} disabled={listaDeSeleccionados.length === 0}>
                         Grabar
                     </button>
-                    
-                    <button 
-                        className={styles.ubicarBtn} 
+
+                    <button
+                        className={styles.ubicarBtn}
                         onClick={() => setIsFreezerOpen(true)}
                     >
                         Ubicar
@@ -198,8 +225,8 @@ function Home() {
                     <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
                             <h3 className={styles.modalTitle}>UBICACIÓN EN FREEZER</h3>
-                            <button 
-                                className={styles.closeModalBtn} 
+                            <button
+                                className={styles.closeModalBtn}
                                 onClick={() => setIsFreezerOpen(false)}
                             >
                                 ×
