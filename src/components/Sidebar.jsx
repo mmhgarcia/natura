@@ -199,7 +199,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
                     {/* Productos */}
                     <Link to="/adminproductos" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>📊</span> Productos
+                        <span style={styles.icon}>🍦</span> Productos
                     </Link>
 
                     {/* Acceso Administrativo */}
@@ -209,9 +209,14 @@ export default function Sidebar({ isOpen, onClose }) {
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
                     >
-                        <span style={styles.icon}>⚙️</span>
+                        <span style={styles.icon}>🛡️</span>
                         <span>Panel de Control</span>
                     </a>
+
+                    {/* FreezerGrid */}
+                    <Link to="/freezergrid" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>🧊</span>Freezer Grid
+                    </Link>
 
                 </nav>
             </div>

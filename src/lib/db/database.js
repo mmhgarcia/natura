@@ -83,6 +83,28 @@ export class NaturaDBClass {
             historico_tasas: '++id, fecha_tasa, tasa' // Nueva tabla indexada por fecha y valor
         });
 
+        this.db.version(10).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt, visible',
+            grupos: '++id, nombre, precio, costo_$', config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad, utilidadUsd, tasaVenta, costoUnitarioUsd',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
+            gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago',
+            historico_tasas: '++id, fecha_tasa, tasa',
+            freezer_slots: 'id, row, col' // [id=row_col]
+        });
+
+        this.db.version(11).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt, visible',
+            grupos: '++id, nombre, precio, costo_$',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad, utilidadUsd, tasaVenta, costoUnitarioUsd',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
+            gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago',
+            historico_tasas: '++id, fecha_tasa, tasa',
+            freezer_containers: '++id, order',
+            freezer_slots: 'id, containerId, row, col'
+        });
+
         // Direct access references for components [6]
         this.productos = this.db.productos;
         this.grupos = this.db.grupos;
@@ -90,7 +112,10 @@ export class NaturaDBClass {
         this.ventas = this.db.ventas;
         this.pedidos = this.db.pedidos;
         this.gastos = this.db.gastos;
+        this.gastos = this.db.gastos;
         this.historico_tasas = this.db.historico_tasas;
+        this.freezer_containers = this.db.freezer_containers;
+        this.freezer_slots = this.db.freezer_slots;
 
     }
 

@@ -10,12 +10,13 @@ import Footer from "./components/Footer";
 import GruposPage from './pages/GruposPage';
 import ProductosPage from './pages/ProductosPage';
 // Nueva importación de la página de Pedidos
-import PedidosPage from './pages/Pedidos'; 
+import PedidosPage from './pages/Pedidos';
 // Asegúrate de tener esto:
 import DeliveryPage from './pages/DeliveryPage';
 import Estadisticas from "./pages/Estadisticas";
 import ResumenInventario from "./components/ResumenInventario";
 import RegistroGasto from "./components/RegistroGasto";
+import FreezerGrid from "./components/FreezerLayout/FreezerGrid";
 
 function App() {
   return (
@@ -33,6 +34,8 @@ function App() {
         <Route path="/estadisticas" element={<Estadisticas />} />
         <Route path="/resumeninventario" element={<ResumenInventario />} />
         <Route path="/registrogasto" element={<RegistroGasto />} />
+        <Route path="/freezergrid" element={<FreezerGrid productosSeleccionados={[]} />} />
+
         {/* Nueva ruta para Pedidos */}
         <Route path="/pedidos" element={<PedidosPage />} />
         <Route path="*" element={<NotFound />} />
