@@ -12,8 +12,8 @@ const Estadisticas = () => {
   const [datosBI, setDatosBI] = useState([]);
   const [datosMargen, setDatosMargen] = useState([]);
   const [tasa, setTasa] = useState(0);
-  const [rango, setRango] = useState('7d');
-  const [limiteProducto, setLimiteProducto] = useState(5); // Nuevo estado para el filtro
+  const [rango, setRango] = useState('mes');
+  const [limiteProducto, setLimiteProducto] = useState('todos'); // Nuevo estado para el filtro
   const [cargando, setCargando] = useState(true);
   const [metricas, setMetricas] = useState({
     ventaTotalUsd: 0,
@@ -22,19 +22,25 @@ const Estadisticas = () => {
     costoTotalUsd: 0,
     gastosOperativosUsd: 0,
     retirosPersonalesUsd: 0,
-    margenPorcentaje: 0
+    margenPorcentaje: 0,
+    proyeccionVenta: 0,
+    proyeccionCosto: 0,
+    proyeccionUtilidad: 0,
+    inversionTotalUsd: 0
   });
 
   useEffect(() => {
     const cargarAnaliticaBI = async () => {
       setCargando(true);
       try {
-        // 1. Unificación de Fuentes: Pedidos, Ventas y Gastos en paralelo
-        const [pedidosRaw, ventasRaw, gastosRaw, valorTasa] = await Promise.all([
+        // 1. Unificación de Fuentes: Pedidos, Ventas, Gastos, Productos y Grupos en paralelo
+        const [pedidosRaw, ventasRaw, gastosRaw, valorTasa, productosRaw, gruposRaw] = await Promise.all([
           db.getAll('pedidos'),
           db.getAll('ventas'),
           db.getAll('gastos'),
-          getTasaBCV()
+          getTasaBCV(),
+          db.getAll('productos'),
+          db.getAll('grupos')
         ]);
 
         // 2. Filtrado por rango de tiempo unificado
@@ -65,12 +71,13 @@ const Estadisticas = () => {
         });
 
         // 5. Procesar Gastos y Retiros
-        let gastosOperativosSum = 0;
-        let retirosPersonalesSum = 0;
+        let inversionesSum = 0;
 
         gastosFiltrados.forEach(g => {
           if (g.categoria === 'Personal') {
             retirosPersonalesSum += g.montoUsd || 0;
+          } else if (g.categoria === 'Inversión') {
+            inversionesSum += g.montoUsd || 0;
           } else {
             gastosOperativosSum += g.montoUsd || 0;
           }
@@ -97,6 +104,26 @@ const Estadisticas = () => {
         const utilidadNetaSum = utilidadBrutaSum - gastosOperativosSum;
         const margenPorc = ventaSum > 0 ? (utilidadNetaSum / ventaSum) * 100 : 0;
 
+        // 9. Calcular Proyección de Inventario (NUEVO - Valor Futuro)
+        let invVenta = 0;
+        let invCosto = 0;
+        const gruposMap = new Map(gruposRaw.map(g => [g.nombre, g]));
+
+        if (Array.isArray(productosRaw)) {
+          productosRaw.forEach(p => {
+            if (p.stock > 0 && p.grupo) {
+              const g = gruposMap.get(p.grupo);
+              if (g) {
+                const costo = g.costo_$ || 0;
+                const precio = g.precio || 0;
+                invVenta += precio * p.stock;
+                invCosto += costo * p.stock;
+              }
+            }
+          });
+        }
+        const invUtilidad = invVenta - invCosto;
+
         setMetricas({
           ventaTotalUsd: ventaSum,
           costoTotalUsd: costoSum,
@@ -104,7 +131,11 @@ const Estadisticas = () => {
           utilidadNetaUsd: utilidadNetaSum,
           gastosOperativosUsd: gastosOperativosSum,
           retirosPersonalesUsd: retirosPersonalesSum,
-          margenPorcentaje: margenPorc
+          margenPorcentaje: margenPorc,
+          proyeccionVenta: invVenta,
+          proyeccionCosto: invCosto,
+          proyeccionUtilidad: invUtilidad,
+          inversionTotalUsd: inversionesSum
         });
 
         // Datos para el gráfico de Ranking
@@ -178,17 +209,17 @@ const Estadisticas = () => {
             <div style={{ flex: 1 }}>
               <label className={styles.filterLabel}>Periodo:</label>
               <select value={rango} onChange={(e) => setRango(e.target.value)} className={styles.select} style={{ width: '100%' }}>
-                <option value="hoy">Ventas de Hoy</option>
-                <option value="7d">Últimos 7 Días</option>
                 <option value="mes">Mes Actual</option>
+                <option value="7d">Últimos 7 Días</option>
+                <option value="hoy">Ventas de Hoy</option>
               </select>
             </div>
             <div style={{ flex: 1 }}>
               <label className={styles.filterLabel}>Top Prods:</label>
               <select value={limiteProducto} onChange={(e) => setLimiteProducto(e.target.value)} className={styles.select} style={{ width: '100%' }}>
-                <option value={5}>Top 5</option>
-                <option value={10}>Top 10</option>
                 <option value="todos">Todos</option>
+                <option value={10}>Top 10</option>
+                <option value={5}>Top 5</option>
               </select>
             </div>
           </div>
@@ -293,8 +324,36 @@ const Estadisticas = () => {
             <span>(⚠) Retiros Personales:</span>
             <span style={{ fontWeight: 'bold' }}>-${metricas.retirosPersonalesUsd.toFixed(2)}</span>
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>
-            * Los retiros personales no afectan la utilidad del negocio, pero sí el efectivo disponible.
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0288d1', fontSize: '0.9rem' }}>
+            <span>(↻) Inversión / Reposición:</span>
+            <span style={{ fontWeight: 'bold' }}>-${metricas.inversionTotalUsd.toFixed(2)}</span>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic', marginTop: '5px' }}>
+            * Retiros e Inversiones NO bajan tu utilidad contable, pero sí restan efectivo de caja.
+
+          </div>
+        </div>
+      </div>
+
+      {/* Tarjeta de Proyección de Inventario (NUEVO) */}
+      <div className={styles.mainCard} style={{ marginTop: '20px', backgroundColor: '#e3f2fd' }}>
+        <h3 className={styles.chartTitle}>🔮 PROYECCIÓN DE INVENTARIO (VALOR FUTURO)</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '1rem', color: '#444' }}>
+          <p style={{ fontSize: '0.85rem', color: '#555', marginBottom: '5px' }}>
+            Este es el dinero que tienes "guardado" en tus freezers. Si vendieras todo hoy, estos serían tus números:
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Valor de Venta (PVP):</span>
+            <span style={{ fontWeight: 'bold' }}>${metricas.proyeccionVenta.toFixed(2)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#d32f2f' }}>
+            <span>Costo de Reposición:</span>
+            <span style={{ fontWeight: 'bold' }}>-${metricas.proyeccionCosto.toFixed(2)}</span>
+          </div>
+          <hr style={{ border: '0', borderTop: '1px solid #bbdefb', margin: '5px 0' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', color: '#0d47a1' }}>
+            <span>(=) Utilidad Proyectada:</span>
+            <span style={{ fontWeight: 'bold' }}>${metricas.proyeccionUtilidad.toFixed(2)}</span>
           </div>
         </div>
       </div>
