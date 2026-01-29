@@ -1,6 +1,7 @@
 .container {
     padding: 15px;
-    padding-bottom: 280px; /* Espacio para el panel fijo inferior */
+    padding-bottom: 280px;
+    /* Espacio para el panel fijo inferior */
     background-color: #fafafa;
     min-height: 100dvh;
     width: 100%;
@@ -23,7 +24,8 @@
     border-radius: 8px;
     border: none;
     font-size: 18px;
-    background-color: #00BFFF; /* Azul Natura */
+    background-color: #00BFFF;
+    /* Azul Natura */
     color: #fff;
     font-weight: bold;
     text-align: center;
@@ -67,7 +69,7 @@
     font-weight: bold;
     font-size: 14px;
     border: 2px solid #fff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     z-index: 10;
 }
 
@@ -106,7 +108,7 @@
     background-color: #fff;
     padding: 15px;
     border-top: 3px solid #00BFFF;
-    box-shadow: 0 -4px 15px rgba(0,0,0,0.15);
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.15);
     z-index: 9999;
     width: 100%;
     box-sizing: border-box;
@@ -168,7 +170,9 @@
     gap: 8px;
 }
 
-.vaciarBtn, .grabarBtn, .ubicarBtn {
+.vaciarBtn,
+.grabarBtn,
+.ubicarBtn {
     flex: 1;
     padding: 14px;
     border: none;
@@ -211,7 +215,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 20000; /* Por encima del panel inferior */
+    z-index: 20000;
+    /* Por encima del panel inferior */
 }
 
 .modalContent {
@@ -222,7 +227,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
 .modalHeader {
@@ -257,4 +262,8 @@
     justify-content: center;
     background-color: #f0f2f5;
     min-height: 200px;
+    max-height: 70vh;
+    /* Limita la altura máxima al 70% del viewport */
+    overflow-y: auto;
+    /* Habilita scroll vertical */
 }

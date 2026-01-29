@@ -233,7 +233,7 @@ function Home() {
                             </button>
                         </div>
                         <div className={styles.modalBody}>
-                            <FreezerLayout />
+                            <FreezerLayout productosSeleccionados={listaDeSeleccionados} />
                         </div>
                     </div>
                 </div>
