@@ -15,7 +15,9 @@ export default function Header() {
                     ☰
                 </button>
 
-                <h1 style={styles.brand}>Natura Ice</h1>
+                <h1 style={styles.brand}>
+                    Natura App 
+                </h1>
                 <div style={{ width: '40px' }} /> {/* Espaciador para centrar título */}
             </div>
 

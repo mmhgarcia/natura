@@ -1,18 +1,24 @@
-ESTRUCTURA DEL PROYECTO: natura
+PROYECTO: NATURA
+FECHA DE GENERACIÓN: 28/01/2026 21:52:10
+============================================================
+DESCRIPCIÓN TÉCNICA DEL STACK:
+- Framework: React con Vite (Arquitectura de componentes funcionales) [5, 6]
+- Estado/Persistencia: IndexedDB mediante Dexie.js (DB: dbTasaBCV) [7, 8]
+- Capacidades: PWA (Progressive Web App) optimizada para Android [9, 10]
+- Despliegue: Vercel [7]
+- Analítica: Business Intelligence local con Recharts y snapshots financieros [11, 12]
 ============================================================
 
 --- ÁRBOL DE DIRECTORIOS ---
-📁 .vercel/
-  📄 README.txt
-  📄 project.json
 📄 README.md
 📄 eslint.config.js
 📄 index.html
 📄 package.json
-📄 project_reader.py
 📁 public/
   📁 outputs/
     📁 small/
+  📁 wasm/
+    📄 security.js
 📁 src/
   📄 App.css
   📄 App.jsx
@@ -20,6 +26,8 @@ ESTRUCTURA DEL PROYECTO: natura
   📁 components/
     📄 Delivery.jsx
     📄 Footer.jsx
+    📁 FreezerLayout/
+      📄 FreezerLayout.jsx
     📄 GestionPedido.jsx
     📄 GestionPedido.module.css
     📁 GruposCRUD/
@@ -51,6 +59,7 @@ ESTRUCTURA DEL PROYECTO: natura
     📄 useLocalStorageList.js
   📄 index.css
   📁 lib/
+    📄 constants.js
     📁 db/
       📄 database.js
       📁 hooks/
@@ -70,6 +79,7 @@ ESTRUCTURA DEL PROYECTO: natura
         📄 migrationService.js
         📄 tasaUtil.js
     📁 types/
+    📄 utils.js
   📄 main.jsx
   📁 pages/
     📄 About.jsx
@@ -86,32 +96,13 @@ ESTRUCTURA DEL PROYECTO: natura
     📄 ProductosPage.jsx
     📄 TasaBCV.jsx
     📄 TasaBCV.module.css
+📄 test_db_check.js
+📄 validacion_resumen_inventario.js
 📄 vite.config.js
 
 ============================================================
 
 --- CONTENIDO DE ARCHIVOS (SANITIZADO) ---
-
-FILE: .vercel/README.txt
-------------------------------
-> Why do I have a folder named ".vercel" in my project?
-The ".vercel" folder is created when you link a directory to a Vercel project.
-
-> What does the "project.json" file contain?
-The "project.json" file contains:
-- The ID of the Vercel project that you linked ("projectId")
-- The ID of the user or team your Vercel project is owned by ("orgId")
-
-> Should I commit the ".vercel" folder?
-No, you should not share the ".vercel" folder with anyone.
-Upon creation, it will be automatically added to your ".gitignore" file.
-
-************************************************************
-
-FILE: .vercel/project.json
-------------------------------
-{"projectId":"prj_hjReYCHTcKVrtd3weTmPa3dKTGQl","orgId":"team_esiDhEy9BSjEtp80YsKI8dmT","projectName":"natura"}
-************************************************************
 
 FILE: README.md
 ------------------------------
@@ -177,8 +168,14 @@ FILE: index.html
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>natura</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="root"></div>
@@ -192,12 +189,13 @@ FILE: package.json
 ------------------------------
 {
   "name": "natura",
-  "private": true,
+[CONTENIDO SENSIBLE ELIMINADO EN: package.json]
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:wasm": "cd src/security/wasm && ./build.sh",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -219,173 +217,17 @@ FILE: package.json
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vite-plugin-pwa": "^1.2.0"
   }
 }
-
 ************************************************************
 
-FILE: project_reader.py
+FILE: public/wasm/security.js
 ------------------------------
-import os
-import shutil
-import sys
-from pathlib import Path
+[CONTENIDO SENSIBLE ELIMINADO EN: security.js]
+;return moduleRtn}})();if(typeof exports==="object"&&typeof module==="object"){module.exports=createSecurityModule;module.exports.default=createSecurityModule}else if(typeof define==="function"&&define["amd"])define([],()=>createSecurityModule);
 
-# --- CONFIGURACIÓN DE EXCLUSIONES ---
-IGNORE_DIRS = {
-    '.git', 'node_modules', 'dist', 'build', '.next',
-    '__pycache__', 'env', 'venv', '.idea', '.vscode'
-}
-IGNORE_FILES = {
-    '.DS_Store', '.env', '.env.*', 'package-lock.json',
-    'yarn.lock', 'pnpm-lock.yaml', '*.log', '*.pid'
-}
-ALLOWED_EXTENSIONS = {
-    '.js', '.jsx', '.ts', '.tsx', '.css', '.scss',
-    '.html', '.json', '.md', '.py', '.txt', '.yml', '.yaml'
-}
-MAX_FILE_SIZE = 1024 * 1024  # 1MB
-[CONTENIDO SENSIBLE ELIMINADO EN: project_reader.py]
-
-def should_ignore(path: Path, root: Path) -> bool:
-    """Determina si un archivo/directorio debe ser omitido."""
-    for part in path.parts:
-        if part in IGNORE_DIRS:
-            return True
-    for pattern in IGNORE_FILES:
-        if pattern.startswith('*') and path.name.endswith(pattern[1:]):
-            return True
-        elif path.name == pattern:
-            return True
-    if path.is_file() and path.suffix not in ALLOWED_EXTENSIONS:
-        return True
-    return False
-
-def sanitize_content(content: str, filepath: str) -> str:
-    """Detecta y oculta líneas con patrones de datos sensibles."""
-    lines = content.split('\n')
-    sanitized = []
-    for line in lines:
-        lower_line = line.lower()
-        if any(pattern in lower_line for pattern in SENSITIVE_PATTERNS):
-            sanitized.append(f"[CONTENIDO SENSIBLE ELIMINADO EN: {filepath}]")
-            continue
-        sanitized.append(line)
-    return '\n'.join(sanitized)
-
-def count_words_in_file(filepath: str) -> int:
-    """Cuenta el número total de palabras en el archivo generado."""
-    try:
-        path = Path(filepath)
-        content = path.read_text(encoding='utf-8', errors='ignore')
-        words = content.split()
-        return len(words)
-    except Exception as e:
-        print(f"⚠️ No se pudo realizar el conteo de palabras: {e}")
-        return 0
-
-def generate_project_summary(root_path: Path, output_file: str):
-    """Genera un archivo consolidado con la estructura y contenido del proyecto."""
-    root = Path(root_path).resolve()
-    output_path = Path(output_file).resolve()
-
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(f"ESTRUCTURA DEL PROYECTO: {root.name}\n")
-        f.write("=" * 60 + "\n\n")
-        
-        f.write("--- ÁRBOL DE DIRECTORIOS ---\n")
-        dir_structure = []
-        file_contents = []
-        
-        for path in sorted(root.rglob('*')):
-            if should_ignore(path, root) or path.resolve() == output_path:
-                continue
-            
-            relative_path = path.relative_to(root)
-            depth = len(relative_path.parts) - 1
-            indent = '  ' * depth
-            
-            if path.is_dir():
-                dir_structure.append(f"{indent}📁 {path.name}/")
-            else:
-                dir_structure.append(f"{indent}📄 {path.name}")
-                
-                try:
-                    file_size = path.stat().st_size
-                    if file_size > MAX_FILE_SIZE:
-                        content_block = f"\nFILE: {relative_path}\n" + "-"*30 + \
-                                        f"\n[ARCHIVO EXCEDE LÍMITE DE TAMAÑO: {file_size} bytes]\n"
-                    else:
-                        raw_content = path.read_text(encoding='utf-8', errors='ignore')
-                        sanitized = sanitize_content(raw_content, path.name)
-                        content_block = f"\nFILE: {relative_path}\n" + "-"*30 + f"\n{sanitized}\n"
-                    
-                    file_contents.append(content_block + "*"*60)
-                except Exception as e:
-                    file_contents.append(f"\n[ERROR procesando {relative_path}: {e}]\n" + "*"*60)
-        
-        f.write('\n'.join(dir_structure))
-        f.write("\n\n" + "=" * 60 + "\n\n")
-        f.write("--- CONTENIDO DE ARCHIVOS (SANITIZADO) ---\n")
-        f.write('\n'.join(file_contents))
-
-def copy_to_destination(source_name: str, destination_dir: str):
-    """Copia el archivo generado a la carpeta compartida especificada."""
-    source_path = Path(source_name).resolve()
-    target_folder = Path(destination_dir)
-
-    if not source_path.exists():
-        print(f"❌ Error: El archivo fuente {source_name} no existe.")
-        return
-
-    if not target_folder.exists():
-        print(f"⚠️ Aviso: La carpeta de destino '{destination_dir}' no existe o no está montada.")
-        return
-
-    try:
-        final_destination = target_folder / source_name
-        shutil.copy2(source_path, final_destination)
-        print(f"🚀 Copia exitosa a: {final_destination}")
-    except PermissionError:
-        print(f"🚫 Error de permisos: No se pudo escribir en '{destination_dir}'.")
-    except Exception as e:
-        print(f"❌ Error durante la copia: {e}")
-
-def main():
-    current_dir = Path.cwd()
-    output_filename = "proyecto_completo.txt"
-    shared_folder = "/media/sf_sfPaleteria/natura/"
-
-    print(f"🚀 Iniciando análisis en: {current_dir}")
-    confirm = input("¿Desea proceder? (s/n): ").strip().lower()
-    
-    if confirm != 's':
-        print("Operación abortada.")
-        return
-
-    try:
-        # 1. Generar el resumen
-        generate_project_summary(current_dir, output_filename)
-        print(f"✅ Resumen generado: {output_filename}")
-        
-        # 2. Contar palabras (Nueva funcionalidad)
-        word_count = count_words_in_file(output_filename)
-        print("-" * 30)
-        print(f"📊 ESTADÍSTICAS DEL ARCHIVO:")
-        print(f"   Total de palabras: {word_count:,}/500.000")
-        print("-" * 30)
-        
-        # 3. Copiar a destino
-        print(f"📦 Copiando a carpeta compartida...")
-        copy_to_destination(output_filename, shared_folder)
-        
-    except Exception as e:
-        print(f"💥 Error crítico en la ejecución: {e}")
-        sys.exit(1)
-
-if __name__ == "__main__":
-    main()
 ************************************************************
 
 FILE: src/App.css
@@ -411,7 +253,7 @@ FILE: src/App.css
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
-@keyframes logo-spin {
+[CONTENIDO SENSIBLE ELIMINADO EN: App.css]
   from {
     transform: rotate(0deg);
   }
@@ -728,7 +570,7 @@ const Delivery = () => {
           Cargando costo de delivery...
         </div>
         <style>{`
-          @keyframes spin {
+[CONTENIDO SENSIBLE ELIMINADO EN: Delivery.jsx]
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
@@ -844,6 +686,32 @@ export default function Footer() {
 
 ************************************************************
 
+FILE: src/components/FreezerLayout/FreezerLayout.jsx
+------------------------------
+import React from 'react';
+import miImagen from './FreezerLayout.png'; // Ruta relativa al componente
+
+const FreezerLayout = () => {
+  const containerStyle = {
+    display: 'flex',
+    justifyContent: 'center', // Centrado horizontal
+    alignItems: 'center',     // Centrado vertical
+    height: 'auto',          // Opcional: para que ocupe toda la pantalla
+    border: '1px solid #ccc',
+    marginTop: '25px',
+    
+  };
+
+  return (
+    <div style={containerStyle}>
+      <img src={miImagen} alt="Descripción de la imagen" style={{ maxWidth: '100%' }} />
+    </div>
+  );
+};
+
+export default FreezerLayout;
+************************************************************
+
 FILE: src/components/GestionPedido.jsx
 ------------------------------
 import React, { useState, useEffect } from 'react';
@@ -865,7 +733,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     const [listaGrupos, setListaGrupos] = useState([]);
     const [cantidades, setCantidades] = useState({});
     const [aplicarDelivery, setAplicarDelivery] = useState(true);
-    const [totales, setTotales] = useState({ usd: 0, bs: 0 });
+    const [totales, setTotales] = useState({ usd: 0, bs: 0, ventaUsd: 0, ventaBs: 0 });
     const [utilidad, setUtilidad] = useState({ usd: 0, bs: 0 });
 
     const esVisualizacion = !!pedido && pedido.estatus === 'Cerrado';
@@ -927,26 +795,33 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
     useEffect(() => {
         const calcularFinanzas = () => {
-            let costoTotalUSD = 0;
-            let ingresoEstimadoUSD = 0;
+            let costoMercanciaUSD = 0;
+            let ventaEstimadaUSD = 0;
 
             Object.entries(cantidades).forEach(([prodId, qty]) => {
                 const producto = productos.find(p => p.id === parseInt(prodId));
                 if (producto && qty > 0) {
                     const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === producto.grupo.toLowerCase());
                     if (grupo) {
-                        costoTotalUSD += qty * (grupo.costo_$ || 0);
-                        ingresoEstimadoUSD += qty * (grupo.precio || 0);
+                        costoMercanciaUSD += qty * (grupo.costo_$ || 0);
+                        ventaEstimadaUSD += qty * (grupo.precio || 0);
                     }
                 }
             });
 
             const cargoDelivery = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
-            const totalPedidoUSD = ingresoEstimadoUSD + cargoDelivery;
+            const totalInversionUSD = costoMercanciaUSD + cargoDelivery;
             const tasaNum = parseFloat(formData.tasa) || 0;
-            const utilidadUSD = ingresoEstimadoUSD - (costoTotalUSD + cargoDelivery);
+            const utilidadUSD = ventaEstimadaUSD - totalInversionUSD;
 
-            setTotales({ usd: totalPedidoUSD, bs: totalPedidoUSD * tasaNum });
+            const ventaEstimadaBS = ventaEstimadaUSD * tasaNum;
+
+            setTotales({
+                usd: totalInversionUSD,
+                bs: totalInversionUSD * tasaNum,
+                ventaUsd: ventaEstimadaUSD,
+                ventaBs: ventaEstimadaBS
+            });
             setUtilidad({ usd: utilidadUSD, bs: utilidadUSD * tasaNum });
         };
 
@@ -1014,6 +889,10 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
             items: itemsBI,
             total_usd: totales.usd,
             total_bs: totales.bs,
+            venta_usd: totales.ventaUsd,
+            venta_bs: totales.ventaBs,
+            utilidad_usd: utilidad.usd,
+            utilidad_bs: utilidad.bs,
             delivery_aplicado: aplicarDelivery,
             updatedAt: new Date().toISOString()
         };
@@ -1059,10 +938,10 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                         </div>
                         <div className={styles.inputGroup}>
                             <label className={styles.label}>Fecha</label>
-                            <input 
-                                type="date" 
-                                value={formData.fecha_pedido} 
-                                onChange={(e) => setFormData({...formData, fecha_pedido: e.target.value})}
+                            <input
+                                type="date"
+                                value={formData.fecha_pedido}
+                                onChange={(e) => setFormData({ ...formData, fecha_pedido: e.target.value })}
                                 className={esVisualizacion ? styles.inputReadOnly : styles.inputSmall}
                                 disabled={esVisualizacion}
                             />
@@ -1071,22 +950,33 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
                     <div className={styles.totalsBar}>
                         <div className={styles.totalBox}>
-                            <span className={styles.totalLabel}>TOTAL PEDIDO $</span>
+                            <span className={styles.totalLabel}>INVERSIÓN TOTAL $</span>
                             <span className={styles.totalValue}>{totales.usd.toFixed(2)}</span>
                         </div>
                         <div className={styles.totalBox}>
-                            <span className={styles.totalLabel}>TOTAL PEDIDO BS</span>
+                            <span className={styles.totalLabel}>VENTA ESTIMADA $</span>
+                            <span className={styles.ventaValue}>{totales.ventaUsd.toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <div className={styles.totalsBar}>
+                        <div className={styles.totalBox}>
+                            <span className={styles.totalLabel}>INVERSIÓN TOTAL BS</span>
                             <span className={styles.totalValue}>{totales.bs.toFixed(2)}</span>
+                        </div>
+                        <div className={styles.totalBox}>
+                            <span className={styles.totalLabel}>VENTA ESTIMADA BS</span>
+                            <span className={styles.ventaValue}>{totales.ventaBs.toFixed(2)}</span>
                         </div>
                     </div>
 
                     <div className={styles.infoBar}>
                         <span>Tasa: {formData.tasa || '---'}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <input 
-                                type="checkbox" 
-                                checked={aplicarDelivery} 
-                                onChange={(e) => setAplicarDelivery(e.target.checked)} 
+                            <input
+                                type="checkbox"
+                                checked={aplicarDelivery}
+                                onChange={(e) => setAplicarDelivery(e.target.checked)}
                                 className={styles.checkbox}
                                 disabled={esVisualizacion}
                             />
@@ -1098,26 +988,26 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                         <div className={styles.productListHeader}>Selección de Productos</div>
                         <div className={styles.productList}>
                             {Object.entries(productosAgrupados).map(([grupo, items]) => (
-                                <div key={grupo}>
+[CONTENIDO SENSIBLE ELIMINADO EN: GestionPedido.jsx]
                                     <div className={styles.groupTitle}>{grupo.toUpperCase()}</div>
                                     {items.map((prod) => {
                                         const badgeColor = prod.stock === 0 ? '#ff4d4d' : (prod.stock <= 5 ? '#ffa500' : '#28a745');
                                         return (
-                                            <div key={prod.id} className={styles.productItem}>
+[CONTENIDO SENSIBLE ELIMINADO EN: GestionPedido.jsx]
                                                 <div className={styles.stockBadgeSmall} style={{ backgroundColor: badgeColor }}>{prod.stock}</div>
                                                 <div className={styles.productName}>{prod.nombre}</div>
                                                 <div className={styles.quantityControl}>
-                                                    <button 
-                                                        type="button" 
-                                                        className={styles.qtyBtn} 
-                                                        onClick={() => setCantidades({...cantidades, [prod.id]: Math.max(0, (cantidades[prod.id] || 0) - 1)})}
+                                                    <button
+                                                        type="button"
+                                                        className={styles.qtyBtn}
+                                                        onClick={() => setCantidades({ ...cantidades, [prod.id]: Math.max(0, (cantidades[prod.id] || 0) - 1) })}
                                                         disabled={esVisualizacion}
                                                     >-</button>
                                                     <span>{cantidades[prod.id] || 0}</span>
-                                                    <button 
-                                                        type="button" 
-                                                        className={styles.qtyBtn} 
-                                                        onClick={() => setCantidades({...cantidades, [prod.id]: (cantidades[prod.id] || 0) + 1})}
+                                                    <button
+                                                        type="button"
+                                                        className={styles.qtyBtn}
+                                                        onClick={() => setCantidades({ ...cantidades, [prod.id]: (cantidades[prod.id] || 0) + 1 })}
                                                         disabled={esVisualizacion}
                                                     >+</button>
                                                 </div>
@@ -1172,7 +1062,7 @@ FILE: src/components/GestionPedido.module.css
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 11000;
 }
 
 .modal {
@@ -1253,7 +1143,8 @@ FILE: src/components/GestionPedido.module.css
 .totalLabel {
   font-size: 11px;
   font-weight: bold;
-  color: #000; /* Se agrega color negro para cumplir con la solicitud */
+  color: #000;
+  /* Se agrega color negro para cumplir con la solicitud */
 }
 
 .totalValue {
@@ -1262,13 +1153,21 @@ FILE: src/components/GestionPedido.module.css
   color: #007bff;
 }
 
+.ventaValue {
+  font-size: 14px;
+  font-weight: bold;
+  color: #9c27b0;
+  /* Un color purpura para diferenciar de la inversión */
+}
+
 .infoBar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 13px;
   font-weight: bold;
-  color: #000; /* Se agrega color negro para cumplir con la solicitud */
+  color: #000;
+  /* Se agrega color negro para cumplir con la solicitud */
 }
 
 .productListContainer {
@@ -1295,7 +1194,8 @@ FILE: src/components/GestionPedido.module.css
   font-weight: bold;
   background-color: #f1f1f1;
   padding: 6px 10px;
-  color: #000; /* Se agrega para que el texto del grupo sea negro */
+  color: #000;
+  /* Se agrega para que el texto del grupo sea negro */
 }
 
 .productItem {
@@ -1320,13 +1220,18 @@ FILE: src/components/GestionPedido.module.css
 .quantityControl {
   display: flex;
   align-items: center;
-  gap: 8px;           /* Aumentado ligeramente para mejor separación */
-  
+  gap: 8px;
+  /* Aumentado ligeramente para mejor separación */
+
   /* Propiedades para hacer visible la cantidad */
-  color: #000;        /* Color negro para el número */
-  font-weight: bold;  /* Resalta la cantidad */
-  font-size: 16px;    /* Tamaño de fuente legible */
-  min-width: 25px;    /* Espacio mínimo para que el número no se mueva */
+  color: #000;
+  /* Color negro para el número */
+  font-weight: bold;
+  /* Resalta la cantidad */
+  font-size: 16px;
+  /* Tamaño de fuente legible */
+  min-width: 25px;
+  /* Espacio mínimo para que el número no se mueva */
   justify-content: center;
 }
 
@@ -1336,7 +1241,8 @@ FILE: src/components/GestionPedido.module.css
   background-color: #eee;
   border: 1px solid #ccc;
   font-weight: bold;
-  color: #000; /* Se añade color negro para los signos + y - */
+  color: #000;
+  /* Se añade color negro para los signos + y - */
 }
 
 .qtyBtn {
@@ -1345,14 +1251,19 @@ FILE: src/components/GestionPedido.module.css
   background-color: #eee;
   border: 1px solid #ccc;
   font-weight: bold;
-  color: #000;          /* Signos en color negro (solicitud anterior) */
-  
+  color: #000;
+  /* Signos en color negro (solicitud anterior) */
+
   /* Nuevas propiedades para centrado */
   display: flex;
-  align-items: center;  /* Centrado vertical */
-  justify-content: center; /* Centrado horizontal */
-  padding: 0;           /* Elimina paddings por defecto que puedan desviar el signo */
-  line-height: normal;  /* Asegura que el interlineado no afecte la posición */
+  align-items: center;
+  /* Centrado vertical */
+  justify-content: center;
+  /* Centrado horizontal */
+  padding: 0;
+  /* Elimina paddings por defecto que puedan desviar el signo */
+  line-height: normal;
+  /* Asegura que el interlineado no afecte la posición */
 }
 
 .utilidadBar {
@@ -1380,8 +1291,11 @@ FILE: src/components/GestionPedido.module.css
   width: 100%;
 }
 
-.limpiarBtn, .recalcularBtn, .grabarBtn {
-  flex: 1; /* Esto asegura que los 3 botones tengan el mismo ancho */
+.limpiarBtn,
+.recalcularBtn,
+.grabarBtn {
+  flex: 1;
+  /* Esto asegura que los 3 botones tengan el mismo ancho */
   padding: 12px 5px;
   border: none;
   border-radius: 4px;
@@ -1425,20 +1339,20 @@ FILE: src/components/GestionPedido.module.css
 }
 
 .productName {
-  color: #666; 
-  flex: 1; 
+  color: #666;
+  flex: 1;
   margin-left: 10px;
-  font-size: 14px; /* Se reduce la fuente a 14px (2px menos que el estándar de 16px del componente) */
+  font-size: 14px;
+  /* Se reduce la fuente a 14px (2px menos que el estándar de 16px del componente) */
 }
 
 .utilidadLabel {
   font-size: 11px;
   font-weight: bold;
-  color: #000; /* Negro solicitado */
+  color: #000;
+  /* Negro solicitado */
   /* Aquí podrías añadir un estilo diferente, como otro color o margen */
 }
-
-
 ************************************************************
 
 FILE: src/components/GruposCRUD/GruposCRUD.jsx
@@ -1518,7 +1432,7 @@ const GruposCRUD = () => {
           <div style={styles.vacio}>No hay grupos registrados.</div>
         ) : (
           grupos.map(grupo => (
-            <div key={grupo.id} style={styles.item}>
+[CONTENIDO SENSIBLE ELIMINADO EN: GruposCRUD.jsx]
               <div style={styles.itemInfo}>
                 <div style={styles.itemNombre}>{grupo.nombre}</div>
                 {/* Visualización de Precio y nuevo campo Costo [10, 11] */}
@@ -1678,20 +1592,22 @@ export default function Header() {
         <header style={styles.header}>
             <div style={styles.nav}>
                 {/* Botón Tipo Side Menu (Hamburguesa) */}
-                <button 
-                    onClick={() => setIsMenuOpen(true)} 
+                <button
+                    onClick={() => setIsMenuOpen(true)}
                     style={styles.menuBtn}
                 >
                     ☰
                 </button>
-                
-                <h1 style={styles.brand}>Natura Ice</h1>
+
+                <h1 style={styles.brand}>
+                    Natura App 
+                </h1>
                 <div style={{ width: '40px' }} /> {/* Espaciador para centrar título */}
             </div>
 
-            <Sidebar 
-                isOpen={isMenuOpen} 
-                onClose={() => setIsMenuOpen(false)} 
+            <Sidebar
+                isOpen={isMenuOpen}
+                onClose={() => setIsMenuOpen(false)}
             />
         </header>
     );
@@ -1704,7 +1620,7 @@ const styles = {
         borderBottom: '1px solid #dee2e6',
         position: 'sticky',
         top: 0,
-        zIndex: 10000  
+        zIndex: 10000
     },
     nav: {
         display: 'flex',
@@ -1716,7 +1632,8 @@ const styles = {
         background: 'none',
         border: 'none',
         color: '#007bff',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        marginLeft: '0px'
     },
     brand: {
         fontSize: '1.8rem',
@@ -1732,26 +1649,26 @@ FILE: src/components/Panel/Panel.jsx
 // src/components/Panel/Panel.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { db } from "../../lib/db/database"; 
-import { useGrupos } from "./hooks/useGrupos"; 
-import { useProductos } from "./hooks/useProductos"; 
-import { exportDatabase } from "../../lib/db/utils/exportService"; 
-import { 
-  migrateOrdersToBI, 
+import { db } from "../../lib/db/database";
+import { useGrupos } from "./hooks/useGrupos";
+import { useProductos } from "./hooks/useProductos";
+import { exportDatabase } from "../../lib/db/utils/exportService";
+import {
+  migrateOrdersToBI,
   migrateSalesToBI // Fase 2: Nueva importación para transformación de ventas
-} from "../../lib/db/utils/migrationService"; 
-import styles from "./Panel.module.css"; 
+} from "../../lib/db/utils/migrationService";
+import styles from "./Panel.module.css";
 
 export default function Panel() {
-  const navigate = useNavigate(); 
-  const { importarGrupos } = useGrupos(); 
-  const { importarProductos } = useProductos(); 
+  const navigate = useNavigate();
+  const { importarGrupos } = useGrupos();
+  const { importarProductos } = useProductos();
 
   // Estados para control de procesos
-  const [isExporting, setIsExporting] = useState(false); 
+  const [isExporting, setIsExporting] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false); // Pedidos
   const [isMigratingSales, setIsMigratingSales] = useState(false); // Fase 2: Ventas
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false); 
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   /**
    * Maneja la exportación de la base de datos a un archivo JSON [4, 5]
@@ -1760,7 +1677,7 @@ export default function Panel() {
     setIsExporting(true);
     const result = await exportDatabase();
     if (result.success) {
-      alert("✅ Copia de seguridad guardada en Descargas"); 
+      alert("✅ Copia de seguridad guardada en Descargas");
     } else {
       alert("❌ Error al exportar: " + (result.error?.message || "Error desconocido"));
     }
@@ -1774,7 +1691,7 @@ export default function Panel() {
   const handleMigrateSalesBI = async () => {
     const mensajeConfirmacion = "📈 ¿Deseas normalizar el historial de VENTAS para BI?\n\n" +
       "Se asignarán costos y utilidades a las ventas pasadas basándose en los grupos actuales.";
-    
+
     if (!window.confirm(mensajeConfirmacion)) return;
 
     setIsMigratingSales(true);
@@ -1797,7 +1714,7 @@ export default function Panel() {
    */
   const handleMigrateBI = async () => {
     const mensajeConfirmacion = "⚠️ ¿Deseas iniciar la migración de pedidos al formato BI?\n\n" +
-      "Esta acción transformará los pedidos antiguos para habilitar la analítica financiera."; 
+      "Esta acción transformará los pedidos antiguos para habilitar la analítica financiera.";
 
     if (!window.confirm(mensajeConfirmacion)) return;
 
@@ -1805,7 +1722,7 @@ export default function Panel() {
     try {
       const result = await migrateOrdersToBI();
       if (result.success) {
-        alert(result.message); 
+        alert(result.message);
       } else {
         alert("❌ Error en la migración: " + result.error);
       }
@@ -1837,12 +1754,29 @@ export default function Panel() {
   };
 
   /**
-   * Importación masiva de grupos iniciales [10, 11]
+   * Importación masiva de grupos y productos iniciales [10, 11]
    */
-  const handleImportGrupos = async () => {
-    if (!window.confirm("¿Importar grupos iniciales? Se borrarán los actuales.")) return;
-    const result = await importarGrupos();
-    alert(result.message);
+  const handleImportInitialData = async () => {
+    if (!window.confirm("¿Importar datos iniciales (Grupos y Productos)? Se sobrescribirán los datos existentes.")) return;
+
+    const resultGrupos = await importarGrupos();
+    const resultProductos = await importarProductos();
+
+    let mensaje = "";
+
+    if (resultGrupos.success) {
+      mensaje += `✅ ${resultGrupos.message}\n`;
+    } else {
+      mensaje += `❌ Error Grupos: ${resultGrupos.error}\n`;
+    }
+
+    if (resultProductos.success) {
+      mensaje += `✅ ${resultProductos.message}\n`;
+    } else {
+      mensaje += `❌ Error Productos: ${resultProductos.error}\n`;
+    }
+
+    alert(mensaje);
   };
 
   return (
@@ -1850,18 +1784,24 @@ export default function Panel() {
       <h1 className={styles.title}>PANEL DE CONTROL</h1>
 
       <div className={styles.buttons}>
+
+        {/* Importación de Configuración Inicial [12] */}
+        <button className={styles.button} onClick={handleImportInitialData}>
+          📥 Cargar Datos Iniciales (Grupos y Productos)
+        </button>
+
         {/* Gestión de Datos y Backups [4] */}
-        <button 
-          className={styles.button} 
-          onClick={handleExport} 
+        <button
+          className={styles.button}
+          onClick={handleExport}
           disabled={isExporting}
         >
           {isExporting ? "⌛ Exportando..." : "📤 Exportar DB"}
         </button>
 
         {/* Fase 2: Migración Analítica de Ventas (Snapshot Financiero) */}
-        <button 
-          className={styles.button} 
+        <button
+          className={styles.button}
           onClick={handleMigrateSalesBI}
           disabled={isMigratingSales}
           style={{ backgroundColor: '#4a148c' }} // Púrpura oscuro para diferenciar
@@ -1870,48 +1810,32 @@ export default function Panel() {
         </button>
 
         {/* Migración Analítica de Pedidos [3] */}
-        <button 
-          className={styles.button} 
-          onClick={handleMigrateBI} 
+        <button
+          className={styles.button}
+          onClick={handleMigrateBI}
           disabled={isMigrating}
-          style={{ backgroundColor: '#6a1b9a' }} 
+          style={{ backgroundColor: '#6a1b9a' }}
         >
           {isMigrating ? "⚙️ Migrando..." : "📊 Migrar Pedidos a BI"}
         </button>
 
         {/* Carga de Histórico de Tasas [3] */}
-        <button 
-          className={styles.button} 
-          onClick={handleLoadHistory} 
+        <button
+          className={styles.button}
+          onClick={handleLoadHistory}
           disabled={isLoadingHistory}
-          style={{ backgroundColor: '#f39c12' }} 
+          style={{ backgroundColor: '#f39c12' }}
         >
           {isLoadingHistory ? "⚙️ Cargando..." : "📉 Cargar Histórico BCV"}
         </button>
 
-        {/* Importación de Configuración Inicial [12] */}
-        <button className={styles.button} onClick={handleImportGrupos}>
-          📥 Cargar Datos Iniciales (Grupos)
-        </button>
-
+        
         <hr style={{ width: '80%', margin: '20px 0', opacity: 0.2 }} />
 
-        {/* Accesos Directos a Módulos [12] */}
-        <button className={styles.button} onClick={() => navigate("/tasabcv")}>
-          💰 Tasa BCV
-        </button>
-
-        <button className={styles.button} onClick={() => navigate("/admingrupos")}>
-          🍦 Grupos
-        </button>
-
-        <button className={styles.button} onClick={() => navigate("/adminproductos")}>
-          📦 Productos
-        </button>
 
         {/* Botón Regresar [12] */}
-        <button 
-          className={`${styles.button} ${styles.back}`} 
+        <button
+          className={`${styles.button} ${styles.back}`}
           onClick={() => navigate("/")}
         >
           ↩️ Regresar
@@ -2118,7 +2042,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/db/database';
 import GestionPedido from './GestionPedido';
+import { formatDate } from '../lib/utils.js';
+import { ORDER_STATUS } from '../lib/constants';
 import styles from './Pedidos.module.css';
+
 
 const PedidosComponente = () => {
   const navigate = useNavigate();
@@ -2132,15 +2059,20 @@ const PedidosComponente = () => {
   const cargarRegistros = async () => {
     try {
       setLoading(true);
-      const datos = await db.getAll('pedidos'); [5]
-      const datosOrdenados = datos.sort((a, b) => {
-        const numA = parseInt(a.numero_pedido) || 0;
-        const numB = parseInt(b.numero_pedido) || 0;
-        return numB - numA;
-      });
+
+      // OPTIMIZACIÓN: Usar el índice de Dexie para traer los pedidos ya ordenados por ID (o número)
+      // Como el ID es autoincremental, el orden inverso del ID suele coincidir con el tiempo.
+      // Si queremos exactitud por numero_pedido, usamos ese índice.
+      const datosOrdenados = await db.db.pedidos
+        .orderBy('id')
+        .reverse()
+        .toArray();
+
       setListaPedidos(datosOrdenados);
-      const activos = datosOrdenados.filter(p => p.estatus === 'Activo' || !p.estatus).length;
-      const cerrados = datosOrdenados.filter(p => p.estatus === 'Cerrado').length;
+
+      const activos = datosOrdenados.filter(p => !p.estatus || p.estatus === ORDER_STATUS.ACTIVE).length;
+      const cerrados = datosOrdenados.filter(p => p.estatus === ORDER_STATUS.CLOSED).length;
+
       setStats({ pedidosActivos: activos, pedidosCerrados: cerrados });
     } catch (error) {
       console.error("Error al cargar pedidos:", error);
@@ -2160,7 +2092,7 @@ const PedidosComponente = () => {
       let contenido = `PEDIDO NATURA ICE\n`;
       contenido += `==============================\n\n`;
       contenido += `Numero: #${pedido.numero_pedido}\n`;
-      contenido += `Fecha: ${new Date(pedido.fecha_pedido).toLocaleDateString('es-ES')}\n`;
+      contenido += `Fecha: ${formatDate(pedido.fecha_pedido)}\n`;
       contenido += `Tasa BCV: ${pedido.tasa}\n`;
       contenido += `==============================\n`;
       contenido += `PRODUCTOS SOLICITADOS:\n`;
@@ -2178,7 +2110,7 @@ const PedidosComponente = () => {
       });
 
       const costoDelivery = pedido.delivery_aplicado ? (parseFloat(pedido.delivery_tasa) || 0) : 0;
-      
+
       contenido += `\n==============================\n`;
       contenido += `RESUMEN:\n`;
       contenido += `==============================\n\n`;
@@ -2187,7 +2119,7 @@ const PedidosComponente = () => {
       contenido += `----------------------------\n`;
       contenido += `Total USD + Deliv: $${(pedido.total_usd).toFixed(2)}\n`;
       contenido += `Total Bs: Bs. ${pedido.total_bs.toFixed(2)}\n\n`;
-      
+
       contenido += `==============================\n`;
       contenido += `INFORMACION:\n`;
       contenido += `==============================\n\n`;
@@ -2195,7 +2127,7 @@ const PedidosComponente = () => {
       contenido += `Generado: ${new Date().toLocaleDateString('es-ES')}\n`;
       contenido += `==============================\n`;
 
-      const blob = new Blob([contenido], { type: 'text/plain' }); [6]
+      const blob = new Blob([contenido], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -2214,7 +2146,7 @@ const PedidosComponente = () => {
   // --- ACTUALIZACIÓN FASE 5: Recepción de pedido con items detallados ---
   const handleRecibirPedido = async (pedido, e) => {
     e.stopPropagation();
-    if (pedido.estatus === 'Cerrado' || isProcessing) return;
+    if (pedido.estatus === ORDER_STATUS.CLOSED || isProcessing) return;
 
     const confirmar = window.confirm(`¿Marcar Pedido #${pedido.numero_pedido} como RECIBIDO?\nSe actualizará el stock.`);
     if (!confirmar) return;
@@ -2227,9 +2159,9 @@ const PedidosComponente = () => {
           // Usamos el productoId guardado en el snapshot del item [2, 7]
           await db.updateStock(item.productoId, item.cantidad);
         }
-        
+
         await db.pedidos.update(pedido.id, {
-          estatus: 'Cerrado',
+          estatus: ORDER_STATUS.CLOSED,
           updatedAt: new Date().toISOString()
         });
       });
@@ -2246,7 +2178,7 @@ const PedidosComponente = () => {
 
   const handleEliminar = async (pedido, e) => {
     e.stopPropagation();
-    if (pedido.estatus === 'Cerrado' || isProcessing) return;
+    if (pedido.estatus === ORDER_STATUS.CLOSED || isProcessing) return;
     if (window.confirm(`¿Eliminar pedido #${pedido.numero_pedido}?`)) {
       await db.del('pedidos', pedido.id);
       cargarRegistros();
@@ -2281,54 +2213,57 @@ const PedidosComponente = () => {
           <p className={styles.loading}>Cargando registros...</p>
         ) : (
           listaPedidos.map((p) => (
-            <div 
-              key={p.id} 
+            <div
+[CONTENIDO SENSIBLE ELIMINADO EN: Pedidos.jsx]
               className={styles.pedidoCard}
-              onClick={() => { if(!isProcessing) { setPedidoSeleccionado(p); setModalOpen(true); } }}
-              style={{ borderLeftColor: p.estatus === 'Cerrado' ? '#3498db' : '#27ae60' }}
+              onClick={() => { if (!isProcessing) { setPedidoSeleccionado(p); setModalOpen(true); } }}
+              style={{ '--status-color': p.estatus === ORDER_STATUS.CLOSED ? '#4f46e5' : '#f39c12' }}
             >
               <div className={styles.cardHeader}>
                 <span className={styles.orderNumber}>#{p.numero_pedido}</span>
-                <span className={`${styles.statusBadge} ${p.estatus === 'Cerrado' ? styles.statusCerrado : styles.statusPendiente}`}>
-                  {p.estatus === 'Cerrado' ? '✅ RECIBIDO' : '🟢 PENDIENTE'}
+                <span className={`${styles.statusBadge} ${p.estatus === ORDER_STATUS.CLOSED ? styles.statusCerrado : styles.statusPendiente}`}>
+                  {p.estatus === ORDER_STATUS.CLOSED ? 'Recibido' : 'Pendiente'}
                 </span>
               </div>
+
               <div className={styles.tasaRow}>
-                <span className={styles.tasaLabel}>💰 Tasa:</span>
-                <span className={styles.tasaValue}>{p.tasa || '---'}</span>
+                <span>Tasa BCV:</span>
+                <span>{p.tasa || '---'}</span>
               </div>
+
               <div className={styles.cardBody}>
-                <span className={styles.cardDate}>{new Date(p.fecha_pedido).toLocaleDateString('es-ES')}</span>
-                <div style={{ textAlign: 'right' }}>
-                  <div className={styles.totalUsd}>${p.total_usd?.toFixed(2)}</div>
-                  <div className={styles.totalBs}>Bs. {p.total_bs?.toFixed(2)}</div>
+                <span className={styles.cardDate}>{formatDate(p.fecha_pedido)}</span>
+                <div className={styles.totalSection}>
+                  <span className={styles.totalUsd}>${p.total_usd?.toFixed(2)}</span>
+                  <div className={styles.utilidadUsdCard}>+${p.utilidad_usd?.toFixed(2)} UTIL.</div>
                 </div>
               </div>
 
               <div className={styles.cardActions}>
-                <button 
-                  className={styles.actionBtn} 
+                <button
+                  className={styles.actionBtn}
                   onClick={(e) => { e.stopPropagation(); setPedidoSeleccionado(p); setModalOpen(true); }}
-                  disabled={p.estatus === 'Cerrado'}
+                  disabled={p.estatus === ORDER_STATUS.CLOSED}
+                  title="Editar"
                 >✏️</button>
-                <button 
-                  className={styles.actionBtn} 
-                  onClick={(e) => handleExportTxt(p, e)} 
-                  title="Exportar para Proveedor"
-                  style={{ backgroundColor: '#fff3cd' }}
+                <button
+                  className={styles.actionBtn}
+                  onClick={(e) => handleExportTxt(p, e)}
+                  title="Exportar TXT"
                 >📄</button>
-                <button 
-                  className={styles.actionBtn} 
+                <button
+                  className={styles.actionBtn}
                   onClick={(e) => handleRecibirPedido(p, e)}
-                  disabled={p.estatus === 'Cerrado' || isProcessing}
-                  style={{ opacity: (p.estatus === 'Cerrado' || isProcessing) ? 0.3 : 1 }}
+                  disabled={p.id === pedidoSeleccionado?.id && isProcessing}
+                  title="Recibir Pedido"
                 >
                   {isProcessing && p.id === pedidoSeleccionado?.id ? '⌛' : '📥'}
                 </button>
-                <button 
-                  className={styles.actionBtn} 
-                  onClick={(e) => handleEliminar(p, e)} 
-                  disabled={p.estatus === 'Cerrado'}
+                <button
+                  className={styles.actionBtn}
+                  onClick={(e) => handleEliminar(p, e)}
+                  disabled={p.estatus === ORDER_STATUS.CLOSED}
+                  title="Eliminar"
                 >🗑️</button>
               </div>
             </div>
@@ -2337,10 +2272,10 @@ const PedidosComponente = () => {
       </div>
 
       {modalOpen && (
-        <GestionPedido 
-          pedido={pedidoSeleccionado} 
-          onClose={() => { setModalOpen(false); cargarRegistros(); }} 
-          onSave={cargarRegistros} 
+        <GestionPedido
+          pedido={pedidoSeleccionado}
+          onClose={() => { setModalOpen(false); cargarRegistros(); }}
+          onSave={cargarRegistros}
         />
       )}
     </div>
@@ -2357,156 +2292,259 @@ FILE: src/components/Pedidos.module.css
     flex-direction: column;
     width: 100vw;
     min-height: 100vh;
-    background-color: #f5f7fa;
+    background: #f8fafc;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    overflow-x: hidden; /* Evita el recorte derecho */
+    overflow-x: hidden;
+    font-family: 'Inter', sans-serif;
 }
 
 .header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    padding: 15px 20px;
-    background-color: #2c3e50;
-    color: white;
+    padding: 24px 32px;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
     position: sticky;
     top: 0;
     z-index: 100;
-    width: 100%;
-    box-sizing: border-box;
 }
 
 .backArrow {
-    background: none;
+    background: #f1f5f9;
     border: none;
-    color: white;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
     font-size: 24px;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
     margin-right: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.backArrow:hover {
+    background: #e2e8f0;
+    color: #0f172a;
 }
 
 .title {
-    font-size: 1.2rem;
-    font-weight: bold;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.5px;
     flex: 1;
-    margin-right: 20px; /* Margen derecho del literal solicitado */
 }
 
-/* Botón "+" corregido para ser circular */
 .addBtnCircle {
-    width: 45px;
-    height: 45px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    background-color: #27ae60;
+    background: #27ae60;
     color: white;
     border: none;
     font-size: 28px;
+    font-weight: 900;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 0; /* Elimina padding que causa elipse */
-    flex-shrink: 0; /* Evita que se aplaste en el contenedor flex */
-    box-sizing: border-box;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 15px -3px rgba(39, 174, 96, 0.3);
+    flex-shrink: 0;
+    padding: 0;
 }
 
-/* Estilo para la Tasa BCV dentro de la card */
-.tasaRow {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    background-color: #fcf8e3;
-    border-radius: 6px;
-    border: 1px solid #faebcc;
-    width: fit-content;
-    margin: 5px 0;
-}
-
-.tasaLabel {
-    font-size: 0.8rem;
-    color: #8a6d3b;
-    font-weight: 600;
-}
-
-.tasaValue {
-    font-size: 0.9rem;
-    color: #2c3e50;
-    font-weight: 800;
+.addBtnCircle:hover {
+    background: #2ecc71;
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 15px 20px -3px rgba(39, 174, 96, 0.4);
 }
 
 .statsBar {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    padding: 15px;
-    background-color: white;
-    border-bottom: 1px solid #eaeaea;
+    gap: 12px;
+    padding: 24px 32px;
 }
 
 .statCard {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 10px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
+    padding: 16px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+    border: 1px solid #f1f5f9;
 }
 
-.statNumber { font-size: 1.1rem; font-weight: bold; color: #7f8c8d; }
-.statLabel { font-size: 0.65rem; color: #95a5a6; text-transform: uppercase; }
+.statNumber {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.statLabel {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
 
 .listaCards {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    padding: 15px;
-    width: 100%;
-    box-sizing: border-box;
+    gap: 16px;
+    padding: 0 32px 32px 32px;
 }
 
 .pedidoCard {
-    background-color: white;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    border-left: 6px solid #00BFFF;
+    background: white;
+    border-radius: 32px;
+    padding: 24px 32px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    width: 100%;
-    box-sizing: border-box;
+    gap: 20px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.cardHeader { display: flex; justify-content: space-between; align-items: center; }
-.orderNumber { font-size: 1.1rem; font-weight: 800; color: #2c3e50; }
-.statusBadge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; font-weight: bold; }
-.statusPendiente { background-color: #d5f4e6; color: #27ae60; }
-.statusCerrado { background-color: #e8f4fc; color: #3498db; }
+.pedidoCard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 35px rgba(0, 0, 0, 0.08);
+    border-color: #cbd5e1;
+}
 
-.cardBody { display: flex; justify-content: space-between; align-items: flex-end; }
-.cardDate { font-size: 0.9rem; color: #7f8c8d; }
-.totalUsd { font-size: 1.5rem; font-weight: 900; color: #28a745; }
-.totalBs { font-size: 0.85rem; color: #7f8c8d; }
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.orderNumber {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.statusBadge {
+    font-size: 0.7rem;
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.statusPendiente {
+    background: #fff4e5;
+    color: #f39c12;
+}
+
+.statusCerrado {
+    background: #eef2ff;
+    color: #4f46e5;
+}
+
+.tasaRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #eef2ff;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #4338ca;
+}
+
+
+
+.cardBody {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+}
+
+.cardDate {
+    font-size: 0.9rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.totalSection {
+    background: #f0fdf4;
+    padding: 12px 20px;
+    border-radius: 20px;
+    border: 1px solid #dcfce7;
+    text-align: center;
+}
+
+.totalUsd {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #166534;
+    display: block;
+}
+
+.utilidadUsdCard {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #15803d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
 
 .cardActions {
-    display: flex;
-    gap: 8px;
-    padding-top: 10px;
-    border-top: 1px solid #eee;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
 }
 
-.actionBtn, .deleteBtn {
-    flex: 1;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    background-color: #f8f9fa;
-    font-size: 1.2rem;
+.actionBtn {
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    font-size: 1.1rem;
     display: flex;
     justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.deleteBtn { color: #f44336; border-color: #ffcdd2; }
+.actionBtn:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-2px);
+}
+
+.actionBtn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
 ************************************************************
 
 FILE: src/components/ProductosCRUD/ModalProducto.jsx
@@ -2747,7 +2785,7 @@ const ModalProducto = ({ producto, grupos, onClose, onSave }) => {
             >
               <option value="">Seleccionar grupo...</option>
               {grupos.map(grupo => (
-                <option key={grupo.id} value={grupo.nombre}>
+[CONTENIDO SENSIBLE ELIMINADO EN: ModalProducto.jsx]
                   {grupo.nombre} {grupo.precio > 0 ? `(+$${grupo.precio.toFixed(2)})` : ''}
                 </option>
               ))}
@@ -2925,7 +2963,7 @@ const ProductosCRUD = () => {
             >
               <option value="todos">Todos los grupos</option>
               {grupos.map(grupo => (
-                <option key={grupo.id} value={grupo.nombre}>
+[CONTENIDO SENSIBLE ELIMINADO EN: ProductosCRUD.jsx]
                   {grupo.nombre}
                 </option>
               ))}
@@ -2951,7 +2989,7 @@ const ProductosCRUD = () => {
           </div>
         ) : (
           productosFiltrados.map(producto => (
-            <div key={producto.id} style={styles.item}>
+[CONTENIDO SENSIBLE ELIMINADO EN: ProductosCRUD.jsx]
               <div style={styles.itemImagen}>
                 {producto.imagen ? (
                   <img 
@@ -3272,74 +3310,162 @@ export default ProductosCRUD;
 
 FILE: src/components/RegistroGasto.jsx
 ------------------------------
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/db/database';
+import { getTasaBCV } from '../lib/db/utils/tasaUtil';
 import styles from './RegistroGasto.module.css';
 
+// Componente para el registro de gastos y retiros con interfaz premium refinada
 const RegistroGasto = ({ onClose }) => {
+  const navigate = useNavigate();
+  const getLocalToday = () => new Date().toLocaleDateString('en-CA');
+
   const [gasto, setGasto] = useState({
     descripcion: '',
     montoUsd: '',
-    categoria: 'Operativo'
+    montoBs: '',
+    categoria: 'Operativo',
+    fecha: getLocalToday(),
+    metodoPago: 'Efectivo',
+    tasa: 0
   });
+
+  const [tasaActual, setTasaActual] = useState(0);
+
+  useEffect(() => {
+    const cargarTasa = async () => {
+      const tasa = await getTasaBCV();
+      setTasaActual(tasa || 1); // Evitar división por cero
+      setGasto(prev => ({ ...prev, tasa: tasa || 1 }));
+    };
+    cargarTasa();
+  }, []);
+
+  const handleMontoBsChange = (e) => {
+    const bsValue = e.target.value;
+    const usdCalc = bsValue && tasaActual > 0 ? (parseFloat(bsValue) / tasaActual).toFixed(2) : '';
+    setGasto({ ...gasto, montoBs: bsValue, montoUsd: usdCalc });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!gasto.descripcion || !gasto.montoUsd) return;
+    if (!gasto.descripcion || !gasto.montoBs) return;
+
+    const montoBsNum = parseFloat(gasto.montoBs);
+    const montoUsdNum = parseFloat(gasto.montoUsd);
 
     await db.gastos.add({
       ...gasto,
-      montoUsd: parseFloat(gasto.montoUsd),
-      fecha: new Date().toISOString()
+      montoBs: montoBsNum,
+      montoUsd: montoUsdNum,
+      fecha: new Date(gasto.fecha).toISOString()
     });
 
-    alert('Gasto registrado con éxito');
-    setGasto({ descripcion: '', montoUsd: '', categoria: 'Operativo' });
-    if (onClose) onClose();
+    alert('✅ Gasto registrado con éxito');
+    if (onClose) {
+      onClose();
+    } else {
+      navigate(-1);
+    }
   };
 
   return (
-    <div className={styles.formContainer}>
-      <h3>💸 Registrar Gasto</h3>
-      <form onSubmit={handleSubmit}>
-        <div className={styles.inputGroup}>
-          <label>Descripción</label>
-          <input 
-            type="text" 
-            placeholder="Ej: Marcador, Almuerzo..."
-            value={gasto.descripcion}
-            onChange={(e) => setGasto({...gasto, descripcion: e.target.value})}
-            required
-          />
+    <div className={styles.overlay}>
+      <div className={styles.modal}>
+        <div className={styles.header}>
+          <span className={styles.title}>💸 REGISTRAR GASTO / RETIRO</span>
+          <button className={styles.closeButton} onClick={() => onClose ? onClose() : navigate(-1)}>×</button>
         </div>
 
-        <div className={styles.inputGroup}>
-          <label>Monto ($)</label>
-          <input 
-            type="number" 
-            step="0.01"
-            placeholder="0.00"
-            value={gasto.montoUsd}
-            onChange={(e) => setGasto({...gasto, montoUsd: e.target.value})}
-            required
-          />
-        </div>
+        <form onSubmit={handleSubmit} className={styles.content}>
+          <div className={styles.inputRow}>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Fecha</label>
+              <input
+                type="date"
+                className={styles.inputField}
+                value={gasto.fecha}
+                onChange={(e) => setGasto({ ...gasto, fecha: e.target.value })}
+                required
+              />
+            </div>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Tasa BCV</label>
+              <div className={styles.tasaHighlight}>
+                Bs. {tasaActual.toFixed(2)}
+              </div>
+            </div>
+          </div>
 
-        <div className={styles.inputGroup}>
-          <label>Categoría</label>
-          <select 
-            value={gasto.categoria}
-            onChange={(e) => setGasto({...gasto, categoria: e.target.value})}
-          >
-            <option value="Insumos">Insumos (Empaques/Vasos)</option>
-            <option value="Operativo">Operativo (Papelería/Limpieza)</option>
-            <option value="Personal">Personal (Comida/Retiro)</option>
-            <option value="Otros">Otros</option>
-          </select>
-        </div>
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Descripción</label>
+            <input
+              type="text"
+              placeholder="Ej: Pago de transporte, Almuerzo, Empaques..."
+              className={styles.inputField}
+              value={gasto.descripcion}
+              onChange={(e) => setGasto({ ...gasto, descripcion: e.target.value })}
+              required
+            />
+          </div>
 
-        <button type="submit" className={styles.btnGuardar}>Guardar Gasto</button>
-      </form>
+          <div className={styles.inputRow}>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Monto (Bs.)</label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                className={styles.inputField}
+                value={gasto.montoBs}
+                onChange={handleMontoBsChange}
+                required
+              />
+            </div>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Monto ($)</label>
+              <div className={styles.montoBsDisplay} style={{ color: '#007bff', backgroundColor: '#e1f5fe', border: '1px solid #b3e5fc' }}>
+                ${parseFloat(gasto.montoUsd || 0).toFixed(2)}
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.inputRow}>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Categoría</label>
+              <select
+                className={styles.selectField}
+                value={gasto.categoria}
+                onChange={(e) => setGasto({ ...gasto, categoria: e.target.value })}
+              >
+                <option value="Operativo">🏢 Operativo (Insumos/Local)</option>
+                <option value="Personal">👤 Personal (Retiro/Comida)</option>
+                <option value="Inversión">📈 Inversión (Nuevos equipos)</option>
+                <option value="Otros">❓ Otros</option>
+              </select>
+            </div>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Método de Pago</label>
+              <select
+                className={styles.selectField}
+                value={gasto.metodoPago}
+                onChange={(e) => setGasto({ ...gasto, metodoPago: e.target.value })}
+              >
+                <option value="Efectivo">💵 Efectivo</option>
+                <option value="Transferencia">🏦 Transferencia</option>
+                <option value="Pago Móvil">📱 Pago Móvil</option>
+                <option value="Zelle">💳 Zelle / Otros $</option>
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.footer}>
+            <button type="button" className={styles.btnCancelar} onClick={() => onClose ? onClose() : navigate(-1)}>Cancelar</button>
+            <button type="submit" className={styles.btnGuardar}>Guardar Registro</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
@@ -3349,41 +3475,249 @@ export default RegistroGasto;
 
 FILE: src/components/RegistroGasto.module.css
 ------------------------------
-.formContainer {
-  padding: 20px;
-  background: #fff;
+/* RegistroGasto.module.css - Refined UI */
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 11000;
+}
+
+.modal {
+  background-color: #ffffff;
+  width: 95%;
+  max-width: 480px;
+  max-height: 95vh;
+  padding: 0px 20px 20px 20px;
   border-radius: 12px;
-  margin: 10px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
-.inputGroup {
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #00BFFF;
+  /* BLUE DIVISION LINE - REINFORCED */
   margin-bottom: 15px;
+  padding-bottom: 5px;
 }
 
-.inputGroup label {
-  display: block;
-  font-weight: bold;
-  margin-bottom: 5px;
+.title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #2c3e50;
+  text-transform: uppercase;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 32px;
+  cursor: pointer;
   color: #333;
 }
 
-.inputGroup input, .inputGroup select {
-  width: 100%;
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  overflow-y: auto;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #7f8c8d;
+  /* SOFT GREY - REFINED */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.inputField,
+.selectField {
   padding: 12px;
-  border: 1px solid #ccc;
   border-radius: 8px;
-  font-size: 16px; /* Evita zoom automático en iOS/Android */
+  border: 1px solid #dcdde1;
+  background-color: #f8faff;
+  /* LIGHT AND FRIENDLY BACKGROUND - REINFORCED */
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  color: #2f3640;
+  transition: all 0.2s ease;
+}
+
+.inputField:focus,
+.selectField:focus {
+  outline: none;
+  border-color: #00BFFF;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 191, 255, 0.1);
+}
+
+.inputRow {
+  display: flex;
+  gap: 12px;
+}
+
+.inputRow>div {
+  flex: 1;
+}
+
+.tasaHighlight {
+  background-color: #ebf5fb;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #d6eaf8;
+  font-size: 14px;
+  color: #2980b9;
+  font-weight: 700;
+  text-align: center;
+}
+
+.montoBsDisplay {
+  font-size: 20px;
+  font-weight: 800;
+  color: #27ae60;
+  text-align: center;
+  padding: 8px;
+  background-color: #eafaf1;
+  border-radius: 8px;
+  border: 1px solid #d5f5e3;
+}
+
+.footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
 }
 
 .btnGuardar {
-  width: 100%;
-  padding: 15px;
-  background-color: #e74c3c;
+  flex: 2;
+  padding: 14px;
+  background-color: #2ecc71;
+  /* SUCCESS GREEN - REINFORCED */
   color: white;
   border: none;
   border-radius: 8px;
-  font-weight: bold;
+  font-weight: 800;
   font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-transform: uppercase;
+}
+
+.btnGuardar:hover {
+  background-color: #27ae60;
+}
+
+.btnCancelar {
+  flex: 1;
+  padding: 14px;
+  background-color: #bdc3c7;
+  /* SOFT GREY BUTTON */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btnCancelar:hover {
+  background-color: #95a5a6;
+}
+
+.btnEliminar {
+  flex: 1;
+  padding: 14px;
+  background-color: #e74c3c;
+  /* DANGER RED */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-transform: uppercase;
+}
+
+.btnEliminar:hover {
+  background-color: #c0392b;
+}
+
+/* List styles */
+.listContainer {
+  margin-top: 25px;
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.listTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: #7f8c8d;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.expenseItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #f9f9f9;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-radius: 6px;
+}
+
+.expenseItem:hover {
+  background-color: #f0f8ff;
+}
+
+.expenseInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.expenseDesc {
+  font-weight: 700;
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+.expenseMeta {
+  font-size: 11px;
+  color: #95a5a6;
+}
+
+.expenseAmount {
+  font-weight: 800;
+  color: #e74c3c;
+  font-size: 14px;
 }
 ************************************************************
 
@@ -3398,23 +3732,33 @@ const ResumenInventario = () => {
         totalCosto: 0,
         totalVenta: 0,
         ganancia: 0,
-        gananciaBs: 0
+        gananciaBs: 0,
+        productosHuerfanos: 0,
+        productosOcultos: 0,
+        advertencias: []
     });
 
     const [tasa, setTasa] = useState(0);
+    const [fechaTasa, setFechaTasa] = useState('');
 
     useEffect(() => {
         const cargarDatosYCalcular = async () => {
             try {
                 // 1. Obtener datos base de productos y grupos
-                const productos = await db.productos.toArray();
+                const todosProductos = await db.productos.toArray();
                 const grupos = await db.grupos.toArray();
 
-                // ACTUALIZACIÓN FASE 2: 
-                // Ya no consulta db.config.get('tasa'). Ahora usa el método dinámico
-                // que prioriza el historial de 11 días cargado en la Fase 1.
-                const valorTasa = await db.getUltimaTasaBCV();
+                // OPCIÓN B: Filtrar solo productos visibles (inventario vendible)
+                const productosOcultos = todosProductos.filter(p => p.visible === false).length;
+                const productos = todosProductos.filter(p => p.visible !== false);
+
+                // Obtener tasa y fecha del histórico
+                const ultimaEntrada = await db.historico_tasas.orderBy('fecha_tasa').last();
+                const valorTasa = ultimaEntrada ? ultimaEntrada.tasa : await db.getUltimaTasaBCV();
+                const fecha = ultimaEntrada ? ultimaEntrada.fecha_tasa : 'Config';
+
                 setTasa(valorTasa);
+                setFechaTasa(fecha);
 
                 // 2. Mapeo de grupos para acceso rápido a costos y precios
                 const gruposMap = grupos.reduce((acc, g) => {
@@ -3425,22 +3769,41 @@ const ResumenInventario = () => {
                     return acc;
                 }, {});
 
-                // 3. Cálculo de totales basado en el stock actual de cada producto
+                // 3. Arrays para validaciones
+                const advertencias = [];
+                let productosHuerfanos = 0;
+
+                // 4. Cálculo de totales basado en el stock actual de cada producto
                 const totales = productos.reduce((acc, p) => {
                     const info = gruposMap[p.grupo];
                     if (info) {
                         acc.totalCosto += (p.stock || 0) * info.costo;
                         acc.totalVenta += (p.stock || 0) * info.precio;
+                    } else if (p.stock > 0) {
+                        // Producto con stock pero sin grupo válido
+                        productosHuerfanos++;
+                        console.warn(`⚠️ Producto huérfano: ${p.id} - ${p.nombre} (Grupo: ${p.grupo}, Stock: ${p.stock})`);
+                        advertencias.push(`${p.nombre} (Stock: ${p.stock}) no tiene grupo válido`);
                     }
                     return acc;
                 }, { totalCosto: 0, totalVenta: 0 });
+
+                // 5. Validar grupos con margen negativo
+                grupos.forEach(g => {
+                    if (g.costo_$ > g.precio) {
+                        advertencias.push(`Grupo "${g.nombre}" tiene margen negativo (Costo: $${g.costo_$}, Precio: $${g.precio})`);
+                    }
+                });
 
                 const gananciaUsd = totales.totalVenta - totales.totalCosto;
 
                 setMetricas({
                     ...totales,
                     ganancia: gananciaUsd,
-                    gananciaBs: gananciaUsd * valorTasa // Cálculo de la rentabilidad en moneda local
+                    gananciaBs: gananciaUsd * valorTasa,
+                    productosHuerfanos,
+                    productosOcultos,
+                    advertencias
                 });
             } catch (error) {
                 console.error("Error al calcular resumen de inventario:", error);
@@ -3453,11 +3816,38 @@ const ResumenInventario = () => {
     return (
         <div className={styles.container}>
             <h2 className={styles.titulo}>Análisis de Inventario Actual</h2>
-            
+
+            {/* Advertencias de calidad de datos */}
+            {metricas.advertencias.length > 0 && (
+                <div className={styles.advertencias}>
+                    <strong>⚠️ Advertencias de Datos:</strong>
+                    <ul>
+                        {metricas.advertencias.slice(0, 3).map((adv, idx) => (
+[CONTENIDO SENSIBLE ELIMINADO EN: ResumenInventario.jsx]
+                        ))}
+                        {metricas.advertencias.length > 3 && (
+                            <li>... y {metricas.advertencias.length - 3} más</li>
+                        )}
+                    </ul>
+                </div>
+            )}
+
+            {/* Información sobre productos excluidos */}
+            {metricas.productosOcultos > 0 && (
+                <div className={styles.infoBox}>
+                    ℹ️ Se excluyeron {metricas.productosOcultos} producto(s) oculto(s) del análisis (solo inventario vendible)
+                </div>
+            )}
+
             <div className={styles.grid}>
                 <div className={styles.card}>
                     <label>Inversión (Costo $)</label>
                     <span className={styles.valorCosto}>${metricas.totalCosto.toFixed(2)}</span>
+                    {metricas.productosHuerfanos > 0 && (
+                        <small className={styles.warning}>
+                            ⚠️ {metricas.productosHuerfanos} producto(s) sin grupo
+                        </small>
+                    )}
                 </div>
 
                 <div className={styles.card}>
@@ -3470,16 +3860,18 @@ const ResumenInventario = () => {
                     <span className={styles.valorGanancia}>${metricas.ganancia.toFixed(2)}</span>
                 </div>
 
-                {/* SECCIÓN RESALTADA: Ganancia en Bs basada en historial */}
-                <div className={`${styles.card} styles.highlightBs`}>
+                {/* CORRECCIÓN: Error tipográfico en className */}
+                <div className={`${styles.card} ${styles.highlightBs}`}>
                     <label>Ganancia Potencial (Bs)</label>
                     <span className={styles.valorBs}>
-                        Bs. {metricas.gananciaBs.toLocaleString('es-VE', { 
-                            minimumFractionDigits: 2, 
-                            maximumFractionDigits: 2 
+                        Bs. {metricas.gananciaBs.toLocaleString('es-VE', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
                         })}
                     </span>
-                    <span className={styles.tasaInfo}>Tasa aplicada: {tasa} (BCV Histórico)</span>
+                    <span className={styles.tasaInfo}>
+                        Tasa: {tasa.toFixed(2)} ({fechaTasa})
+                    </span>
                 </div>
             </div>
         </div>
@@ -3491,31 +3883,52 @@ export default ResumenInventario;
 
 FILE: src/components/ResumenInventario.module.css
 ------------------------------
-.container { padding: 20px; }
+.container {
+  padding: 20px;
+}
+
 .grid {
   display: grid;
-  grid-template-columns: 1fr; /* Una columna en móvil */
+  grid-template-columns: 1fr;
+  /* Una columna en móvil */
   gap: 15px;
 }
+
 .card {
   background: #fff;
   padding: 15px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
 }
-.valorCosto { color: #e74c3c; font-size: 1.5rem; font-weight: bold; }
-.valorVenta { color: #3498db; font-size: 1.5rem; font-weight: bold; }
-.valorGanancia { color: #2ecc71; font-size: 1.8rem; font-weight: bold; }
 
-label{
-    color: black;
+.valorCosto {
+  color: #e74c3c;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.valorVenta {
+  color: #3498db;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.valorGanancia {
+  color: #2ecc71;
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+label {
+  color: black;
 }
 
 .highlightBs {
   background-color: #f8f9fa;
-  border-left: 5px solid #ff9800; /* Color naranja para resaltar moneda local */
+  border-left: 5px solid #ff9800;
+  /* Color naranja para resaltar moneda local */
 }
 
 .valorBs {
@@ -3532,20 +3945,67 @@ label{
 }
 
 .sidebar {
-  position: fixed; /* Crucial para que no se mueva al hacer scroll */
+  position: fixed;
+  /* Crucial para que no se mueva al hacer scroll */
   top: 0;
   left: 0;
   height: 100vh;
-  width: 280px; /* O el ancho que prefieras */
+  width: 280px;
+  /* O el ancho que prefieras */
   background-color: #ffffff;
-  
+
   /* Elevación máxima */
-  z-index: 9999; 
-  
+  z-index: 9999;
+
   /* Sombra para dar profundidad y separar visualmente del fondo */
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
-  
+
   transition: transform 0.3s ease-in-out;
+}
+
+/* Advertencias de calidad de datos */
+.advertencias {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  color: #856404;
+}
+
+.advertencias ul {
+  margin: 10px 0 0 20px;
+  padding: 0;
+}
+
+.advertencias li {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+/* Info box para productos excluidos */
+.infoBox {
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  border-radius: 8px;
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  color: #0c5460;
+  font-size: 14px;
+}
+
+/* Warning badge para productos huérfanos */
+.warning {
+  display: block;
+  color: #ff6b6b;
+  font-size: 12px;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.titulo {
+  color: #fff;
+  margin-bottom: 20px;
 }
 ************************************************************
 
@@ -3560,7 +4020,7 @@ export default function Sidebar({ isOpen, onClose }) {
     const handleAdminAccess = (e) => {
         e.preventDefault();
         const pin = window.prompt("Ingrese el PIN de acceso:");
-        if (pin === "aaaaa") { 
+        if (pin === "aaaaa") {
             navigate("/Panel");
             onClose();
         } else {
@@ -3578,69 +4038,78 @@ export default function Sidebar({ isOpen, onClose }) {
     };
 
     // Estilos definidos como objeto
-   const styles = {
-    sidebar: {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        height: '100vh',
-        width: '250px',
-        backgroundColor: '#ffffff',
-        boxShadow: '2px 0 10px rgba(0,0,0,0.2)',
-        zIndex: 9999,
-        transition: 'transform 0.3s ease-in-out',
-        display: 'flex',
-        flexDirection: 'column',
-        // Asegura que el sidebar no se mueva si el contenido es largo
-        overflow: 'auto' 
-    },
-    overlay: {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        // Subimos el zIndex para que bloquee botones o modales de la UI principal
-        zIndex: 9998, 
-        backdropFilter: 'blur(2px)', // Toque estético moderno
-    },
-    header: {
-        padding: '20px',
-        borderBottom: '1px solid #eee',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#00BFFF',
-        // El header se queda fijo arriba
-        flexShrink: 0,
-       
-    },
-    nav: { 
-        display: 'flex', 
-        flexDirection: 'column', 
-        padding: '10px',
-        // ESTO HACE QUE LA LISTA SEA DESPLAZABLE
-        overflowY: 'auto', 
-        flexGrow: 1,
-        WebkitOverflowScrolling: 'touch', // Scroll suave en móviles
-    },
-    // ... tus otros estilos (title, closeBtn, icon se mantienen igual)
-    link: {
-        padding: '15px',
-        textDecoration: 'none',
-        color: '#333',
-        fontSize: '1.1rem',
-        borderBottom: '1px solid #f5f5f5',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        transition: 'background-color 0.2s',
-        // Evita que el texto se rompa en varias líneas si es largo
-        whiteSpace: 'nowrap', 
-    },
-};
+    const styles = {
+        sidebar: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            height: '100vh',
+            width: '250px',
+            backgroundColor: '#ffffff',
+            boxShadow: '2px 0 10px rgba(0,0,0,0.2)',
+            zIndex: 9999,
+            transition: 'transform 0.3s ease-in-out',
+            display: 'flex',
+            flexDirection: 'column',
+            // Asegura que el sidebar no se mueva si el contenido es largo
+            overflow: 'hidden'
+        },
+        overlay: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            // Subimos el zIndex para que bloquee botones o modales de la UI principal
+            zIndex: 9998,
+            backdropFilter: 'blur(2px)', // Toque estético moderno
+        },
+        header: {
+            padding: '20px',
+            borderBottom: '1px solid #eee',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            backgroundColor: '#00BFFF',
+            // El header se queda fijo arriba
+            flexShrink: 0,
+
+        },
+        nav: {
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '10px',
+            // ESTO HACE QUE LA LISTA SEA DESPLAZABLE
+            overflowY: 'auto',
+            flexGrow: 1,
+            minHeight: 0, // Importante para que flex-grow funcione con overflow
+            WebkitOverflowScrolling: 'touch', // Scroll suave en móviles
+        },
+        // ... tus otros estilos (title, closeBtn, icon se mantienen igual)
+        link: {
+            padding: '15px',
+            textDecoration: 'none',
+            color: '#333',
+            fontSize: '1.1rem',
+            borderBottom: '1px solid #f5f5f5',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            transition: 'background-color 0.2s',
+            // Evita que el texto se rompa en varias líneas si es largo
+            whiteSpace: 'nowrap',
+        },
+        separator: {
+            border: 'none',
+            borderTop: '1px solid lightgray',
+            margin: '0px 10px',
+            flexShrink: 0,
+            opacity: 1,
+            display: 'block',
+        },
+    };
 
     return (
         <>
@@ -3661,9 +4130,9 @@ export default function Sidebar({ isOpen, onClose }) {
 
                 <nav style={styles.nav}>
                     {/* Opción Inicio */}
-                    <Link 
-                        to="/" 
-                        onClick={onClose} 
+                    <Link
+                        to="/"
+                        onClick={onClose}
                         style={styles.link}
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
@@ -3671,11 +4140,11 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>🏠</span>
                         <span>Inicio</span>
                     </Link>
-                    
+
                     {/* Opción Pedidos */}
-                    <Link 
-                        to="/pedidos" 
-                        onClick={onClose} 
+                    <Link
+                        to="/pedidos"
+                        onClick={onClose}
                         style={styles.link}
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
@@ -3683,10 +4152,10 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>📋</span>
                         <span>Pedidos</span>
                     </Link>
-                    
-                                       <Link 
-                        to="/registrogasto" 
-                        onClick={onClose} 
+
+                    <Link
+                        to="/registrogasto"
+                        onClick={onClose}
                         style={styles.link}
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
@@ -3694,24 +4163,25 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>💸</span>
                         <span>Registrar Gastos</span>
                     </Link>
- 
 
-                    {/* Opción Tasa Delivery */}
-                    <Link 
-                        to="/delivery" 
-                        onClick={onClose} 
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>🚚</span>
-                        <span>Tasa Delivery</span>
+                    {/* Separador visual horizontal */}
+                    <hr style={styles.separator} />
+
+                    <Link to="/estadisticas" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Estadísticas
                     </Link>
-                    
+
+                    <Link to="/resumeninventario" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Resumen de Inventario
+                    </Link>
+
+                    {/* Segundo separador visual */}
+                    <hr style={styles.separator} />
+
                     {/* Opción Tasa BCV */}
-                    <Link 
-                        to="/tasabcv" 
-                        onClick={onClose} 
+                    <Link
+                        to="/tasabcv"
+                        onClick={onClose}
                         style={styles.link}
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
@@ -3720,18 +4190,34 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Tasa BCV</span>
                     </Link>
 
-                    
-                    <Link to="/estadisticas" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>📊</span> Estadísticas
+                    {/* Opción Tasa Delivery */}
+                    <Link
+                        to="/delivery"
+                        onClick={onClose}
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>🚚</span>
+                        <span>Tasa Delivery</span>
                     </Link>
-                    
-                    <Link to="/resumeninventario" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>📊</span> Resumen de Inventario
+
+                    {/* Tercer separador visual */}
+                    <hr style={styles.separator} />
+
+                    {/* Grupos */}
+                    <Link to="/admingrupos" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Grupos de Producto
                     </Link>
-                    
+
+                    {/* Productos */}
+                    <Link to="/adminproductos" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Productos
+                    </Link>
+
                     {/* Acceso Administrativo */}
-                    <a 
-                        onClick={handleAdminAccess} 
+                    <a
+                        onClick={handleAdminAccess}
                         style={styles.link}
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
@@ -3739,20 +4225,7 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>⚙️</span>
                         <span>Panel de Control</span>
                     </a>
-                    
-                    {/* Opción Acerca de */}
-                    <Link 
-                        to="/about" 
-                        onClick={onClose} 
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>ℹ️</span>
-                        <span>Acerca de</span>
-                    </Link>
-                    
-                    
+
                 </nav>
             </div>
         </>
@@ -4029,7 +4502,7 @@ const TasaList = () => {
         ) : (
           tasas.map(tasa => (
             <div 
-              key={tasa.id} 
+[CONTENIDO SENSIBLE ELIMINADO EN: TasaList.jsx]
               className={`p-4 border rounded flex justify-between items-center ${
                 !tasa.activo ? 'bg-gray-50 opacity-75' : ''
               }`}
@@ -4091,7 +4564,7 @@ const TasaList = () => {
             <div className="p-4">
               <div className="space-y-3">
                 {historial.map((item, index) => (
-                  <div key={index} className="p-3 border rounded">
+[CONTENIDO SENSIBLE ELIMINADO EN: TasaList.jsx]
                     <div className="flex justify-between">
                       <span className="font-medium">{item.tipo}</span>
                       <span className="text-sm text-gray-500">
@@ -4329,15 +4802,15 @@ FILE: src/hooks/useLocalStorageList.js
 ------------------------------
 import { useState, useEffect } from "react";
 
-export function useLocalStorageList(key, initialValue) {
+[CONTENIDO SENSIBLE ELIMINADO EN: useLocalStorageList.js]
   const [data, setData] = useState(() => {
-    const stored = localStorage.getItem(key);
+[CONTENIDO SENSIBLE ELIMINADO EN: useLocalStorageList.js]
     return stored ? JSON.parse(stored) : initialValue;
   });
 
   useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(data));
-  }, [data, key]);
+[CONTENIDO SENSIBLE ELIMINADO EN: useLocalStorageList.js]
+[CONTENIDO SENSIBLE ELIMINADO EN: useLocalStorageList.js]
 
   return { data, setData };
 }
@@ -4416,6 +4889,15 @@ button:focus-visible {
 
 ************************************************************
 
+FILE: src/lib/constants.js
+------------------------------
+export const ORDER_STATUS = {
+    ACTIVE: 'Activo',
+    CLOSED: 'Cerrado'
+};
+
+************************************************************
+
 FILE: src/lib/db/database.js
 ------------------------------
 import Dexie from 'dexie';
@@ -4460,7 +4942,7 @@ export class NaturaDBClass {
         // Version 5 - Added cost field (costo_$) to groups for price management [3]
         this.db.version(5).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt',
-            grupos: '++id, nombre, precio, costo_$', 
+            grupos: '++id, nombre, precio, costo_$',
             config: 'clave',
             ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad',
             pedidos: '++id, numero_pedido, fecha_pedido, tasa'
@@ -4496,7 +4978,7 @@ export class NaturaDBClass {
 
         this.db.version(9).stores({
             productos: 'id, nombre, grupo, stock, imagen, createdAt, visible',
-            grupos: '++id, nombre, precio, costo_$',            config: 'clave',
+            grupos: '++id, nombre, precio, costo_$', config: 'clave',
             ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad, utilidadUsd, tasaVenta, costoUnitarioUsd',
             pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
             gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago',
@@ -4523,6 +5005,11 @@ export class NaturaDBClass {
         return this;
     }
 
+    // Transaction helper to ensure atomicity [BI/Production Readiness]
+    async transaction(mode, tables, callback) {
+        return await this.db.transaction(mode, tables, callback);
+    }
+
     // Generic CRUD methods used across the application [6, 7]
     async add(table, data) {
         return await this.db[table].add(data);
@@ -4534,8 +5021,8 @@ export class NaturaDBClass {
 
     async getAll(table, filters = {}) {
         let query = this.db[table];
-        for (const [key, value] of Object.entries(filters)) {
-            query = query.where(key).equals(value);
+[CONTENIDO SENSIBLE ELIMINADO EN: database.js]
+[CONTENIDO SENSIBLE ELIMINADO EN: database.js]
         }
         return await query.toArray();
     }
@@ -4551,15 +5038,21 @@ export class NaturaDBClass {
                 return ultimaEntrada.tasa;
             }
 
-            // Fallback: Si el histórico está vacío, buscamos en la tabla config antigua
-            const antiguaTasa = 0;  //await this.getConfigValue('tasa');
-            return antiguaTasa;
+            // Fallback: Intentar config antigua, si no existe usar última tasa conocida
+            const configTasa = await this.getConfigValue('tasa');
+            if (configTasa && configTasa > 0) {
+                return configTasa;
+            }
+
+            // Último fallback: Usar última tasa conocida del histórico hardcoded
+            console.warn('⚠️ No hay tasa BCV en BD. Usando tasa por defecto.');
+            return 355.11; // Última tasa conocida del histórico inicial
         } catch (error) {
             console.error("Error obteniendo tasa reciente:", error);
-            return 0;
+            return 355.11; // Fallback seguro en caso de error
         }
     }
-    
+
     async put(table, data) {
         return await this.db[table].put(data);
     }
@@ -4615,9 +5108,9 @@ export class NaturaDBClass {
             await this.db.historico_tasas.clear();
             await this.db.historico_tasas.bulkAdd(dataRecaudada);
             // Retornamos 'message' para que el Panel lo reconozca
-            return { 
-                success: true, 
-                message: `✅ Se cargaron ${dataRecaudada.length} días al histórico.` 
+            return {
+                success: true,
+                message: `✅ Se cargaron ${dataRecaudada.length} días al histórico.`
             };
         } catch (error) {
             return { success: false, error: error.message };
@@ -4892,19 +5385,19 @@ FILE: src/lib/db/repositories/DeliveryRepository.js
 // src/lib/db/repositories/DeliveryRepository.js
 import { db } from "../database";
 
-const DELIVERY_KEY = 'delivery';
+[CONTENIDO SENSIBLE ELIMINADO EN: DeliveryRepository.js]
 
 export const DeliveryRepository = {
   async getDelivery() {
-    return await db.getConfigValue(DELIVERY_KEY);
+[CONTENIDO SENSIBLE ELIMINADO EN: DeliveryRepository.js]
   },
 
   async saveDelivery(valor) {
-    return await db.setConfigValue(DELIVERY_KEY, Number(valor));
+[CONTENIDO SENSIBLE ELIMINADO EN: DeliveryRepository.js]
   },
 
   async calcularTotalConDelivery(subtotal) {
-    const delivery = await db.getConfigValue(DELIVERY_KEY);
+[CONTENIDO SENSIBLE ELIMINADO EN: DeliveryRepository.js]
     
     if (!delivery || typeof delivery !== "number") {
       console.warn("Delivery no configurado. Retornando solo subtotal.");
@@ -4968,7 +5461,7 @@ FILE: src/lib/db/repositories/TasaRepository.js
 // src/lib/db/repositories/TasaRepository.js
 import { db } from "../database";
 
-const TASA_KEY = 'tasa';
+[CONTENIDO SENSIBLE ELIMINADO EN: TasaRepository.js]
 
 export const TasaRepository = {
     async getTasa() {
@@ -5181,7 +5674,7 @@ export const migrateSalesToBI = async () => {
     for (const venta of salesToMigrate) {
       // 3. Buscar el costo actual del grupo al que pertenece el producto
       const grupo = allGroups.find(g => g.nombre.toLowerCase() === venta.grupo.toLowerCase());
-      
+
       const costoUnit = grupo?.costo_$ || 0;
       const precioVenta = venta.precioUsd || 0;
 
@@ -5191,7 +5684,7 @@ export const migrateSalesToBI = async () => {
         costoUnitarioUsd: costoUnit,
         utilidadUsd: precioVenta - costoUnit,
         // Si no tiene tasaVenta (ventas muy viejas), podrías asignar 0 o buscar la tasa de esa fecha
-        tasaVenta: venta.tasaVenta || 0, 
+        tasaVenta: venta.tasaVenta || 0,
         migratedAt: new Date().toISOString() // Marca de auditoría
       };
 
@@ -5222,8 +5715,9 @@ export const migrateOrdersToBI = async () => {
       db.getAll('grupos')
     ]);
 
-    // 2. Filtrar pedidos que aún tienen el formato antiguo (items no es un Array)
-    const ordersToMigrate = allOrders.filter(p => p.items && !Array.isArray(p.items));
+    // 2. Filtrar pedidos que aún tienen el formato antiguo (items no es un Array) 
+    // MODIFICACIÓN: Ahora permitimos migrar todos para corregir discrepancias de cálculos anteriores
+    const ordersToMigrate = allOrders; // Procesamos todos los pedidos para asegurar consistencia
 
     if (ordersToMigrate.length === 0) {
       return { success: true, migratedCount: 0, message: "No hay pedidos pendientes por migrar." };
@@ -5232,12 +5726,18 @@ export const migrateOrdersToBI = async () => {
     let count = 0;
 
     for (const pedido of ordersToMigrate) {
-      // 3. Lógica de Transformación de Items
-      const itemsBI = Object.entries(pedido.items).map(([prodId, qty]) => {
-        const prod = allProducts.find(p => p.id === parseInt(prodId));
+      // 3. Lógica de Transformación de Items (Maneja tanto Formato Antiguo como BI)
+      const itemsSnapshot = Array.isArray(pedido.items)
+        ? pedido.items
+        : Object.entries(pedido.items || {}).map(([id, qty]) => ({ productoId: parseInt(id), cantidad: qty }));
+
+      const itemsBI = itemsSnapshot.map((item) => {
+        const prodId = item.productoId;
+        const qty = item.cantidad;
+        const prod = allProducts.find(p => p.id === prodId);
         // Buscamos el grupo ignorando mayúsculas/minúsculas para mayor seguridad
-        const grupo = prod 
-          ? allGroups.find(g => g.nombre.toLowerCase() === prod.grupo.toLowerCase()) 
+        const grupo = prod
+          ? allGroups.find(g => g.nombre.toLowerCase() === prod.grupo.toLowerCase())
           : null;
 
         const precioUnit = grupo?.precio || 0;
@@ -5256,20 +5756,26 @@ export const migrateOrdersToBI = async () => {
       });
 
       // 4. Recalcular totales para asegurar consistencia BI
+      const subtotalCostoUsd = itemsBI.reduce((sum, item) => sum + (item.cantidad * item.costoUnitario), 0);
       const subtotalVentaUsd = itemsBI.reduce((sum, item) => sum + item.subtotalUsd, 0);
       const costoEnvio = pedido.delivery_aplicado ? (parseFloat(pedido.delivery_tasa) || 0) : 0;
-      
-      const nuevoTotalUsd = subtotalVentaUsd + costoEnvio;
+
+      const totalInversionUsd = subtotalCostoUsd + costoEnvio;
+      const totalVentaUsd = subtotalVentaUsd; // La venta no suele incluir el delivery pagado al proveedor
       const tasaActual = parseFloat(pedido.tasa) || 0;
 
       // 5. Preparar objeto migrado
       const pedidoMigrado = {
         ...pedido,
-        items: itemsBI, // Reemplazamos el diccionario por el Array BI
-        total_usd: nuevoTotalUsd,
-        total_bs: nuevoTotalUsd * tasaActual,
+        items: itemsBI,
+        total_usd: totalInversionUsd, // Ahora es Costo + Delivery
+        total_bs: totalInversionUsd * tasaActual,
+        venta_usd: totalVentaUsd,
+        venta_bs: totalVentaUsd * tasaActual,
+        utilidad_usd: totalVentaUsd - totalInversionUsd,
+        utilidad_bs: (totalVentaUsd - totalInversionUsd) * tasaActual,
         updatedAt: new Date().toISOString(),
-        migratedAt: new Date().toISOString() // Marca de auditoría
+        migratedAt: new Date().toISOString()
       };
 
       // 6. Actualización Masiva (Registro por registro para seguridad en IndexedDB)
@@ -5277,10 +5783,10 @@ export const migrateOrdersToBI = async () => {
       count++;
     }
 
-    return { 
-      success: true, 
-      migratedCount: count, 
-      message: `Se migraron ${count} pedidos exitosamente al formato BI.` 
+    return {
+      success: true,
+      migratedCount: count,
+      message: `Se migraron ${count} pedidos exitosamente al formato BI.`
     };
 
   } catch (error) {
@@ -5324,6 +5830,33 @@ export async function calcularEnDolares(bs, tasa = null) {
     return null;
   }
 }
+
+************************************************************
+
+FILE: src/lib/utils.js
+------------------------------
+/**
+ * Formatea una fecha en formato YYYY-MM-DD a DD/MM/YYYY
+ * sin usar el constructor new Date() para evitar problemas de zona horaria (UTC).
+ * @param {string} dateStr - Fecha en formato YYYY-MM-DD
+ * @returns {string} - Fecha en formato DD/MM/YYYY
+ */
+export const formatDate = (dateStr) => {
+    try {
+        if (!dateStr) return '---';
+        const str = String(dateStr);
+        const cleanDate = str.split('T')[0];
+        const parts = cleanDate.split('-');
+
+        if (parts.length !== 3) return str;
+
+        const [year, month, day] = parts;
+        return `${day}/${month}/${year}`;
+    } catch (e) {
+        console.error("Error formatting date:", e);
+        return String(dateStr || '---');
+    }
+};
 
 ************************************************************
 
@@ -5511,99 +6044,169 @@ export default DeliveryPage;
 
 FILE: src/pages/Estadisticas.jsx
 ------------------------------
-/* src/pages/Estadisticas.jsx */
+// src/pages/Estadisticas.jsx
 import { useState, useEffect } from 'react';
-import { db } from '../lib/db/database'; // [3]
-import { getTasaBCV } from '../lib/db/utils/tasaUtil'; // [4, 5]
+import { db } from '../lib/db/database'; // [1, 2]
+import { getTasaBCV } from '../lib/db/utils/tasaUtil'; // [3, 4]
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Cell,
-  LabelList
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  CartesianGrid, Cell, LabelList, Legend
 } from 'recharts'; // [5, 6]
-import styles from './Estadisticas.module.css'; // [5, 7]
+import styles from './Estadisticas.module.css'; // [7]
 
 const Estadisticas = () => {
   const [datosBI, setDatosBI] = useState([]);
+  const [datosMargen, setDatosMargen] = useState([]);
   const [tasa, setTasa] = useState(0);
   const [rango, setRango] = useState('7d');
+  const [limiteProducto, setLimiteProducto] = useState(5); // Nuevo estado para el filtro
   const [cargando, setCargando] = useState(true);
-  const [metricas, setMetricas] = useState({ ventaTotalUsd: 0, utilidadTotalUsd: 0 });
+  const [metricas, setMetricas] = useState({
+    ventaTotalUsd: 0,
+    utilidadTotalUsd: 0,
+    utilidadNetaUsd: 0,
+    costoTotalUsd: 0,
+    gastosOperativosUsd: 0,
+    retirosPersonalesUsd: 0,
+    margenPorcentaje: 0
+  });
 
   useEffect(() => {
     const cargarAnaliticaBI = async () => {
       setCargando(true);
       try {
-        // 1. Obtenemos pedidos y tasa en paralelo para optimizar en Android [8, 9]
-        const [pedidosRaw, valorTasa] = await Promise.all([
+        // 1. Unificación de Fuentes: Pedidos, Ventas y Gastos en paralelo
+        const [pedidosRaw, ventasRaw, gastosRaw, valorTasa] = await Promise.all([
           db.getAll('pedidos'),
+          db.getAll('ventas'),
+          db.getAll('gastos'),
           getTasaBCV()
         ]);
 
-        // 2. Filtramos solo pedidos 'Cerrados' (Ventas efectivas) [2]
-        const pedidosCerrados = pedidosRaw.filter(p => p.estatus === 'Cerrado');
-        
-        // 3. Filtramos por el rango de tiempo seleccionado [9]
-        const filtrados = filtrarPorRango(pedidosCerrados, rango);
+        // 2. Filtrado por rango de tiempo unificado
+        const pedidosCerrados = filtrarPorRango(pedidosRaw.filter(p => p.estatus === 'Cerrado'), rango);
+        const ventasDirectas = filtrarPorRango(ventasRaw, rango);
+        const gastosFiltrados = filtrarPorRango(gastosRaw, rango);
 
-        // 4. Procesamiento de datos para BI: Agregación por producto
         const acumulado = {};
-        let ventaSum = 0;
-        let utilidadSum = 0;
 
-        filtrados.forEach(pedido => {
-          ventaSum += (pedido.total_usd || 0);
-          
-          // Iteramos los items (formato Array BI sugerido en fases anteriores)
+        // 3. Procesar Pedidos (Ventas a Distribuidores)
+        pedidosCerrados.forEach(pedido => {
           if (Array.isArray(pedido.items)) {
             pedido.items.forEach(item => {
-              if (!acumulado[item.nombre]) {
-                acumulado[item.nombre] = { name: item.nombre, utilidad: 0, cantidad: 0 };
-              }
-              acumulado[item.nombre].utilidad += (item.utilidadUsd || 0);
-              acumulado[item.nombre].cantidad += (item.cantidad || 0);
-              utilidadSum += (item.utilidadUsd || 0);
+              actualizarAcumulado(acumulado, item);
             });
           }
         });
 
-        // 5. Preparar datos para el gráfico (Top 6 por utilidad) [10]
-        const dataGrafico = Object.values(acumulado)
-          .sort((a, b) => b.utilidad - a.utilidad)
-          .slice(0, 6);
+        // 4. Procesar Ventas (Ventas Directas desde Home.jsx)
+        ventasDirectas.forEach(venta => {
+          actualizarAcumulado(acumulado, {
+            nombre: venta.nombre,
+            utilidadUsd: venta.utilidadUsd,
+            cantidad: 1,
+            subtotalUsd: venta.precioUsd,
+            costoUnitario: venta.costoUnitarioUsd
+          });
+        });
 
-        setDatosBI(dataGrafico);
-        setMetricas({ ventaTotalUsd: ventaSum, utilidadTotalUsd: utilidadSum });
+        // 5. Procesar Gastos y Retiros
+        let gastosOperativosSum = 0;
+        let retirosPersonalesSum = 0;
+
+        gastosFiltrados.forEach(g => {
+          if (g.categoria === 'Personal') {
+            retirosPersonalesSum += g.montoUsd || 0;
+          } else {
+            gastosOperativosSum += g.montoUsd || 0;
+          }
+        });
+
+        // 6. Ordenar por Rentabilidad para aplicar el Top
+        let productosOrdenados = Object.values(acumulado).sort((a, b) => b.utilidad - a.utilidad);
+
+        // 7. Aplicar Filtro de Universo (Top 5, 10, Todos)
+        if (limiteProducto !== 'todos') {
+          productosOrdenados = productosOrdenados.slice(0, parseInt(limiteProducto));
+        }
+
+        // 8. Calcular Métricas del Universo Definido
+        let ventaSum = 0;
+        let costoSum = 0;
+
+        productosOrdenados.forEach(prod => {
+          ventaSum += prod.ventaTotal;
+          costoSum += prod.costoTotal;
+        });
+
+        const utilidadBrutaSum = ventaSum - costoSum;
+        const utilidadNetaSum = utilidadBrutaSum - gastosOperativosSum;
+        const margenPorc = ventaSum > 0 ? (utilidadNetaSum / ventaSum) * 100 : 0;
+
+        setMetricas({
+          ventaTotalUsd: ventaSum,
+          costoTotalUsd: costoSum,
+          utilidadTotalUsd: utilidadBrutaSum,
+          utilidadNetaUsd: utilidadNetaSum,
+          gastosOperativosUsd: gastosOperativosSum,
+          retirosPersonalesUsd: retirosPersonalesSum,
+          margenPorcentaje: margenPorc
+        });
+
+        // Datos para el gráfico de Ranking
+        setDatosBI(productosOrdenados);
+
+        // Datos para el gráfico de Margen de Contribución
+        setDatosMargen([
+          { name: 'Finanzas USD', Costo: costoSum, Gastos: gastosOperativosSum, Utilidad: utilidadNetaSum }
+        ]);
+
         setTasa(valorTasa || 0);
 
       } catch (err) {
-        console.error("Error cargando analítica BI:", err);
+        console.error("Error en unificación BI:", err);
       } finally {
         setCargando(false);
       }
     };
 
     cargarAnaliticaBI();
-  }, [rango]);
+  }, [rango, limiteProducto]); // Añadimos limiteProducto a dependencias
 
-  const filtrarPorRango = (pedidos, tipo) => {
+  const actualizarAcumulado = (acc, item) => {
+    // Normalización de valores
+    const ventaItem = item.subtotalUsd || item.precioUsd || 0;
+    const costoItem = (item.costoUnitario || item.costoUnitarioUsd || 0) * (item.cantidad || 1);
+    const utilidadItem = item.utilidadUsd || (ventaItem - costoItem);
+
+    if (!acc[item.nombre]) {
+      acc[item.nombre] = {
+        name: item.nombre,
+        utilidad: 0,
+        cantidad: 0,
+        ventaTotal: 0,
+        costoTotal: 0
+      };
+    }
+    acc[item.nombre].utilidad += utilidadItem;
+    acc[item.nombre].cantidad += (item.cantidad || 0);
+    acc[item.nombre].ventaTotal += ventaItem;
+    acc[item.nombre].costoTotal += costoItem;
+  };
+
+  const filtrarPorRango = (items, tipo) => {
     const ahora = new Date();
-    return pedidos.filter(p => {
-      const fechaPedido = new Date(p.fecha_pedido);
-      if (tipo === 'hoy') return fechaPedido.toDateString() === ahora.toDateString();
+    return items.filter(item => {
+      const fechaStr = item.fecha_pedido || item.fecha; // Soporta ambos formatos
+      const fechaItem = new Date(fechaStr);
+      if (tipo === 'hoy') return fechaItem.toDateString() === ahora.toDateString();
       if (tipo === '7d') {
         const limite = new Date();
         limite.setDate(ahora.getDate() - 7);
-        return fechaPedido >= limite;
+        return fechaItem >= limite;
       }
       if (tipo === 'mes') {
-        return fechaPedido.getMonth() === ahora.getMonth() && 
-               fechaPedido.getFullYear() === ahora.getFullYear();
+        return fechaItem.getMonth() === ahora.getMonth() && fechaItem.getFullYear() === ahora.getFullYear();
       }
       return true;
     });
@@ -5617,75 +6220,140 @@ const Estadisticas = () => {
 
       <div className={styles.mainCard}>
         <div className={styles.filterBar}>
-          <label className={styles.filterLabel}>Periodo de Análisis:</label>
-          <select 
-            value={rango} 
-            onChange={(e) => setRango(e.target.value)}
-            className={styles.select}
-          >
-            <option value="hoy">Ventas de Hoy</option>
-            <option value="7d">Últimos 7 Días</option>
-            <option value="mes">Mes Actual</option>
-          </select>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ flex: 1 }}>
+              <label className={styles.filterLabel}>Periodo:</label>
+              <select value={rango} onChange={(e) => setRango(e.target.value)} className={styles.select} style={{ width: '100%' }}>
+                <option value="hoy">Ventas de Hoy</option>
+                <option value="7d">Últimos 7 Días</option>
+                <option value="mes">Mes Actual</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className={styles.filterLabel}>Top Prods:</label>
+              <select value={limiteProducto} onChange={(e) => setLimiteProducto(e.target.value)} className={styles.select} style={{ width: '100%' }}>
+                <option value={5}>Top 5</option>
+                <option value={10}>Top 10</option>
+                <option value="todos">Todos</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div className={styles.ingresosContainer}>
           <div className={styles.ingresosCard}>
-            <span className={styles.ingresosLabel}>VENTA TOTAL ($)</span>
+            <span className={styles.ingresosLabel}>Venta Bruta (Top)</span>
             <span className={styles.ingresosValue}>${metricas.ventaTotalUsd.toFixed(2)}</span>
           </div>
-          <div className={styles.ingresosCard} style={{ backgroundColor: '#e8f5e9' }}>
-            <span className={styles.ingresosLabel} style={{ color: '#2e7d32' }}>UTILIDAD NETA ($)</span>
-            <span className={styles.ingresosValue} style={{ color: '#2e7d32' }}>
-              ${metricas.utilidadTotalUsd.toFixed(2)}
+          <div className={styles.ingresosCard} style={{ backgroundColor: '#fff3e0' }}>
+            <span className={styles.ingresosLabel}>Margen Real</span>
+            <span className={styles.ingresosValue} style={{ color: '#e65100' }}>
+              {metricas.margenPorcentaje.toFixed(1)}%
             </span>
           </div>
         </div>
 
+        {/* Gráfico de Margen de Contribución */}
+        <h3 className={styles.chartTitle}>MARGEN DE CONTRIBUCIÓN (COSTO VS UTILIDAD)</h3>
         <div className={styles.chartWrapper}>
-          <h3 className={styles.chartTitle}>TOP 6: RENTABILIDAD POR PRODUCTO</h3>
-          <div style={{ width: '100%', height: 300 }}>
-            <ResponsiveContainer>
-              <BarChart data={datosBI} margin={{ top: 20, right: 30, left: 0, bottom: 70 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis 
-                  dataKey="name" 
-                  angle={-45} 
-                  textAnchor="end" 
-                  interval={0} 
-                  fontSize={10}
-                  stroke="#555"
-                  height={80}
-                />
-                <YAxis hide />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                  formatter={(value) => [`$${value.toFixed(2)}`, 'Utilidad']}
-                />
-                <Bar dataKey="utilidad" fill="#00BFFF" radius={[11]} barSize={35}>
-                  <LabelList 
-                    dataKey="utilidad" 
-                    position="top" 
-                    formatter={(v) => `$${v.toFixed(2)}`}
-                    style={{ fill: '#2c3e50', fontSize: 11, fontWeight: 'bold' }} 
-                  />
-                  {datosBI.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === 0 ? '#FFD700' : '#00BFFF'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <ResponsiveContainer width="100%" height={150}>
+            <BarChart data={datosMargen} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+              <XAxis type="number" hide />
+[CONTENIDO SENSIBLE ELIMINADO EN: Estadisticas.jsx]
+              <Tooltip formatter={(v) => `$${v.toFixed(2)}`} />
+              <Legend />
+[CONTENIDO SENSIBLE ELIMINADO EN: Estadisticas.jsx]
+[CONTENIDO SENSIBLE ELIMINADO EN: Estadisticas.jsx]
+[CONTENIDO SENSIBLE ELIMINADO EN: Estadisticas.jsx]
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
-        <div className={styles.ingresosContainer} style={{ marginTop: '20px' }}>
-           <div className={styles.ingresosCard} style={{ gridColumn: 'span 2', background: '#fff3e0' }}>
-            <span className={styles.ingresosLabel} style={{ color: '#ef6c00' }}>UTILIDAD ESTIMADA EN BOLÍVARES</span>
-            <span className={styles.ingresosValue} style={{ color: '#ef6c00' }}>
-              Bs. {(metricas.utilidadTotalUsd * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-            </span>
-            <small style={{ fontSize: '0.7rem', color: '#666' }}>Tasa: {tasa.toFixed(2)}</small>
+        {/* Gráfico de Rentabilidad por Producto */}
+        <h3 className={styles.chartTitle}>
+          {limiteProducto === 'todos' ? 'RENTABILIDAD POR PRODUCTO (TODOS)' : `TOP ${limiteProducto}: RENTABILIDAD POR PRODUCTO`}
+        </h3>
+        <div className={styles.chartWrapper}>
+          <ResponsiveContainer width="100%" height={Math.max(250, datosBI.length * 40)}>
+            <BarChart data={datosBI} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+              <XAxis type="number" hide />
+[CONTENIDO SENSIBLE ELIMINADO EN: Estadisticas.jsx]
+              <Tooltip formatter={(v) => `$${v.toFixed(2)}`} />
+              {/* Cambiamos a layout vertical para mejor visualización cuando son muchos productos */}
+[CONTENIDO SENSIBLE ELIMINADO EN: Estadisticas.jsx]
+                <LabelList
+[CONTENIDO SENSIBLE ELIMINADO EN: Estadisticas.jsx]
+                  position="right"
+                  formatter={(v) => `$${v.toFixed(2)}`}
+                  style={{ fill: '#2c3e50', fontSize: 10, fontWeight: 'bold' }}
+                />
+                {datosBI.map((entry, index) => (
+[CONTENIDO SENSIBLE ELIMINADO EN: Estadisticas.jsx]
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className={styles.footerInfo} style={{ marginTop: '20px', textAlign: 'center' }}>
+          <p style={{ color: '#2e7d32', fontWeight: 'bold', marginBottom: '5px' }}>
+            UTILIDAD NETA REAL: $ {metricas.utilidadNetaUsd.toLocaleString('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}
+          </p>
+          <p style={{ color: '#000', fontWeight: 'bold' }}>
+            UTILIDAD NETA REAL: Bs. {(metricas.utilidadNetaUsd * tasa).toLocaleString('es-VE', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}
+          </p>
+          <small style={{ color: '#666' }}>Tasa: {tasa.toFixed(2)} (Histórico BCV)</small>
+        </div>
+      </div>
+
+      {/* Tarjeta de Desglose de Utilidad (Segunda Posición) */}
+      <div className={styles.mainCard} style={{ marginTop: '20px' }}>
+        <h3 className={styles.chartTitle}>💰 DESGLOSE DE UTILIDAD REAL</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '1rem', color: '#444' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>(+) Venta Bruta:</span>
+            <span style={{ fontWeight: 'bold' }}>${metricas.ventaTotalUsd.toFixed(2)}</span>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#d32f2f' }}>
+            <span>(-) Costo de Mercancía:</span>
+            <span style={{ fontWeight: 'bold' }}>-${metricas.costoTotalUsd.toFixed(2)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f57c00' }}>
+            <span>(-) Gastos Operativos:</span>
+            <span style={{ fontWeight: 'bold' }}>-${metricas.gastosOperativosUsd.toFixed(2)}</span>
+          </div>
+          <hr style={{ border: '0', borderTop: '1px solid #eee', margin: '5px 0' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', color: '#2e7d32' }}>
+            <span>(=) Utilidad Neta Real:</span>
+            <span style={{ fontWeight: 'bold' }}>${metricas.utilidadNetaUsd.toFixed(2)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#7b1fa2', marginTop: '10px', fontSize: '0.9rem' }}>
+            <span>(⚠) Retiros Personales:</span>
+            <span style={{ fontWeight: 'bold' }}>-${metricas.retirosPersonalesUsd.toFixed(2)}</span>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>
+            * Los retiros personales no afectan la utilidad del negocio, pero sí el efectivo disponible.
+          </div>
+        </div>
+      </div>
+
+      {/* Tarjeta de Guía para No Financieros (Información adicional del historial) */}
+      <div className={styles.mainCard} style={{ marginTop: '20px', backgroundColor: '#fdfdfd' }}>
+        <h3 className={styles.chartTitle}>📖 GUÍA RÁPIDA DE TUS NÚMEROS</h3>
+        <div style={{ fontSize: '0.85rem', color: '#444', lineHeight: '1.4' }}>
+          <p><strong>💰 Venta Bruta:</strong> Todo el dinero cobrado por ventas.</p>
+          <p><strong>📉 Costo de Mercancía:</strong> Lo que debes apartar para reponer los productos vendidos.</p>
+          <p><strong>🏢 Gastos Operativos:</strong> Costos del negocio (empaques, transporte, catálogos).</p>
+          <p><strong>✅ Utilidad Neta Real:</strong> Tu ganancia verdadera después de pagar productos y gastos.</p>
+          <p><strong>👤 Retiros Personales:</strong> Dinero que has tomado para uso personal (no es un gasto del negocio, pero vacía la caja).</p>
         </div>
       </div>
     </div>
@@ -5844,6 +6512,7 @@ import { useNavigate } from "react-router-dom";
 import { db } from '../lib/db/database.js'; // Acceso a dbTasaBCV [3]
 import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // Utilidad de tasa [3]
 import styles from './Home.module.css';
+import FreezerLayout   from "../components/FreezerLayout/FreezerLayout.jsx";
 
 function Home() {
   const [productos, setProductos] = useState([]);
@@ -5853,6 +6522,20 @@ function Home() {
   const [cargando, setCargando] = useState(true);
   const [filtroGrupo, setFiltroGrupo] = useState('todos');
   const navigate = useNavigate();
+
+  // Función helper para enriquecer productos con info del grupo
+  // Optimización: Usamos un Map para reducir la complejidad de O(N*M) a O(N) [BI/Performance]
+  const enriquecerProductos = (listaProductos, listaGrupos) => {
+    const gruposMap = new Map(listaGrupos.map(g => [g.nombre, g]));
+    return listaProductos.map(p => {
+      const grupoInfo = gruposMap.get(p.grupo);
+      return {
+        ...p,
+        precio: grupoInfo ? grupoInfo.precio : 0,
+        costo: grupoInfo ? (grupoInfo.costo_$ || 0) : 0
+      };
+    });
+  };
 
   // Carga inicial de datos desde IndexedDB [4]
   useEffect(() => {
@@ -5864,8 +6547,14 @@ function Home() {
           db.getAll('grupos'),
           getTasaBCV()
         ]);
-        setProductos(p);
+
+        // Guardamos grupos raw por si se necesitan
         setGrupos(g);
+
+        // Enriquecemos productos inmediatamente
+        const productosEnriquecidos = enriquecerProductos(p, g);
+        setProductos(productosEnriquecidos);
+
         setTasa(t || 0);
       } catch (err) {
         console.error("Error initializing Home:", err);
@@ -5884,7 +6573,7 @@ function Home() {
    */
   const productosFiltrados = productos.filter(p => {
     const coincideGrupo = filtroGrupo === 'todos' || p.grupo === filtroGrupo;
-    const esVisible = p.visible !== false; 
+    const esVisible = p.visible !== false;
     return coincideGrupo && esVisible;
   });
 
@@ -5904,80 +6593,62 @@ function Home() {
     if (!confirmar) return;
 
     try {
-      // 1. Generar un ID de transacción único para todo el grupo de helados vendidos
-      // Esto permite analizar el "Ticket Promedio" en BI
+      // 1. Validar Stock ANTES de iniciar la transacción [Producción/Robustez]
+      // Agrupamos por producto para validar la suma de lo seleccionado
+      const conteoPorProducto = listaDeSeleccionados.reduce((acc, p) => {
+        acc[p.id] = (acc[p.id] || 0) + 1;
+        return acc;
+      }, {});
+
+      for (const [id, cantidad] of Object.entries(conteoPorProducto)) {
+        const pOriginal = productos.find(p => String(p.id) === id);
+        if (!pOriginal || pOriginal.stock < cantidad) {
+          alert(`❌ Stock insuficiente para: ${pOriginal?.nombre || id}. Disponible: ${pOriginal?.stock || 0}`);
+          return;
+        }
+      }
+
+      // 2. Generar un ID de transacción único para análisis de BI
       const transaccionId = `TX-${Date.now()}`;
 
-      for (const item of listaDeSeleccionados) {
-        // 2. Buscar la información del grupo para obtener Precio y Costo histórico [4]
-        const grupoInfo = grupos.find(g => g.nombre === item.grupo);
-        
-        const precioUsd = grupoInfo ? grupoInfo.precio : 0;
-        const costoUnitarioUsd = grupoInfo ? (grupoInfo.costo_$ || 0) : 0;
-        const utilidadUsd = precioUsd - costoUnitarioUsd;
+      // 3. Procesar venta ATÓMICA [Producción/Integridad]
+      // Usamos la tabla 'ventas' y 'productos' en la transacción
+      await db.transaction('rw', [db.ventas, db.productos], async () => {
+        for (const item of listaDeSeleccionados) {
+          const precioUsd = item.precio || 0;
+          const costoUnitarioUsd = item.costo || 0;
+          const utilidadUsd = precioUsd - costoUnitarioUsd;
 
-        // 3. Registrar venta con el Snapshot Financiero completo
-        await db.add('ventas', {
-          productoId: item.id,
-          nombre: item.nombre,
-          grupo: item.grupo,
-          precioUsd: precioUsd,
-          costoUnitarioUsd: costoUnitarioUsd, // Nuevo campo: costo del momento
-          utilidadUsd: utilidadUsd,           // Nuevo campo: ganancia real
-          tasaVenta: tasa,                    // Nuevo campo: tasa BCV usada [6]
-          transaccionId: transaccionId,       // Nuevo campo: vínculo de grupo
-          cantidad: 1,
-          fecha: new Date().toISOString()     // Referencia temporal ISO [3]
-        });
+          // Snapshot Financiero
+          await db.add('ventas', {
+            productoId: item.id,
+            nombre: item.nombre,
+            grupo: item.grupo,
+            precioUsd: precioUsd,
+            costoUnitarioUsd: costoUnitarioUsd,
+            utilidadUsd: utilidadUsd,
+            tasaVenta: tasa,
+            transaccionId: transaccionId,
+            cantidad: 1,
+            fecha: new Date().toISOString()
+          });
 
-        // 4. Actualizar stock en la base de datos [3]
-        await db.updateStock(item.id, -1);
-      }
+          // Actualizar stock
+          await db.updateStock(item.id, -1);
+        }
+      });
 
       // Refrescar estado local
       const productosActualizados = await db.getAll('productos');
-      setProductos(productosActualizados);
+      const productosEnriquecidos = enriquecerProductos(productosActualizados, grupos);
+      setProductos(productosEnriquecidos);
+
       setListaDeSeleccionados([]);
-      alert("✅ Venta procesada con éxito con snapshot financiero.");
+      alert("✅ Venta procesada con éxito con snapshot financiero y transaccionalidad.");
 
     } catch (error) {
       console.error("Error en snapshot de venta:", error);
-      alert("❌ Error al procesar la venta.");
-    }
-  };
-
-  // Procesamiento de venta y actualización de stock [6, 7]
-  const __handleGrabar = async () => {
-    if (listaDeSeleccionados.length === 0) return;
-    const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
-    if (!confirmar) return;
-
-    try {
-      for (const item of listaDeSeleccionados) {
-        const grupoInfo = grupos.find(g => g.nombre === item.grupo);
-        const precioUsd = grupoInfo ? grupoInfo.precio : 0;
-
-        // Registrar venta en IndexedDB [7]
-        await db.add('ventas', {
-          productoId: item.id,
-          nombre: item.nombre,
-          grupo: item.grupo,
-          precioUsd: precioUsd,
-          cantidad: 1,
-          fecha: new Date().toISOString()
-        });
-
-        // Descontar inventario [7]
-        await db.updateStock(item.id, -1);
-      }
-
-      // Refrescar lista de productos con stock actualizado [8]
-      const productosActualizados = await db.getAll('productos');
-      setProductos(productosActualizados);
-      setListaDeSeleccionados([]);
-      alert("✅ Venta procesada con éxito.");
-    } catch (error) {
-      alert("❌ Error al procesar la venta.");
+      alert("❌ Error al procesar la venta. Los cambios no se aplicaron.");
     }
   };
 
@@ -5992,8 +6663,7 @@ function Home() {
   const calcularTotales = () => {
     let usd = 0;
     listaDeSeleccionados.forEach(item => {
-      const grupoInfo = grupos.find(g => g.nombre === item.grupo);
-      usd += grupoInfo ? grupoInfo.precio : 0;
+      usd += item.precio || 0;
     });
     return { usd, bs: usd * tasa };
   };
@@ -6003,19 +6673,20 @@ function Home() {
   if (cargando) return <div className={styles.loading}>Cargando tienda...</div>;
 
   return (
+    <>
     <div className={styles.container}>
       {/* Selector de Grupos */}
       <div className={styles.filterBar}>
         <label htmlFor="filtro-home">Filtrar por Grupo:</label>
-        <select 
-          id="filtro-home" 
-          value={filtroGrupo} 
+        <select
+          id="filtro-home"
+          value={filtroGrupo}
           onChange={(e) => setFiltroGrupo(e.target.value)}
           className={styles.select}
         >
           <option value="todos">Todos los helados</option>
           {grupos.map(g => (
-            <option key={g.id} value={g.nombre}>{g.nombre}</option>
+[CONTENIDO SENSIBLE ELIMINADO EN: Home.jsx]
           ))}
         </select>
       </div>
@@ -6023,18 +6694,17 @@ function Home() {
       {/* Grid de Productos [9] */}
       <div className={styles.grid}>
         {productosFiltrados.map(p => {
-          const grupoInfo = grupos.find(g => g.nombre === p.grupo);
-          const precio = grupoInfo ? grupoInfo.precio : 0;
+          const precio = p.precio || 0;
           const esAgotado = p.stock === 0;
           const esBajoStock = p.stock > 0 && p.stock <= 5;
 
           return (
-            <div 
-              key={p.id} 
+            <div
+[CONTENIDO SENSIBLE ELIMINADO EN: Home.jsx]
               className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
               onClick={() => !esAgotado && seleccionarProducto(p)}
             >
-              <div 
+              <div
                 className={styles.stockBadge}
                 style={{ backgroundColor: esAgotado ? '#ff4d4d' : (esBajoStock ? '#ffa500' : '#28a745') }}
               >
@@ -6042,9 +6712,9 @@ function Home() {
               </div>
 
               {p.imagen ? (
-                <img 
-                  src={p.imagen} 
-                  alt={p.nombre} 
+                <img
+                  src={p.imagen}
+                  alt={p.nombre}
                   className={styles.productImage}
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
@@ -6067,12 +6737,12 @@ function Home() {
           <span>Items: <strong>{listaDeSeleccionados.length}</strong></span>
           <span>Tasa: <strong>{tasa.toFixed(2)}</strong></span>
         </div>
-        
+
         <div className={styles.selectedList}>
           {listaDeSeleccionados.map((item, index) => (
-            <div key={`${item.id}-${index}`} className={styles.selectedItem}>
+[CONTENIDO SENSIBLE ELIMINADO EN: Home.jsx]
               <span>#{item.id} - {item.nombre}</span>
-              <button 
+              <button
                 className={styles.eliminarBtn}
                 onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}
               >
@@ -6090,18 +6760,23 @@ function Home() {
           <button className={styles.vaciarBtn} onClick={handleVaciarLista}>
             Vaciar
           </button>
-          <button 
-            className={styles.grabarBtn} 
+          <button
+            className={styles.grabarBtn}
             onClick={handleGrabar}
             disabled={listaDeSeleccionados.length === 0}
           >
             Grabar
           </button>
         </div>
-      </div>
+      
+      </div>      
+    <FreezerLayout />
     </div>
+    
+    </>
   );
 }
+
 
 export default Home;
 ************************************************************
@@ -6113,7 +6788,7 @@ FILE: src/pages/Home.module.css
   padding: 15px;
   padding-bottom: 280px; /* Espacio para el panel fijo inferior */
   background-color: #fafafa;
-  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic Viewport Height para móviles */
   width: 100%;
   box-sizing: border-box;
   color: #333;
@@ -6171,6 +6846,11 @@ FILE: src/pages/Home.module.css
   transform: scale(0.98); /* Feedback táctil para Android */
 }
 
+/* Mejora táctil para evitar zoom y retrasos */
+button, .card, select {
+  touch-action: manipulation;
+}
+
 .stockBadge {
   position: absolute;
   top: -8px;
@@ -6224,7 +6904,7 @@ FILE: src/pages/Home.module.css
   padding: 15px;
   border-top: 2px solid #00BFFF;
   box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-  z-index: 1000;
+  z-index: 9999; /* Asegurar que esté por encima de todo */
   width: 100%;
   box-sizing: border-box;
 }
@@ -6274,12 +6954,14 @@ FILE: src/pages/Home.module.css
   flex: 1; 
 }
 
+
 /* Actualización: Fondo verde y ancho igualado (flex: 1) */
 .grabarBtn { 
   background-color: #28a745; 
   color: white; 
   flex: 1; 
 }
+
 
 .grabarBtn:disabled { 
   background-color: #ccc; 
@@ -6299,7 +6981,7 @@ function Lista() {
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
         {data.map((producto) => (
-          <div key={producto.id} style={{ width: "150px" }}>
+[CONTENIDO SENSIBLE ELIMINADO EN: Lista.jsx]
             <img
               src={producto.imagen}
               alt={producto.nombre}
@@ -6509,7 +7191,7 @@ export default function TasaBCV() {
               </div>
             ) : (
               historico.map(reg => (
-                <div key={reg.id} className={styles.productItem}>
+[CONTENIDO SENSIBLE ELIMINADO EN: TasaBCV.jsx]
                   <div className={styles.productName}>
                     <strong>{reg.fecha_tasa}</strong> — Bs. {reg.tasa.toFixed(2)}
                   </div>
@@ -6724,10 +7406,205 @@ FILE: src/pages/TasaBCV.module.css
 }
 ************************************************************
 
+FILE: test_db_check.js
+------------------------------
+
+const { NaturaDBClass } = require('./src/lib/db/database.js');
+// This is for local execution in the environment if possible, 
+// but since it's browser-based with Dexie, I can't run it easily in node without polyfills.
+// I'll try to look at the code more or use a different approach.
+
+************************************************************
+
+FILE: validacion_resumen_inventario.js
+------------------------------
+/**
+ * Script de Validación para Resumen de Inventario
+ * 
+ * Ejecutar en DevTools Console (F12) después de navegar a la página de Resumen de Inventario
+ * 
+ * Este script valida:
+ * 1. Productos huérfanos (sin grupo válido)
+ * 2. Grupos con margen negativo
+ * 3. Tasa BCV válida (no cero)
+ * 4. Productos ocultos excluidos del cálculo
+ * 5. Precisión de los cálculos financieros
+ */
+
+const validarResumenInventario = async () => {
+    console.clear();
+    console.log('%c📊 AUDITORÍA DE RESUMEN DE INVENTARIO', 'font-size: 18px; font-weight: bold; color: #2196F3');
+    console.log('='.repeat(60));
+
+    try {
+        await db.init();
+
+        const todosProductos = await db.productos.toArray();
+        const grupos = await db.grupos.toArray();
+        const gruposMap = new Map(grupos.map(g => [g.nombre, g]));
+
+        // 1. ANÁLISIS DE PRODUCTOS
+        console.log('\n%c1️⃣ ANÁLISIS DE PRODUCTOS', 'font-weight: bold; color: #4CAF50');
+        console.log('-'.repeat(60));
+
+        const productosVisibles = todosProductos.filter(p => p.visible !== false);
+        const productosOcultos = todosProductos.filter(p => p.visible === false);
+
+        console.log(`Total de productos en BD: ${todosProductos.length}`);
+        console.log(`✅ Productos visibles (incluidos): ${productosVisibles.length}`);
+        console.log(`❌ Productos ocultos (excluidos): ${productosOcultos.length}`);
+
+        if (productosOcultos.length > 0) {
+            console.log('\n%cProductos excluidos del análisis:', 'color: #FF9800');
+            productosOcultos.forEach(p => {
+                console.log(`  - ${p.nombre} (Stock: ${p.stock || 0})`);
+            });
+        }
+
+        // 2. PRODUCTOS HUÉRFANOS
+        console.log('\n%c2️⃣ PRODUCTOS HUÉRFANOS (sin grupo válido)', 'font-weight: bold; color: #FF5722');
+        console.log('-'.repeat(60));
+
+        const huerfanos = productosVisibles.filter(p => !gruposMap.has(p.grupo) && p.stock > 0);
+
+        if (huerfanos.length === 0) {
+            console.log('✅ No hay productos huérfanos con stock');
+        } else {
+            console.log(`🔴 ADVERTENCIA: ${huerfanos.length} producto(s) con stock pero sin grupo válido:`);
+            huerfanos.forEach(p => {
+                console.log(`  - ID: ${p.id} | Nombre: ${p.nombre} | Grupo: "${p.grupo}" | Stock: ${p.stock}`);
+            });
+            console.log('\n⚠️ Estos productos NO se incluyen en el cálculo financiero');
+        }
+
+        // 3. GRUPOS CON MARGEN NEGATIVO
+        console.log('\n%c3️⃣ VALIDACIÓN DE MÁRGENES', 'font-weight: bold; color: #9C27B0');
+        console.log('-'.repeat(60));
+
+        const margenNegativo = grupos.filter(g => g.costo_$ > g.precio);
+
+        if (margenNegativo.length === 0) {
+            console.log('✅ Todos los grupos tienen margen positivo');
+        } else {
+            console.log(`⚠️ ADVERTENCIA: ${margenNegativo.length} grupo(s) con margen negativo:`);
+            margenNegativo.forEach(g => {
+                const margen = ((g.precio - g.costo_$) / g.costo_$ * 100).toFixed(2);
+                console.log(`  - ${g.nombre}: Costo $${g.costo_$} > Precio $${g.precio} (Margen: ${margen}%)`);
+            });
+        }
+
+        // 4. TASA BCV
+        console.log('\n%c4️⃣ TASA BCV', 'font-weight: bold; color: #00BCD4');
+        console.log('-'.repeat(60));
+
+        const tasa = await db.getUltimaTasaBCV();
+        const ultimaEntrada = await db.historico_tasas.orderBy('fecha_tasa').last();
+
+        if (tasa === 0) {
+            console.log('🔴 ERROR CRÍTICO: La tasa BCV es 0');
+        } else {
+            console.log(`✅ Tasa BCV válida: ${tasa.toFixed(2)}`);
+            if (ultimaEntrada) {
+                console.log(`   Fecha: ${ultimaEntrada.fecha_tasa}`);
+                console.log(`   Fuente: Histórico BCV`);
+            } else {
+                console.log(`   Fuente: Configuración o fallback`);
+            }
+        }
+
+        // 5. CÁLCULOS FINANCIEROS
+        console.log('\n%c5️⃣ CÁLCULOS FINANCIEROS', 'font-weight: bold; color: #4CAF50');
+        console.log('-'.repeat(60));
+
+        let totalCosto = 0;
+        let totalVenta = 0;
+        let productosContabilizados = 0;
+
+        productosVisibles.forEach(p => {
+            const grupo = gruposMap.get(p.grupo);
+            if (grupo) {
+                const stock = p.stock || 0;
+                totalCosto += stock * (grupo.costo_$ || 0);
+                totalVenta += stock * (grupo.precio || 0);
+                if (stock > 0) productosContabilizados++;
+            }
+        });
+
+        const gananciaUsd = totalVenta - totalCosto;
+        const gananciaBs = gananciaUsd * tasa;
+        const margenPromedio = totalCosto > 0 ? ((gananciaUsd / totalCosto) * 100) : 0;
+
+        console.log(`Productos contabilizados: ${productosContabilizados}`);
+        console.log(`\n💰 Inversión Total (Costo): $${totalCosto.toFixed(2)}`);
+        console.log(`💵 Venta Estimada: $${totalVenta.toFixed(2)}`);
+        console.log(`📈 Ganancia Potencial USD: $${gananciaUsd.toFixed(2)}`);
+        console.log(`📈 Ganancia Potencial Bs: Bs. ${gananciaBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        console.log(`📊 Margen Promedio: ${margenPromedio.toFixed(2)}%`);
+
+        // 6. RESUMEN DE VALIDACIÓN
+        console.log('\n%c6️⃣ RESUMEN DE VALIDACIÓN', 'font-weight: bold; color: #E91E63');
+        console.log('='.repeat(60));
+
+        const problemas = [];
+
+        if (huerfanos.length > 0) {
+            problemas.push(`🔴 ${huerfanos.length} producto(s) huérfano(s)`);
+        }
+        if (margenNegativo.length > 0) {
+            problemas.push(`⚠️ ${margenNegativo.length} grupo(s) con margen negativo`);
+        }
+        if (tasa === 0) {
+            problemas.push(`🔴 Tasa BCV es 0`);
+        }
+
+        if (problemas.length === 0) {
+            console.log('%c✅ VALIDACIÓN EXITOSA: No se detectaron problemas', 'color: #4CAF50; font-weight: bold');
+        } else {
+            console.log('%c⚠️ SE DETECTARON PROBLEMAS:', 'color: #FF5722; font-weight: bold');
+            problemas.forEach(p => console.log(`   ${p}`));
+        }
+
+        console.log('\n' + '='.repeat(60));
+        console.log('%c✅ Auditoría completada', 'font-size: 14px; color: #4CAF50');
+
+        // Retornar objeto con resultados para uso programático
+        return {
+            totalProductos: todosProductos.length,
+            productosVisibles: productosVisibles.length,
+            productosOcultos: productosOcultos.length,
+            productosHuerfanos: huerfanos.length,
+            gruposConMargenNegativo: margenNegativo.length,
+            tasaBCV: tasa,
+            totales: {
+                costo: totalCosto,
+                venta: totalVenta,
+                gananciaUsd: gananciaUsd,
+                gananciaBs: gananciaBs,
+                margenPromedio: margenPromedio
+            },
+            problemas: problemas
+        };
+
+    } catch (error) {
+        console.error('❌ Error durante la auditoría:', error);
+        throw error;
+    }
+};
+
+// Ejecutar automáticamente
+console.log('%c🚀 Ejecutando validación...', 'color: #2196F3; font-weight: bold');
+validarResumenInventario().then(resultado => {
+    console.log('\n%c📋 Resultado guardado en variable "resultado"', 'color: #9C27B0');
+    window.resultadoAuditoria = resultado;
+});
+
+************************************************************
+
 FILE: vite.config.js
 ------------------------------
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -6737,6 +7614,46 @@ export default defineConfig({
         plugins: [['babel-plugin-react-compiler']],
       },
     }),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      manifest: {
+        name: 'Natura Helados',
+        short_name: 'Natura',
+        description: 'Venta de Helados Offline',
+        theme_color: '#ffffff',
+        icons: [
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          }
+        ]
+      },
+      workbox: {
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/outputs/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 Days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
+      }
+    })
   ],
 })
 

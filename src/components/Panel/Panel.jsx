@@ -136,6 +136,12 @@ export default function Panel() {
       <h1 className={styles.title}>PANEL DE CONTROL</h1>
 
       <div className={styles.buttons}>
+
+        {/* Importación de Configuración Inicial [12] */}
+        <button className={styles.button} onClick={handleImportInitialData}>
+          📥 Cargar Datos Iniciales (Grupos y Productos)
+        </button>
+
         {/* Gestión de Datos y Backups [4] */}
         <button
           className={styles.button}
@@ -175,25 +181,9 @@ export default function Panel() {
           {isLoadingHistory ? "⚙️ Cargando..." : "📉 Cargar Histórico BCV"}
         </button>
 
-        {/* Importación de Configuración Inicial [12] */}
-        <button className={styles.button} onClick={handleImportInitialData}>
-          📥 Cargar Datos Iniciales (Grupos y Productos)
-        </button>
-
+        
         <hr style={{ width: '80%', margin: '20px 0', opacity: 0.2 }} />
 
-        {/* Accesos Directos a Módulos [12] */}
-        <button className={styles.button} onClick={() => navigate("/tasabcv")}>
-          💰 Tasa BCV
-        </button>
-
-        <button className={styles.button} onClick={() => navigate("/admingrupos")}>
-          🍦 Grupos
-        </button>
-
-        <button className={styles.button} onClick={() => navigate("/adminproductos")}>
-          📦 Productos
-        </button>
 
         {/* Botón Regresar [12] */}
         <button

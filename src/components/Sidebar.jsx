@@ -151,22 +151,19 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Registrar Gastos</span>
                     </Link>
 
-
-
                     {/* Separador visual horizontal */}
                     <hr style={styles.separator} />
 
-                    {/* Opción Tasa Delivery */}
-                    <Link
-                        to="/delivery"
-                        onClick={onClose}
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>🚚</span>
-                        <span>Tasa Delivery</span>
+                    <Link to="/estadisticas" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Estadísticas
                     </Link>
+
+                    <Link to="/resumeninventario" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Resumen de Inventario
+                    </Link>
+
+                    {/* Segundo separador visual */}
+                    <hr style={styles.separator} />
 
                     {/* Opción Tasa BCV */}
                     <Link
@@ -180,20 +177,30 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Tasa BCV</span>
                     </Link>
 
-                    {/* Segundo separador visual */}
-                    <hr style={styles.separator} />
-
-
-                    <Link to="/estadisticas" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>📊</span> Estadísticas
-                    </Link>
-
-                    <Link to="/resumeninventario" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>📊</span> Resumen de Inventario
+                    {/* Opción Tasa Delivery */}
+                    <Link
+                        to="/delivery"
+                        onClick={onClose}
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>🚚</span>
+                        <span>Tasa Delivery</span>
                     </Link>
 
                     {/* Tercer separador visual */}
                     <hr style={styles.separator} />
+
+                    {/* Grupos */}
+                    <Link to="/admingrupos" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Grupos de Producto
+                    </Link>
+
+                    {/* Productos */}
+                    <Link to="/adminproductos" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Productos
+                    </Link>
 
                     {/* Acceso Administrativo */}
                     <a
@@ -205,19 +212,6 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>⚙️</span>
                         <span>Panel de Control</span>
                     </a>
-
-                    {/* Opción Acerca de 
-                    <Link
-                        to="/about"
-                        onClick={onClose}
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>ℹ️</span>
-                        <span>Acerca de</span>
-                    </Link>
-                    */}
 
                 </nav>
             </div>
