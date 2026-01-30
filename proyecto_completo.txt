@@ -1,5 +1,5 @@
 PROYECTO: NATURA
-FECHA DE GENERACIÓN: 28/01/2026 21:52:10
+FECHA DE GENERACIÓN: 30/01/2026 09:16:50
 ============================================================
 DESCRIPCIÓN TÉCNICA DEL STACK:
 - Framework: React con Vite (Arquitectura de componentes funcionales) [5, 6]
@@ -27,7 +27,9 @@ DESCRIPCIÓN TÉCNICA DEL STACK:
     📄 Delivery.jsx
     📄 Footer.jsx
     📁 FreezerLayout/
+      📄 FreezerGrid.jsx
       📄 FreezerLayout.jsx
+      📄 FreezerSlot.jsx
     📄 GestionPedido.jsx
     📄 GestionPedido.module.css
     📁 GruposCRUD/
@@ -292,12 +294,13 @@ import Footer from "./components/Footer";
 import GruposPage from './pages/GruposPage';
 import ProductosPage from './pages/ProductosPage';
 // Nueva importación de la página de Pedidos
-import PedidosPage from './pages/Pedidos'; 
+import PedidosPage from './pages/Pedidos';
 // Asegúrate de tener esto:
 import DeliveryPage from './pages/DeliveryPage';
 import Estadisticas from "./pages/Estadisticas";
 import ResumenInventario from "./components/ResumenInventario";
 import RegistroGasto from "./components/RegistroGasto";
+import FreezerGrid from "./components/FreezerLayout/FreezerGrid";
 
 function App() {
   return (
@@ -315,6 +318,8 @@ function App() {
         <Route path="/estadisticas" element={<Estadisticas />} />
         <Route path="/resumeninventario" element={<ResumenInventario />} />
         <Route path="/registrogasto" element={<RegistroGasto />} />
+        <Route path="/freezergrid" element={<FreezerGrid productosSeleccionados={[]} />} />
+
         {/* Nueva ruta para Pedidos */}
         <Route path="/pedidos" element={<PedidosPage />} />
         <Route path="*" element={<NotFound />} />
@@ -686,30 +691,835 @@ export default function Footer() {
 
 ************************************************************
 
+FILE: src/components/FreezerLayout/FreezerGrid.jsx
+------------------------------
+import React, { useState, useEffect } from 'react';
+import { db } from '../../lib/db/database';
+import FreezerSlot from './FreezerSlot';
+
+const FreezerGrid = ({ productosSeleccionados = [] }) => {
+    const [containers, setContainers] = useState([]);
+    const [selectedSlot, setSelectedSlot] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editForm, setEditForm] = useState({
+        name: '',
+        rows: [],
+        color: '#f8f9fa'
+    });
+    const [currentRow, setCurrentRow] = useState({ label: '', value: '' });
+    const [editingContainerId, setEditingContainerId] = useState(null);
+    const [editingContainerName, setEditingContainerName] = useState('');
+
+    // Grid configuration
+    const COLS = 2;
+
+    useEffect(() => {
+        loadContainers();
+    }, []);
+
+    const loadContainers = async () => {
+        try {
+            await db.init();
+            let allContainers = await db.freezer_containers.orderBy('order').toArray();
+
+            // Initialize with one default container if empty
+            if (allContainers.length === 0) {
+                const defaultContainer = {
+                    name: 'Freezer 1',
+                    order: 0,
+                    color: '#e9ecef'
+                };
+                const containerId = await db.freezer_containers.add(defaultContainer);
+
+                // Create default slots for this container
+                const newSlots = [];
+                for (let c = 0; c < COLS; c++) {
+                    newSlots.push({
+                        id: `${containerId}_${c}`,
+                        containerId: containerId,
+                        row: 0,
+                        col: c,
+                        name: `Sección ${c + 1}`,
+                        rows: [],
+                        color: '#f8f9fa'
+                    });
+                }
+                await db.freezer_slots.bulkAdd(newSlots);
+
+                allContainers = [{ ...defaultContainer, id: containerId }];
+            }
+
+            // Load slots for each container
+            for (let container of allContainers) {
+                let slots = await db.freezer_slots.where('containerId').equals(container.id).toArray();
+
+                // Ensure rows array exists
+                slots = slots.map(slot => ({
+                    ...slot,
+                    rows: slot.rows || []
+                }));
+
+                slots.sort((a, b) => a.col - b.col);
+                container.slots = slots;
+            }
+
+            setContainers(allContainers);
+        } catch (error) {
+            console.error("Error loading containers:", error);
+        }
+    };
+
+    const addContainer = async () => {
+        try {
+            const nextOrder = containers.length;
+            const newContainer = {
+                name: `Freezer ${containers.length + 1}`,
+                order: nextOrder,
+                color: '#e9ecef'
+            };
+
+            const containerId = await db.freezer_containers.add(newContainer);
+
+            // Create slots for new container
+            const newSlots = [];
+            for (let c = 0; c < COLS; c++) {
+                newSlots.push({
+                    id: `${containerId}_${c}`,
+                    containerId: containerId,
+                    row: 0,
+                    col: c,
+                    name: `Sección ${c + 1}`,
+                    rows: [],
+                    color: '#f8f9fa'
+                });
+            }
+            await db.freezer_slots.bulkAdd(newSlots);
+
+            await loadContainers();
+        } catch (error) {
+            console.error("Error adding container:", error);
+            alert("Error al añadir contenedor");
+        }
+    };
+
+    const deleteContainer = async (containerId) => {
+        if (!window.confirm('¿Estás seguro de eliminar este contenedor? Se perderán todos sus datos.')) {
+            return;
+        }
+
+        try {
+            // Delete all slots in this container
+            await db.freezer_slots.where('containerId').equals(containerId).delete();
+
+            // Delete the container
+            await db.freezer_containers.delete(containerId);
+
+            await loadContainers();
+        } catch (error) {
+            console.error("Error deleting container:", error);
+            alert("Error al eliminar contenedor");
+        }
+    };
+
+    const startEditingContainerName = (container) => {
+        setEditingContainerId(container.id);
+        setEditingContainerName(container.name);
+    };
+
+    const saveContainerName = async (containerId) => {
+        if (!editingContainerName.trim()) {
+            alert('El nombre no puede estar vacío');
+            return;
+        }
+
+        try {
+            const container = await db.freezer_containers.get(containerId);
+            await db.freezer_containers.put({
+                ...container,
+                name: editingContainerName
+            });
+
+            setEditingContainerId(null);
+            setEditingContainerName('');
+            await loadContainers();
+        } catch (error) {
+            console.error("Error saving container name:", error);
+            alert("Error al guardar nombre");
+        }
+    };
+
+    const saveContainerColor = async (containerId, color) => {
+        try {
+            const container = await db.freezer_containers.get(containerId);
+            await db.freezer_containers.put({
+                ...container,
+                color: color
+            });
+            await loadContainers();
+        } catch (error) {
+            console.error("Error saving container color:", error);
+            alert("Error al guardar color");
+        }
+    };
+
+    const handleSlotClick = (slot) => {
+        setSelectedSlot(slot);
+        setEditForm({
+            name: slot.name,
+            rows: slot.rows || [],
+            color: slot.color || '#f8f9fa'
+        });
+        setCurrentRow({ label: '', value: '' });
+        setIsEditing(true);
+    };
+
+    const handleAddRow = () => {
+        if (!currentRow.label.trim() || !currentRow.value.trim()) {
+            alert('Por favor completa ambos campos (Etiqueta y Valor)');
+            return;
+        }
+
+        setEditForm({
+            ...editForm,
+            rows: [...editForm.rows, { ...currentRow }]
+        });
+        setCurrentRow({ label: '', value: '' });
+    };
+
+    const handleDeleteRow = (index) => {
+        const newRows = editForm.rows.filter((_, i) => i !== index);
+        setEditForm({ ...editForm, rows: newRows });
+    };
+
+    const handleSave = async () => {
+        if (!selectedSlot) return;
+
+        const updatedSlot = {
+            ...selectedSlot,
+            name: editForm.name,
+            rows: editForm.rows,
+            color: editForm.color
+        };
+
+        try {
+            await db.freezer_slots.put(updatedSlot);
+            await loadContainers();
+            setIsEditing(false);
+            setSelectedSlot(null);
+        } catch (error) {
+            console.error("Error saving slot:", error);
+            alert("Error al guardar cambios");
+        }
+    };
+
+    const containerStyle = {
+        padding: '15px',
+        maxWidth: '800px',
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px'
+    };
+
+    const headerStyle = {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '10px'
+    };
+
+    const addBtnStyle = {
+        padding: '10px 20px',
+        borderRadius: '8px',
+        border: 'none',
+        backgroundColor: '#007bff',
+        color: 'white',
+        cursor: 'pointer',
+        fontSize: '14px',
+        fontWeight: 'bold',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+    };
+
+    const containerHeaderStyle = {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '10px'
+    };
+
+    const containerNameStyle = {
+        margin: 0,
+        color: '#333',
+        cursor: 'pointer',
+        padding: '8px 12px',
+        borderRadius: '6px',
+        transition: 'background-color 0.2s',
+        ':hover': {
+            backgroundColor: '#f0f0f0'
+        }
+    };
+
+    const containerNameInputStyle = {
+        flex: 1,
+        padding: '8px 12px',
+        borderRadius: '6px',
+        border: '2px solid #007bff',
+        fontSize: '16px',
+        fontWeight: 'bold'
+    };
+
+    const colorSelectStyle = {
+        padding: '8px 12px',
+        borderRadius: '6px',
+        border: '1px solid #ced4da',
+        backgroundColor: 'white',
+        cursor: 'pointer',
+        fontSize: '14px'
+    };
+
+    const deleteBtnStyle = {
+        padding: '8px 16px',
+        borderRadius: '6px',
+        border: 'none',
+        backgroundColor: '#dc3545',
+        color: 'white',
+        cursor: 'pointer',
+        fontSize: '16px',
+        fontWeight: 'bold'
+    };
+
+    const gridStyle = {
+        display: 'grid',
+        gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+        gap: '10px',
+        padding: '15px',
+        borderRadius: '12px',
+        border: '3px solid #495057',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        position: 'relative'
+    };
+
+    const editorStyle = {
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '12px',
+        boxShadow: '0 -4px 10px rgba(0,0,0,0.1)',
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
+        maxHeight: '80vh',
+        overflowY: 'auto'
+    };
+
+    const formGroupStyle = {
+        marginBottom: '15px'
+    };
+
+    const inputStyle = {
+        width: '100%',
+        padding: '10px',
+        borderRadius: '6px',
+        border: '1px solid #ced4da',
+        boxSizing: 'border-box'
+    };
+
+    const rowInputContainerStyle = {
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '10px'
+    };
+
+    const rowListStyle = {
+        listStyle: 'none',
+        padding: 0,
+        margin: '10px 0',
+        maxHeight: '200px',
+        overflowY: 'auto',
+        border: '1px solid #e9ecef',
+        borderRadius: '6px'
+    };
+
+    const rowItemStyle = {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '8px 12px',
+        borderBottom: '1px solid #f1f3f5',
+        backgroundColor: '#f8f9fa'
+    };
+
+    const buttonRowStyle = {
+        display: 'flex',
+        gap: '10px',
+        justifyContent: 'flex-end',
+        marginTop: '15px'
+    };
+
+    const btnStyle = {
+        padding: '10px 20px',
+        borderRadius: '6px',
+        border: 'none',
+        cursor: 'pointer',
+        fontWeight: 'bold'
+    };
+
+    const smallBtnStyle = {
+        padding: '6px 12px',
+        borderRadius: '4px',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '12px',
+        fontWeight: 'bold'
+    };
+
+    return (
+        <div style={containerStyle}>
+            <div style={headerStyle}>
+                <h3 style={{ textAlign: 'center', color: '#0080FF', margin: 0 }}>Distribución del Freezer</h3>
+                <button
+                    style={addBtnStyle}
+                    onClick={addContainer}
+                >
+                    ➕ Añadir Contenedor
+                </button>
+            </div>
+
+            {containers.map(container => (
+[CONTENIDO SENSIBLE ELIMINADO EN: FreezerGrid.jsx]
+                    <div style={containerHeaderStyle}>
+                        {editingContainerId === container.id ? (
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1 }}>
+                                <input
+                                    style={containerNameInputStyle}
+                                    value={editingContainerName}
+                                    onChange={(e) => setEditingContainerName(e.target.value)}
+[CONTENIDO SENSIBLE ELIMINADO EN: FreezerGrid.jsx]
+[CONTENIDO SENSIBLE ELIMINADO EN: FreezerGrid.jsx]
+                                            saveContainerName(container.id);
+                                        }
+                                    }}
+                                    autoFocus
+                                />
+                                <button
+                                    style={{ ...smallBtnStyle, backgroundColor: '#28a745', color: 'white' }}
+                                    onClick={() => saveContainerName(container.id)}
+                                >
+                                    ✓
+                                </button>
+                                <button
+                                    style={{ ...smallBtnStyle, backgroundColor: '#6c757d', color: 'white' }}
+                                    onClick={() => {
+                                        setEditingContainerId(null);
+                                        setEditingContainerName('');
+                                    }}
+                                >
+                                    ✗
+                                </button>
+                            </div>
+                        ) : (
+                            <h4
+                                style={containerNameStyle}
+                                onClick={() => startEditingContainerName(container)}
+                            >
+                                {container.name}
+                            </h4>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <select
+                                style={colorSelectStyle}
+                                value={container.color}
+                                onChange={(e) => saveContainerColor(container.id, e.target.value)}
+                            >
+                                <option value="#e9ecef">Gris</option>
+                                <option value="#d1ecf1">Azul Claro</option>
+                                <option value="#d4edda">Verde Claro</option>
+                                <option value="#fff3cd">Amarillo</option>
+                                <option value="#f8d7da">Rosa</option>
+                                <option value="#e2e3e5">Gris Oscuro</option>
+                                <option value="#cfe2ff">Azul</option>
+                            </select>
+                            <button
+                                style={deleteBtnStyle}
+                                onClick={() => deleteContainer(container.id)}
+                            >
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{ ...gridStyle, backgroundColor: container.color }}>
+                        {container.slots && container.slots.map(slot => (
+                            <FreezerSlot
+[CONTENIDO SENSIBLE ELIMINADO EN: FreezerGrid.jsx]
+                                slotData={slot}
+                                onClick={() => handleSlotClick(slot)}
+                                isSelected={selectedSlot && selectedSlot.id === slot.id}
+                            />
+                        ))}
+                    </div>
+                </div>
+            ))}
+
+            {isEditing && (
+                <div style={editorStyle}>
+                    <h4 style={{ margin: '0 0 15px 0' }}>Editar Sección</h4>
+
+                    <div style={formGroupStyle}>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Título (Sabor):</label>
+                        <input
+                            style={inputStyle}
+                            value={editForm.name}
+                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                            placeholder="Ej. Chocolate"
+                        />
+                    </div>
+
+                    <div style={formGroupStyle}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                            Filas de Información:
+                        </label>
+
+                        {/* Add Row Form */}
+                        <div style={rowInputContainerStyle}>
+                            <input
+                                style={{ ...inputStyle, flex: 1 }}
+                                value={currentRow.label}
+                                onChange={(e) => setCurrentRow({ ...currentRow, label: e.target.value })}
+                                placeholder="Etiqueta (ej. Lote)"
+                            />
+                            <input
+                                style={{ ...inputStyle, flex: 1 }}
+                                value={currentRow.value}
+                                onChange={(e) => setCurrentRow({ ...currentRow, value: e.target.value })}
+                                placeholder="Valor (ej. 123)"
+                            />
+                            <button
+                                style={{ ...smallBtnStyle, backgroundColor: '#007bff', color: 'white' }}
+                                onClick={handleAddRow}
+                            >
+                                + Añadir
+                            </button>
+                        </div>
+
+                        {/* Rows List */}
+                        {editForm.rows.length > 0 && (
+                            <ul style={rowListStyle}>
+                                {editForm.rows.map((row, index) => (
+[CONTENIDO SENSIBLE ELIMINADO EN: FreezerGrid.jsx]
+                                        <span>
+                                            <strong>{row.label}:</strong> {row.value}
+                                        </span>
+                                        <button
+                                            style={{ ...smallBtnStyle, backgroundColor: '#dc3545', color: 'white' }}
+                                            onClick={() => handleDeleteRow(index)}
+                                        >
+                                            Eliminar
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    <div style={formGroupStyle}>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Color:</label>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            {['#f8f9fa', '#ffcccc', '#ccffcc', '#cce5ff', '#fff3cd'].map(c => (
+                                <div
+[CONTENIDO SENSIBLE ELIMINADO EN: FreezerGrid.jsx]
+                                    onClick={() => setEditForm({ ...editForm, color: c })}
+                                    style={{
+                                        width: '30px',
+                                        height: '30px',
+                                        backgroundColor: c,
+                                        borderRadius: '50%',
+                                        cursor: 'pointer',
+                                        border: editForm.color === c ? '2px solid #333' : '1px solid #ddd'
+                                    }}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    <div style={buttonRowStyle}>
+                        <button
+                            style={{ ...btnStyle, backgroundColor: '#6c757d', color: 'white' }}
+                            onClick={() => setIsEditing(false)}
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            style={{ ...btnStyle, backgroundColor: '#28a745', color: 'white' }}
+                            onClick={handleSave}
+                        >
+                            Guardar
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default FreezerGrid;
+
+************************************************************
+
 FILE: src/components/FreezerLayout/FreezerLayout.jsx
 ------------------------------
 import React from 'react';
 import miImagen from './FreezerLayout.png'; // Ruta relativa al componente
 
-const FreezerLayout = () => {
+const FreezerLayout = ({ productosSeleccionados = [] }) => {
   const containerStyle = {
     display: 'flex',
-    justifyContent: 'center', // Centrado horizontal
-    alignItems: 'center',     // Centrado vertical
-    height: 'auto',          // Opcional: para que ocupe toda la pantalla
-    border: '1px solid #ccc',
-    marginTop: '25px',
-    
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '20px',
+    paddingBottom: '20px',
   };
+
+  const cardStyle = {
+    backgroundColor: '#fff',
+    borderRadius: '12px',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+    padding: '15px',
+    width: '100%',
+    maxWidth: '600px',
+    boxSizing: 'border-box',
+    border: '1px solid #e1e4e8',
+  };
+
+  const imageContainerStyle = {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  };
+
+  const summaryTitleStyle = {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    marginBottom: '15px',
+    color: '#333',
+    textAlign: 'center',
+    borderBottom: '2px solid #00BFFF',
+    paddingBottom: '8px',
+  };
+
+  const tableHeaderStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '10px 15px',
+    marginBottom: '8px',
+    backgroundColor: '#e9ecef',
+    borderRadius: '6px',
+    fontWeight: 'bold',
+    color: '#495057',
+    fontSize: '14px',
+  };
+
+  const summaryListStyle = {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+  };
+
+  const summaryItemStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '10px 15px',
+    marginBottom: '8px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '6px',
+    border: '1px solid #dee2e6',
+  };
+
+  const itemInfoStyle = {
+    display: 'flex',
+    gap: '10px',
+    alignItems: 'center',
+    flex: 1,
+  };
+
+  const idBadgeStyle = {
+    backgroundColor: '#007bff',
+    color: 'white',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    minWidth: '24px',
+    textAlign: 'center',
+  };
+
+  const nameStyle = {
+    fontWeight: '500',
+    color: '#212529',
+  };
+
+  const quantityBadgeStyle = {
+    backgroundColor: '#28a745',
+    color: 'white',
+    padding: '4px 12px',
+    borderRadius: '4px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    minWidth: '30px',
+    textAlign: 'center',
+  };
+
+  // Agrupar productos por ID y sumar cantidades
+  const productosSumarizados = productosSeleccionados.reduce((acc, producto) => {
+    const existing = acc.find(item => item.id === producto.id);
+    if (existing) {
+      existing.cantidad += 1;
+    } else {
+      acc.push({
+        id: producto.id,
+        nombre: producto.nombre,
+        cantidad: 1,
+      });
+    }
+    return acc;
+  }, []);
+
+  // Ordenar por ID para mejor visualización
+  productosSumarizados.sort((a, b) => a.id - b.id);
 
   return (
     <div style={containerStyle}>
-      <img src={miImagen} alt="Descripción de la imagen" style={{ maxWidth: '100%' }} />
+      {/* Card de la Imagen */}
+      <div style={cardStyle}>
+        <div style={imageContainerStyle}>
+          <img src={miImagen} alt="Ubicación en Freezer" style={{ maxWidth: '100%', borderRadius: '8px' }} />
+        </div>
+      </div>
+
+      {/* Card del Resumen */}
+      {productosSumarizados.length > 0 && (
+        <div style={cardStyle}>
+          <div style={summaryTitleStyle}>
+            Resumen de Productos
+          </div>
+
+          <div style={tableHeaderStyle}>
+            <span style={{ width: '50px' }}>ID</span>
+            <span style={{ flex: 1, textAlign: 'left', paddingLeft: '10px' }}>NOMBRE</span>
+            <span style={{ minWidth: '80px', textAlign: 'right' }}>CANTIDAD</span>
+          </div>
+
+          <ul style={summaryListStyle}>
+            {productosSumarizados.map((item) => (
+[CONTENIDO SENSIBLE ELIMINADO EN: FreezerLayout.jsx]
+                <div style={itemInfoStyle}>
+                  <span style={idBadgeStyle}>{item.id}</span>
+                  <span style={nameStyle}>{item.nombre}</span>
+                </div>
+                <span style={quantityBadgeStyle}>{item.cantidad}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
 
 export default FreezerLayout;
+************************************************************
+
+FILE: src/components/FreezerLayout/FreezerSlot.jsx
+------------------------------
+import React from 'react';
+
+const FreezerSlot = ({ slotData, onClick, isSelected }) => {
+    const { id, name, rows = [], color } = slotData || {};
+
+    const containerStyle = {
+        border: isSelected ? '2px solid #007bff' : '1px solid #ccc',
+        borderRadius: '8px',
+        padding: '12px',
+        minHeight: '100px',
+        backgroundColor: color || '#f8f9fa',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'all 0.2s',
+        boxShadow: isSelected ? '0 0 8px rgba(0,123,255,0.5)' : 'none',
+        position: 'relative'
+    };
+
+    const headerStyle = {
+        fontSize: '14px',
+        color: '#495057',
+        marginBottom: '8px',
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+        textAlign: 'center',
+        borderBottom: '1px solid #dee2e6',
+        paddingBottom: '6px'
+    };
+
+    const rowsContainerStyle = {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        width: '100%'
+    };
+
+    const rowStyle = {
+        fontSize: '12px',
+        color: '#333',
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: '4px 0'
+    };
+
+    const rowLabelStyle = {
+        fontWeight: '600',
+        color: '#6c757d'
+    };
+
+    const rowValueStyle = {
+        fontWeight: '500',
+        color: '#212529'
+    };
+
+    const emptyStyle = {
+        fontSize: '12px',
+        color: '#adb5bd',
+        fontStyle: 'italic',
+        textAlign: 'center',
+        marginTop: '8px'
+    };
+
+    return (
+        <div style={containerStyle} onClick={onClick}>
+            <div style={headerStyle}>{name || `Sección ${id}`}</div>
+
+            {rows && rows.length > 0 ? (
+                <div style={rowsContainerStyle}>
+                    {rows.map((row, index) => (
+[CONTENIDO SENSIBLE ELIMINADO EN: FreezerSlot.jsx]
+                            <span style={rowLabelStyle}>{row.label}:</span>
+                            <span style={rowValueStyle}>{row.value}</span>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div style={emptyStyle}>Sin información</div>
+            )}
+        </div>
+    );
+};
+
+export default FreezerSlot;
+
 ************************************************************
 
 FILE: src/components/GestionPedido.jsx
@@ -3321,6 +4131,11 @@ const RegistroGasto = ({ onClose }) => {
   const navigate = useNavigate();
   const getLocalToday = () => new Date().toLocaleDateString('en-CA');
 
+  const [gastos, setGastos] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+
   const [gasto, setGasto] = useState({
     descripcion: '',
     montoUsd: '',
@@ -3333,14 +4148,38 @@ const RegistroGasto = ({ onClose }) => {
 
   const [tasaActual, setTasaActual] = useState(0);
 
+  const fetchGastos = async () => {
+    try {
+      const allGastos = await db.gastos.orderBy('fecha').reverse().toArray();
+      setGastos(allGastos);
+    } catch (error) {
+      console.error("Error fetching gastos:", error);
+    }
+  };
+
   useEffect(() => {
-    const cargarTasa = async () => {
+    const cargarDatos = async () => {
       const tasa = await getTasaBCV();
       setTasaActual(tasa || 1); // Evitar división por cero
       setGasto(prev => ({ ...prev, tasa: tasa || 1 }));
+      await fetchGastos();
     };
-    cargarTasa();
+    cargarDatos();
   }, []);
+
+  const resetForm = () => {
+    setGasto({
+      descripcion: '',
+      montoUsd: '',
+      montoBs: '',
+      categoria: 'Operativo',
+      fecha: getLocalToday(),
+      metodoPago: 'Efectivo',
+      tasa: tasaActual
+    });
+    setEditingId(null);
+    setShowForm(false);
+  };
 
   const handleMontoBsChange = (e) => {
     const bsValue = e.target.value;
@@ -3355,117 +4194,206 @@ const RegistroGasto = ({ onClose }) => {
     const montoBsNum = parseFloat(gasto.montoBs);
     const montoUsdNum = parseFloat(gasto.montoUsd);
 
-    await db.gastos.add({
+    const gastoData = {
       ...gasto,
       montoBs: montoBsNum,
       montoUsd: montoUsdNum,
       fecha: new Date(gasto.fecha).toISOString()
-    });
+    };
 
-    alert('✅ Gasto registrado con éxito');
-    if (onClose) {
-      onClose();
-    } else {
-      navigate(-1);
+    try {
+      if (editingId) {
+        await db.gastos.put({ ...gastoData, id: editingId });
+        alert('✅ Gasto actualizado con éxito');
+      } else {
+        await db.gastos.add(gastoData);
+        alert('✅ Gasto registrado con éxito');
+      }
+      await fetchGastos();
+      resetForm();
+    } catch (error) {
+      console.error("Error saving gasto:", error);
+      alert('❌ Error al guardar el gasto');
+    }
+  };
+
+  const handleEdit = (item) => {
+    setGasto({
+      ...item,
+      fecha: item.fecha.split('T')[0], // Ajustar fecha para input type="date"
+      montoUsd: item.montoUsd.toString(),
+      montoBs: item.montoBs.toString()
+    });
+    setEditingId(item.id);
+    setShowForm(true);
+  };
+
+  const handleDeleteClick = (id) => {
+    setShowDeleteConfirm(id);
+  };
+
+  const confirmDelete = async () => {
+    if (showDeleteConfirm) {
+      await db.gastos.delete(showDeleteConfirm);
+      await fetchGastos();
+      setShowDeleteConfirm(null);
     }
   };
 
   return (
-    <div className={styles.overlay}>
-      <div className={styles.modal}>
-        <div className={styles.header}>
-          <span className={styles.title}>💸 REGISTRAR GASTO / RETIRO</span>
-          <button className={styles.closeButton} onClick={() => onClose ? onClose() : navigate(-1)}>×</button>
-        </div>
-
-        <form onSubmit={handleSubmit} className={styles.content}>
-          <div className={styles.inputRow}>
-            <div className={styles.inputGroup}>
-              <label className={styles.label}>Fecha</label>
-              <input
-                type="date"
-                className={styles.inputField}
-                value={gasto.fecha}
-                onChange={(e) => setGasto({ ...gasto, fecha: e.target.value })}
-                required
-              />
-            </div>
-            <div className={styles.inputGroup}>
-              <label className={styles.label}>Tasa BCV</label>
-              <div className={styles.tasaHighlight}>
-                Bs. {tasaActual.toFixed(2)}
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>Descripción</label>
-            <input
-              type="text"
-              placeholder="Ej: Pago de transporte, Almuerzo, Empaques..."
-              className={styles.inputField}
-              value={gasto.descripcion}
-              onChange={(e) => setGasto({ ...gasto, descripcion: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className={styles.inputRow}>
-            <div className={styles.inputGroup}>
-              <label className={styles.label}>Monto (Bs.)</label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                className={styles.inputField}
-                value={gasto.montoBs}
-                onChange={handleMontoBsChange}
-                required
-              />
-            </div>
-            <div className={styles.inputGroup}>
-              <label className={styles.label}>Monto ($)</label>
-              <div className={styles.montoBsDisplay} style={{ color: '#007bff', backgroundColor: '#e1f5fe', border: '1px solid #b3e5fc' }}>
-                ${parseFloat(gasto.montoUsd || 0).toFixed(2)}
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.inputRow}>
-            <div className={styles.inputGroup}>
-              <label className={styles.label}>Categoría</label>
-              <select
-                className={styles.selectField}
-                value={gasto.categoria}
-                onChange={(e) => setGasto({ ...gasto, categoria: e.target.value })}
-              >
-                <option value="Operativo">🏢 Operativo (Insumos/Local)</option>
-                <option value="Personal">👤 Personal (Retiro/Comida)</option>
-                <option value="Inversión">📈 Inversión (Nuevos equipos)</option>
-                <option value="Otros">❓ Otros</option>
-              </select>
-            </div>
-            <div className={styles.inputGroup}>
-              <label className={styles.label}>Método de Pago</label>
-              <select
-                className={styles.selectField}
-                value={gasto.metodoPago}
-                onChange={(e) => setGasto({ ...gasto, metodoPago: e.target.value })}
-              >
-                <option value="Efectivo">💵 Efectivo</option>
-                <option value="Transferencia">🏦 Transferencia</option>
-                <option value="Pago Móvil">📱 Pago Móvil</option>
-                <option value="Zelle">💳 Zelle / Otros $</option>
-              </select>
-            </div>
-          </div>
-
-          <div className={styles.footer}>
-            <button type="button" className={styles.btnCancelar} onClick={() => onClose ? onClose() : navigate(-1)}>Cancelar</button>
-            <button type="submit" className={styles.btnGuardar}>Guardar Registro</button>
-          </div>
-        </form>
+    <div className={styles.container}>
+      {/* Header Fijo */}
+      <div className={styles.mainHeader}>
+        <span className={styles.mainTitle}>💸 Registro de Gastos</span>
+        <button className={styles.closeMainButton} onClick={() => onClose ? onClose() : navigate(-1)}>×</button>
       </div>
+
+      {/* Lista de Gastos */}
+      <div className={styles.listContainer}>
+        {gastos.length === 0 ? (
+          <div className={styles.emptyState}>No hay gastos registrados.</div>
+        ) : (
+          gastos.map((item) => (
+[CONTENIDO SENSIBLE ELIMINADO EN: RegistroGasto.jsx]
+              <div className={styles.expenseInfo}>
+                <span className={styles.expenseDesc}>{item.descripcion}</span>
+                <span className={styles.expenseMeta}>
+                  {new Date(item.fecha).toLocaleDateString()} • {item.categoria}
+                </span>
+              </div>
+              <div className={styles.expenseActions}>
+                <div className={styles.expenseAmount}>
+                  ${item.montoUsd?.toFixed(2)}
+                  <span className={styles.amountBs}>Bs. {item.montoBs?.toFixed(2)}</span>
+                </div>
+                <div className={styles.actionButtons}>
+                  <button onClick={() => handleEdit(item)} className={styles.btnIconEdit}>✏️</button>
+                  <button onClick={() => handleDeleteClick(item.id)} className={styles.btnIconDelete}>🗑️</button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* FAB Button */}
+      <button className={styles.fab} onClick={() => { resetForm(); setShowForm(true); }}>
+        +
+      </button>
+
+      {/* Modal Formulario */}
+      {showForm && (
+        <div className={styles.overlay}>
+          <div className={styles.modal}>
+            <div className={styles.header}>
+              <span className={styles.title}>{editingId ? 'EDITAR GASTO' : 'NUEVO GASTO'}</span>
+              <button className={styles.closeButton} onClick={resetForm}>×</button>
+            </div>
+
+            <form onSubmit={handleSubmit} className={styles.content}>
+              <div className={styles.inputRow}>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label}>Fecha</label>
+                  <input
+                    type="date"
+                    className={styles.inputField}
+                    value={gasto.fecha}
+                    onChange={(e) => setGasto({ ...gasto, fecha: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label}>Tasa BCV</label>
+                  <div className={styles.tasaHighlight}>
+                    Bs. {tasaActual.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label className={styles.label}>Descripción</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Pago de transporte, Almuerzo..."
+                  className={styles.inputField}
+                  value={gasto.descripcion}
+                  onChange={(e) => setGasto({ ...gasto, descripcion: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className={styles.inputRow}>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label}>Monto (Bs.)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    className={styles.inputField}
+                    value={gasto.montoBs}
+                    onChange={handleMontoBsChange}
+                    required
+                  />
+                </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label}>Monto ($)</label>
+                  <div className={styles.montoBsDisplay} style={{ color: '#007bff', backgroundColor: '#e1f5fe', border: '1px solid #b3e5fc' }}>
+                    ${parseFloat(gasto.montoUsd || 0).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.inputRow}>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label}>Categoría</label>
+                  <select
+                    className={styles.selectField}
+                    value={gasto.categoria}
+                    onChange={(e) => setGasto({ ...gasto, categoria: e.target.value })}
+                  >
+                    <option value="Operativo">🏢 Operativo</option>
+                    <option value="Personal">👤 Personal</option>
+                    <option value="Inversión">📈 Inversión</option>
+                    <option value="Otros">❓ Otros</option>
+                  </select>
+                </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.label}>Método</label>
+                  <select
+                    className={styles.selectField}
+                    value={gasto.metodoPago}
+                    onChange={(e) => setGasto({ ...gasto, metodoPago: e.target.value })}
+                  >
+                    <option value="Efectivo">💵 Efectivo</option>
+                    <option value="Transferencia">🏦 Transf.</option>
+                    <option value="Pago Móvil">📱 Pago Móvil</option>
+                    <option value="Zelle">💳 Zelle</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className={styles.footer}>
+                <button type="button" className={styles.btnCancelar} onClick={resetForm}>Cancelar</button>
+                <button type="submit" className={styles.btnGuardar}>Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmacion Eliminar */}
+      {showDeleteConfirm && (
+        <div className={styles.overlay} style={{ zIndex: 12000 }}>
+          <div className={styles.confirmModal}>
+            <h3>¿Eliminar gasto?</h3>
+            <p>Esta acción no se puede deshacer.</p>
+            <div className={styles.confirmActions}>
+              <button className={styles.btnCancelar} onClick={() => setShowDeleteConfirm(null)}>Cancelar</button>
+              <button className={styles.btnEliminar} onClick={confirmDelete}>Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -3477,40 +4405,231 @@ FILE: src/components/RegistroGasto.module.css
 ------------------------------
 /* RegistroGasto.module.css - Refined UI */
 
+.container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #f4f6f9;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+}
+
+.mainHeader {
+  background-color: #ffffff;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+}
+
+.mainTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #2c3e50;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.closeMainButton {
+  background: none;
+  border: none;
+  font-size: 32px;
+  cursor: pointer;
+  color: #7f8c8d;
+  line-height: 1;
+}
+
+/* List Styles */
+.listContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.emptyState {
+  text-align: center;
+  color: #bdc3c7;
+  font-size: 16px;
+  margin-top: 40px;
+  font-weight: 500;
+}
+
+.expenseItem {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-left: 4px solid #3498db;
+  /* Default accent */
+}
+
+/* Categorize colors if possible, else generic blue */
+.expenseItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.expenseInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.expenseDesc {
+  font-weight: 700;
+  font-size: 15px;
+  color: #2c3e50;
+}
+
+.expenseMeta {
+  font-size: 12px;
+  color: #95a5a6;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.expenseActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.expenseAmount {
+  font-size: 16px;
+  font-weight: 800;
+  color: #e74c3c;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.amountBs {
+  font-size: 11px;
+  color: #95a5a6;
+  font-weight: 600;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 10px;
+}
+
+.btnIconEdit,
+.btnIconDelete {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  padding: 0;
+}
+
+.btnIconEdit:hover,
+.btnIconDelete:hover {
+  opacity: 1;
+}
+
+/* FAB */
+.fab {
+  position: absolute;
+  bottom: 25px;
+  right: 25px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  font-size: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  /* Ensure no padding affects dimensions */
+  line-height: 1;
+  /* Normalize line height */
+  box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+  cursor: pointer;
+  transition: transform 0.2s;
+  z-index: 100;
+}
+
+.fab:hover {
+  transform: scale(1.05);
+  background-color: #27ae60;
+}
+
+/* Modal Overlay & Form (Reusing updated styles) */
 .overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 11000;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+[CONTENIDO SENSIBLE ELIMINADO EN: RegistroGasto.module.css]
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modal {
   background-color: #ffffff;
   width: 95%;
   max-width: 480px;
-  max-height: 95vh;
-  padding: 0px 20px 20px 20px;
-  border-radius: 12px;
+  padding: 25px;
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease-out;
+}
+
+[CONTENIDO SENSIBLE ELIMINADO EN: RegistroGasto.module.css]
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 3px solid #00BFFF;
-  /* BLUE DIVISION LINE - REINFORCED */
-  margin-bottom: 15px;
-  padding-bottom: 5px;
+  border-bottom: 2px solid #f1f2f6;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
 }
 
 .title {
@@ -3523,29 +4642,38 @@ FILE: src/components/RegistroGasto.module.css
 .closeButton {
   background: none;
   border: none;
-  font-size: 32px;
+  font-size: 28px;
   cursor: pointer;
-  color: #333;
+  color: #95a5a6;
+  transition: color 0.2s;
+}
+
+.closeButton:hover {
+  color: #e74c3c;
 }
 
 .content {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  overflow-y: auto;
+}
+
+.inputRow {
+  display: flex;
+  gap: 15px;
 }
 
 .inputGroup {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1;
 }
 
 .label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #7f8c8d;
-  /* SOFT GREY - REFINED */
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -3554,170 +4682,132 @@ FILE: src/components/RegistroGasto.module.css
 .selectField {
   padding: 12px;
   border-radius: 8px;
-  border: 1px solid #dcdde1;
-  background-color: #f8faff;
-  /* LIGHT AND FRIENDLY BACKGROUND - REINFORCED */
-  font-size: 16px;
+  border: 1px solid #dfe6e9;
+  background-color: #fdfdfd;
+  font-size: 15px;
   width: 100%;
   box-sizing: border-box;
-  color: #2f3640;
-  transition: all 0.2s ease;
+  color: #2d3436;
+  transition: border-color 0.2s;
 }
 
 .inputField:focus,
 .selectField:focus {
   outline: none;
-  border-color: #00BFFF;
-  background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(0, 191, 255, 0.1);
-}
-
-.inputRow {
-  display: flex;
-  gap: 12px;
-}
-
-.inputRow>div {
-  flex: 1;
+  border-color: #3498db;
+  background-color: #fff;
 }
 
 .tasaHighlight {
-  background-color: #ebf5fb;
-  padding: 10px;
+  background-color: #ecf0f1;
+  padding: 12px;
   border-radius: 8px;
-  border: 1px solid #d6eaf8;
-  font-size: 14px;
-  color: #2980b9;
-  font-weight: 700;
+  border: 1px solid #bdc3c7;
+  font-size: 15px;
+  color: #2c3e50;
+  font-weight: 600;
   text-align: center;
 }
 
 .montoBsDisplay {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
-  color: #27ae60;
+  color: #2980b9;
   text-align: center;
-  padding: 8px;
-  background-color: #eafaf1;
+  padding: 10px;
+  background-color: #ebf5fb;
   border-radius: 8px;
-  border: 1px solid #d5f5e3;
+  border: 1px solid #d6eaf8;
 }
 
 .footer {
   display: flex;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.btnGuardar,
+.btnCancelar,
+.btnEliminar {
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: background-color 0.2s, transform 0.1s;
 }
 
 .btnGuardar {
   flex: 2;
-  padding: 14px;
   background-color: #2ecc71;
-  /* SUCCESS GREEN - REINFORCED */
   color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 800;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  text-transform: uppercase;
 }
 
 .btnGuardar:hover {
   background-color: #27ae60;
+  transform: scale(1.02);
 }
 
 .btnCancelar {
   flex: 1;
-  padding: 14px;
-  background-color: #bdc3c7;
-  /* SOFT GREY BUTTON */
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 800;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.2s;
+  background-color: #ecf0f1;
+  color: #7f8c8d;
 }
 
 .btnCancelar:hover {
-  background-color: #95a5a6;
+  background-color: #bdc3c7;
+  color: white;
 }
 
 .btnEliminar {
-  flex: 1;
-  padding: 14px;
   background-color: #e74c3c;
-  /* DANGER RED */
   color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 800;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  text-transform: uppercase;
+  flex: 1;
 }
 
 .btnEliminar:hover {
   background-color: #c0392b;
 }
 
-/* List styles */
-.listContainer {
-  margin-top: 25px;
-  border-top: 1px solid #eee;
-  padding-top: 15px;
-  max-height: 250px;
-  overflow-y: auto;
+/* Confirm Modal Specifics */
+.confirmModal {
+  background-color: white;
+  padding: 30px;
+  border-radius: 12px;
+  text-align: center;
+  width: 85%;
+  max-width: 320px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.listTitle {
-  font-size: 14px;
-  font-weight: 800;
-  color: #7f8c8d;
-  margin-bottom: 10px;
-  text-transform: uppercase;
+[CONTENIDO SENSIBLE ELIMINADO EN: RegistroGasto.module.css]
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
-.expenseItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  border-bottom: 1px solid #f9f9f9;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  border-radius: 6px;
-}
-
-.expenseItem:hover {
-  background-color: #f0f8ff;
-}
-
-.expenseInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.expenseDesc {
-  font-weight: 700;
-  font-size: 14px;
+.confirmModal h3 {
+  margin: 0 0 10px 0;
   color: #2c3e50;
 }
 
-.expenseMeta {
-  font-size: 11px;
-  color: #95a5a6;
+.confirmModal p {
+  color: #7f8c8d;
+  margin-bottom: 25px;
 }
 
-.expenseAmount {
-  font-weight: 800;
-  color: #e74c3c;
-  font-size: 14px;
+.confirmActions {
+  display: flex;
+  gap: 15px;
 }
 ************************************************************
 
@@ -4212,7 +5302,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
                     {/* Productos */}
                     <Link to="/adminproductos" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>📊</span> Productos
+                        <span style={styles.icon}>🍦</span> Productos
                     </Link>
 
                     {/* Acceso Administrativo */}
@@ -4222,9 +5312,14 @@ export default function Sidebar({ isOpen, onClose }) {
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
                     >
-                        <span style={styles.icon}>⚙️</span>
+                        <span style={styles.icon}>🛡️</span>
                         <span>Panel de Control</span>
                     </a>
+
+                    {/* FreezerGrid */}
+                    <Link to="/freezergrid" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>🧊</span>Freezer Grid
+                    </Link>
 
                 </nav>
             </div>
@@ -4985,6 +6080,28 @@ export class NaturaDBClass {
             historico_tasas: '++id, fecha_tasa, tasa' // Nueva tabla indexada por fecha y valor
         });
 
+        this.db.version(10).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt, visible',
+            grupos: '++id, nombre, precio, costo_$', config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad, utilidadUsd, tasaVenta, costoUnitarioUsd',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
+            gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago',
+            historico_tasas: '++id, fecha_tasa, tasa',
+            freezer_slots: 'id, row, col' // [id=row_col]
+        });
+
+        this.db.version(11).stores({
+            productos: 'id, nombre, grupo, stock, imagen, createdAt, visible',
+            grupos: '++id, nombre, precio, costo_$',
+            config: 'clave',
+            ventas: '++id, productoId, nombre, grupo, precioUsd, fecha, cantidad, utilidadUsd, tasaVenta, costoUnitarioUsd',
+            pedidos: '++id, numero_pedido, fecha_pedido, tasa, estatus',
+            gastos: '++id, fecha, descripcion, categoria, montoUsd, metodoPago',
+            historico_tasas: '++id, fecha_tasa, tasa',
+            freezer_containers: '++id, order',
+            freezer_slots: 'id, containerId, row, col'
+        });
+
         // Direct access references for components [6]
         this.productos = this.db.productos;
         this.grupos = this.db.grupos;
@@ -4992,7 +6109,10 @@ export class NaturaDBClass {
         this.ventas = this.db.ventas;
         this.pedidos = this.db.pedidos;
         this.gastos = this.db.gastos;
+        this.gastos = this.db.gastos;
         this.historico_tasas = this.db.historico_tasas;
+        this.freezer_containers = this.db.freezer_containers;
+        this.freezer_slots = this.db.freezer_slots;
 
     }
 
@@ -6058,8 +7178,8 @@ const Estadisticas = () => {
   const [datosBI, setDatosBI] = useState([]);
   const [datosMargen, setDatosMargen] = useState([]);
   const [tasa, setTasa] = useState(0);
-  const [rango, setRango] = useState('7d');
-  const [limiteProducto, setLimiteProducto] = useState(5); // Nuevo estado para el filtro
+  const [rango, setRango] = useState('mes');
+  const [limiteProducto, setLimiteProducto] = useState('todos'); // Nuevo estado para el filtro
   const [cargando, setCargando] = useState(true);
   const [metricas, setMetricas] = useState({
     ventaTotalUsd: 0,
@@ -6068,19 +7188,25 @@ const Estadisticas = () => {
     costoTotalUsd: 0,
     gastosOperativosUsd: 0,
     retirosPersonalesUsd: 0,
-    margenPorcentaje: 0
+    margenPorcentaje: 0,
+    proyeccionVenta: 0,
+    proyeccionCosto: 0,
+    proyeccionUtilidad: 0,
+    inversionTotalUsd: 0
   });
 
   useEffect(() => {
     const cargarAnaliticaBI = async () => {
       setCargando(true);
       try {
-        // 1. Unificación de Fuentes: Pedidos, Ventas y Gastos en paralelo
-        const [pedidosRaw, ventasRaw, gastosRaw, valorTasa] = await Promise.all([
+        // 1. Unificación de Fuentes: Pedidos, Ventas, Gastos, Productos y Grupos en paralelo
+        const [pedidosRaw, ventasRaw, gastosRaw, valorTasa, productosRaw, gruposRaw] = await Promise.all([
           db.getAll('pedidos'),
           db.getAll('ventas'),
           db.getAll('gastos'),
-          getTasaBCV()
+          getTasaBCV(),
+          db.getAll('productos'),
+          db.getAll('grupos')
         ]);
 
         // 2. Filtrado por rango de tiempo unificado
@@ -6113,10 +7239,13 @@ const Estadisticas = () => {
         // 5. Procesar Gastos y Retiros
         let gastosOperativosSum = 0;
         let retirosPersonalesSum = 0;
+        let inversionesSum = 0;
 
         gastosFiltrados.forEach(g => {
           if (g.categoria === 'Personal') {
             retirosPersonalesSum += g.montoUsd || 0;
+          } else if (g.categoria === 'Inversión') {
+            inversionesSum += g.montoUsd || 0;
           } else {
             gastosOperativosSum += g.montoUsd || 0;
           }
@@ -6143,6 +7272,26 @@ const Estadisticas = () => {
         const utilidadNetaSum = utilidadBrutaSum - gastosOperativosSum;
         const margenPorc = ventaSum > 0 ? (utilidadNetaSum / ventaSum) * 100 : 0;
 
+        // 9. Calcular Proyección de Inventario (NUEVO - Valor Futuro)
+        let invVenta = 0;
+        let invCosto = 0;
+        const gruposMap = new Map(gruposRaw.map(g => [g.nombre, g]));
+
+        if (Array.isArray(productosRaw)) {
+          productosRaw.forEach(p => {
+            if (p.stock > 0 && p.grupo) {
+              const g = gruposMap.get(p.grupo);
+              if (g) {
+                const costo = g.costo_$ || 0;
+                const precio = g.precio || 0;
+                invVenta += precio * p.stock;
+                invCosto += costo * p.stock;
+              }
+            }
+          });
+        }
+        const invUtilidad = invVenta - invCosto;
+
         setMetricas({
           ventaTotalUsd: ventaSum,
           costoTotalUsd: costoSum,
@@ -6150,7 +7299,11 @@ const Estadisticas = () => {
           utilidadNetaUsd: utilidadNetaSum,
           gastosOperativosUsd: gastosOperativosSum,
           retirosPersonalesUsd: retirosPersonalesSum,
-          margenPorcentaje: margenPorc
+          margenPorcentaje: margenPorc,
+          proyeccionVenta: invVenta,
+          proyeccionCosto: invCosto,
+          proyeccionUtilidad: invUtilidad,
+          inversionTotalUsd: inversionesSum
         });
 
         // Datos para el gráfico de Ranking
@@ -6224,17 +7377,17 @@ const Estadisticas = () => {
             <div style={{ flex: 1 }}>
               <label className={styles.filterLabel}>Periodo:</label>
               <select value={rango} onChange={(e) => setRango(e.target.value)} className={styles.select} style={{ width: '100%' }}>
-                <option value="hoy">Ventas de Hoy</option>
-                <option value="7d">Últimos 7 Días</option>
                 <option value="mes">Mes Actual</option>
+                <option value="7d">Últimos 7 Días</option>
+                <option value="hoy">Ventas de Hoy</option>
               </select>
             </div>
             <div style={{ flex: 1 }}>
               <label className={styles.filterLabel}>Top Prods:</label>
               <select value={limiteProducto} onChange={(e) => setLimiteProducto(e.target.value)} className={styles.select} style={{ width: '100%' }}>
-                <option value={5}>Top 5</option>
-                <option value={10}>Top 10</option>
                 <option value="todos">Todos</option>
+                <option value={10}>Top 10</option>
+                <option value={5}>Top 5</option>
               </select>
             </div>
           </div>
@@ -6339,8 +7492,36 @@ const Estadisticas = () => {
             <span>(⚠) Retiros Personales:</span>
             <span style={{ fontWeight: 'bold' }}>-${metricas.retirosPersonalesUsd.toFixed(2)}</span>
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>
-            * Los retiros personales no afectan la utilidad del negocio, pero sí el efectivo disponible.
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0288d1', fontSize: '0.9rem' }}>
+            <span>(↻) Inversión / Reposición:</span>
+            <span style={{ fontWeight: 'bold' }}>-${metricas.inversionTotalUsd.toFixed(2)}</span>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic', marginTop: '5px' }}>
+            * Retiros e Inversiones NO bajan tu utilidad contable, pero sí restan efectivo de caja.
+
+          </div>
+        </div>
+      </div>
+
+      {/* Tarjeta de Proyección de Inventario (NUEVO) */}
+      <div className={styles.mainCard} style={{ marginTop: '20px', backgroundColor: '#e3f2fd' }}>
+        <h3 className={styles.chartTitle}>🔮 PROYECCIÓN DE INVENTARIO (VALOR FUTURO)</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '1rem', color: '#444' }}>
+          <p style={{ fontSize: '0.85rem', color: '#555', marginBottom: '5px' }}>
+            Este es el dinero que tienes "guardado" en tus freezers. Si vendieras todo hoy, estos serían tus números:
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Valor de Venta (PVP):</span>
+            <span style={{ fontWeight: 'bold' }}>${metricas.proyeccionVenta.toFixed(2)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#d32f2f' }}>
+            <span>Costo de Reposición:</span>
+            <span style={{ fontWeight: 'bold' }}>-${metricas.proyeccionCosto.toFixed(2)}</span>
+          </div>
+          <hr style={{ border: '0', borderTop: '1px solid #bbdefb', margin: '5px 0' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', color: '#0d47a1' }}>
+            <span>(=) Utilidad Proyectada:</span>
+            <span style={{ fontWeight: 'bold' }}>${metricas.proyeccionUtilidad.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -6509,462 +7690,521 @@ FILE: src/pages/Home.jsx
 ------------------------------
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { db } from '../lib/db/database.js'; // Acceso a dbTasaBCV [3]
-import { getTasaBCV } from '../lib/db/utils/tasaUtil.js'; // Utilidad de tasa [3]
+import { db } from '../lib/db/database.js';
+import { getTasaBCV } from '../lib/db/utils/tasaUtil.js';
 import styles from './Home.module.css';
-import FreezerLayout   from "../components/FreezerLayout/FreezerLayout.jsx";
+import FreezerLayout from "../components/FreezerLayout/FreezerLayout.jsx";
+
+const getConstructedImagePath = (nombre) => {
+    const cleanName = nombre.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove accents
+        .replace(/\s+/g, ""); // Remove spaces
+    return `/outputs/small/${cleanName}_400.webp`;
+};
+
+const ProductImage = ({ product, className }) => {
+    const [src, setSrc] = useState(product.imagen || getConstructedImagePath(product.nombre));
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        setSrc(product.imagen || getConstructedImagePath(product.nombre));
+        setError(false);
+    }, [product]);
+
+    if (error) {
+        return <div className={className}>📷 {product.nombre}</div>;
+    }
+
+    return (
+        <img
+            src={src}
+            alt={product.nombre}
+            className={className}
+            onError={() => setError(true)}
+        />
+    );
+};
 
 function Home() {
-  const [productos, setProductos] = useState([]);
-  const [grupos, setGrupos] = useState([]);
-  const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
-  const [tasa, setTasa] = useState(0);
-  const [cargando, setCargando] = useState(true);
-  const [filtroGrupo, setFiltroGrupo] = useState('todos');
-  const navigate = useNavigate();
+    const [productos, setProductos] = useState([]);
+    const [grupos, setGrupos] = useState([]);
+    const [listaDeSeleccionados, setListaDeSeleccionados] = useState([]);
+    const [tasa, setTasa] = useState(0);
+    const [cargando, setCargando] = useState(true);
+    const [filtroGrupo, setFiltroGrupo] = useState('todos');
 
-  // Función helper para enriquecer productos con info del grupo
-  // Optimización: Usamos un Map para reducir la complejidad de O(N*M) a O(N) [BI/Performance]
-  const enriquecerProductos = (listaProductos, listaGrupos) => {
-    const gruposMap = new Map(listaGrupos.map(g => [g.nombre, g]));
-    return listaProductos.map(p => {
-      const grupoInfo = gruposMap.get(p.grupo);
-      return {
-        ...p,
-        precio: grupoInfo ? grupoInfo.precio : 0,
-        costo: grupoInfo ? (grupoInfo.costo_$ || 0) : 0
-      };
-    });
-  };
+    // Estado para controlar la visibilidad del modal del Freezer
+    const [isFreezerOpen, setIsFreezerOpen] = useState(false);
 
-  // Carga inicial de datos desde IndexedDB [4]
-  useEffect(() => {
-    const cargarTodo = async () => {
-      try {
-        await db.init(); // Inicializa dbTasaBCV [4]
-        const [p, g, t] = await Promise.all([
-          db.getAll('productos'),
-          db.getAll('grupos'),
-          getTasaBCV()
-        ]);
+    const navigate = useNavigate();
 
-        // Guardamos grupos raw por si se necesitan
-        setGrupos(g);
-
-        // Enriquecemos productos inmediatamente
-        const productosEnriquecidos = enriquecerProductos(p, g);
-        setProductos(productosEnriquecidos);
-
-        setTasa(t || 0);
-      } catch (err) {
-        console.error("Error initializing Home:", err);
-      } finally {
-        setCargando(false);
-      }
+    const enriquecerProductos = (listaProductos, listaGrupos) => {
+        const gruposMap = new Map(listaGrupos.map(g => [g.nombre, g]));
+        return listaProductos.map(p => {
+            const grupoInfo = gruposMap.get(p.grupo);
+            return {
+                ...p,
+                precio: grupoInfo ? grupoInfo.precio : 0,
+                costo: grupoInfo ? (grupoInfo.costo_$ || 0) : 0
+            };
+        });
     };
-    cargarTodo();
-  }, []);
 
-  /**
-   * FILTRADO ACTUALIZADO Y SEGURO:
-   * 1. Filtra por grupo seleccionado.
-   * 2. Valida visibilidad: Si el campo 'visible' es estrictamente 'false', se oculta.
-   *    Si es 'true' o 'undefined' (registros antiguos), se muestra [2, 5].
-   */
-  const productosFiltrados = productos.filter(p => {
-    const coincideGrupo = filtroGrupo === 'todos' || p.grupo === filtroGrupo;
-    const esVisible = p.visible !== false;
-    return coincideGrupo && esVisible;
-  });
+    useEffect(() => {
+        const cargarTodo = async () => {
+            try {
+                await db.init();
+                const [p, g, t] = await Promise.all([
+                    db.getAll('productos'),
+                    db.getAll('grupos'),
+                    getTasaBCV()
+                ]);
 
-  // Confirmación para vaciar la lista [6]
-  const handleVaciarLista = () => {
-    if (listaDeSeleccionados.length === 0) return;
-    const confirmar = window.confirm(
-      `⚠️ ¿Estás seguro de que deseas vaciar la lista?\n\nSe eliminarán los ${listaDeSeleccionados.length} helados seleccionados.`
-    );
-    if (confirmar) setListaDeSeleccionados([]);
-  };
+                setGrupos(g);
+                const productosEnriquecidos = enriquecerProductos(p, g);
+                setProductos(productosEnriquecidos);
+                setTasa(t || 0);
+            } catch (err) {
+                console.error("Error initializing Home:", err);
+            } finally {
+                setCargando(false);
+            }
+        };
+        cargarTodo();
+    }, []);
 
-  const handleGrabar = async () => {
-    if (listaDeSeleccionados.length === 0) return;
-
-    const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
-    if (!confirmar) return;
-
-    try {
-      // 1. Validar Stock ANTES de iniciar la transacción [Producción/Robustez]
-      // Agrupamos por producto para validar la suma de lo seleccionado
-      const conteoPorProducto = listaDeSeleccionados.reduce((acc, p) => {
-        acc[p.id] = (acc[p.id] || 0) + 1;
-        return acc;
-      }, {});
-
-      for (const [id, cantidad] of Object.entries(conteoPorProducto)) {
-        const pOriginal = productos.find(p => String(p.id) === id);
-        if (!pOriginal || pOriginal.stock < cantidad) {
-          alert(`❌ Stock insuficiente para: ${pOriginal?.nombre || id}. Disponible: ${pOriginal?.stock || 0}`);
-          return;
-        }
-      }
-
-      // 2. Generar un ID de transacción único para análisis de BI
-      const transaccionId = `TX-${Date.now()}`;
-
-      // 3. Procesar venta ATÓMICA [Producción/Integridad]
-      // Usamos la tabla 'ventas' y 'productos' en la transacción
-      await db.transaction('rw', [db.ventas, db.productos], async () => {
-        for (const item of listaDeSeleccionados) {
-          const precioUsd = item.precio || 0;
-          const costoUnitarioUsd = item.costo || 0;
-          const utilidadUsd = precioUsd - costoUnitarioUsd;
-
-          // Snapshot Financiero
-          await db.add('ventas', {
-            productoId: item.id,
-            nombre: item.nombre,
-            grupo: item.grupo,
-            precioUsd: precioUsd,
-            costoUnitarioUsd: costoUnitarioUsd,
-            utilidadUsd: utilidadUsd,
-            tasaVenta: tasa,
-            transaccionId: transaccionId,
-            cantidad: 1,
-            fecha: new Date().toISOString()
-          });
-
-          // Actualizar stock
-          await db.updateStock(item.id, -1);
-        }
-      });
-
-      // Refrescar estado local
-      const productosActualizados = await db.getAll('productos');
-      const productosEnriquecidos = enriquecerProductos(productosActualizados, grupos);
-      setProductos(productosEnriquecidos);
-
-      setListaDeSeleccionados([]);
-      alert("✅ Venta procesada con éxito con snapshot financiero y transaccionalidad.");
-
-    } catch (error) {
-      console.error("Error en snapshot de venta:", error);
-      alert("❌ Error al procesar la venta. Los cambios no se aplicaron.");
-    }
-  };
-
-  const seleccionarProducto = (producto) => {
-    setListaDeSeleccionados(prev => [...prev, producto]);
-  };
-
-  const eliminarItem = (indexParaEliminar) => {
-    setListaDeSeleccionados(prev => prev.filter((_, index) => index !== indexParaEliminar));
-  };
-
-  const calcularTotales = () => {
-    let usd = 0;
-    listaDeSeleccionados.forEach(item => {
-      usd += item.precio || 0;
+    const productosFiltrados = productos.filter(p => {
+        const coincideGrupo = filtroGrupo === 'todos' || p.grupo === filtroGrupo;
+        const esVisible = p.visible !== false;
+        return coincideGrupo && esVisible;
     });
-    return { usd, bs: usd * tasa };
-  };
 
-  const { usd, bs } = calcularTotales();
+    const handleVaciarLista = () => {
+        if (listaDeSeleccionados.length === 0) return;
+        const confirmar = window.confirm(`⚠️ ¿Estás seguro de que deseas vaciar la lista?`);
+        if (confirmar) setListaDeSeleccionados([]);
+    };
 
-  if (cargando) return <div className={styles.loading}>Cargando tienda...</div>;
+    const handleGrabar = async () => {
+        if (listaDeSeleccionados.length === 0) return;
+        const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
+        if (!confirmar) return;
 
-  return (
-    <>
-    <div className={styles.container}>
-      {/* Selector de Grupos */}
-      <div className={styles.filterBar}>
-        <label htmlFor="filtro-home">Filtrar por Grupo:</label>
-        <select
-          id="filtro-home"
-          value={filtroGrupo}
-          onChange={(e) => setFiltroGrupo(e.target.value)}
-          className={styles.select}
-        >
-          <option value="todos">Todos los helados</option>
-          {grupos.map(g => (
+        try {
+            const transaccionId = `TX-${Date.now()}`;
+            await db.transaction('rw', [db.ventas, db.productos], async () => {
+                for (const item of listaDeSeleccionados) {
+                    await db.add('ventas', {
+                        productoId: item.id,
+                        nombre: item.nombre,
+                        grupo: item.grupo,
+                        precioUsd: item.precio || 0,
+                        costoUnitarioUsd: item.costo || 0,
+                        utilidadUsd: (item.precio || 0) - (item.costo || 0),
+                        tasaVenta: tasa,
+                        transaccionId: transaccionId,
+                        cantidad: 1,
+                        fecha: new Date().toISOString()
+                    });
+                    await db.updateStock(item.id, -1);
+                }
+            });
+            setListaDeSeleccionados([]);
+            alert("✅ Venta procesada con éxito.");
+        } catch (error) {
+            alert("❌ Error al procesar la venta.");
+        }
+    };
+
+    const seleccionarProducto = (producto) => {
+        setListaDeSeleccionados(prev => [...prev, producto]);
+    };
+
+    const eliminarItem = (indexParaEliminar) => {
+        setListaDeSeleccionados(prev => prev.filter((_, index) => index !== indexParaEliminar));
+    };
+
+    const calcularTotales = () => {
+        let usd = listaDeSeleccionados.reduce((acc, item) => acc + (item.precio || 0), 0);
+        return { usd, bs: usd * tasa };
+    };
+
+    const { usd, bs } = calcularTotales();
+
+    if (cargando) return <div>Cargando tienda...</div>;
+
+    return (
+        <div className={styles.container}>
+            <div className={styles.filterBar}>
+                <label htmlFor="filtro-home">Filtrar por Grupo:</label>
+                <select
+                    id="filtro-home"
+                    value={filtroGrupo}
+                    onChange={(e) => setFiltroGrupo(e.target.value)}
+                    className={styles.select}
+                >
+                    <option value="todos">Todos los helados</option>
+                    {grupos.map(g => (
 [CONTENIDO SENSIBLE ELIMINADO EN: Home.jsx]
-          ))}
-        </select>
-      </div>
-
-      {/* Grid de Productos [9] */}
-      <div className={styles.grid}>
-        {productosFiltrados.map(p => {
-          const precio = p.precio || 0;
-          const esAgotado = p.stock === 0;
-          const esBajoStock = p.stock > 0 && p.stock <= 5;
-
-          return (
-            <div
-[CONTENIDO SENSIBLE ELIMINADO EN: Home.jsx]
-              className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
-              onClick={() => !esAgotado && seleccionarProducto(p)}
-            >
-              <div
-                className={styles.stockBadge}
-                style={{ backgroundColor: esAgotado ? '#ff4d4d' : (esBajoStock ? '#ffa500' : '#28a745') }}
-              >
-                {p.stock}
-              </div>
-
-              {p.imagen ? (
-                <img
-                  src={p.imagen}
-                  alt={p.nombre}
-                  className={styles.productImage}
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-              ) : (
-                <div className={styles.imagePlaceholder}>📷 {p.nombre}</div>
-              )}
-
-              <h3 className={styles.productTitle}>{p.nombre}</h3>
-              <p className={styles.priceText}>
-                ID: {p.id} - $: {precio.toFixed(2)} - Bs.: {(precio * tasa).toFixed(2)}
-              </p>
+                    ))}
+                </select>
             </div>
-          );
-        })}
-      </div>
 
-      {/* Panel inferior fijo [10, 11] */}
-      <div className={styles.selectedContainer}>
-        <div className={styles.selectedHeader}>
-          <span>Items: <strong>{listaDeSeleccionados.length}</strong></span>
-          <span>Tasa: <strong>{tasa.toFixed(2)}</strong></span>
-        </div>
-
-        <div className={styles.selectedList}>
-          {listaDeSeleccionados.map((item, index) => (
+            <div className={styles.grid}>
+                {productosFiltrados.map(p => {
+                    const precio = p.precio || 0;
+                    const esAgotado = p.stock === 0;
+                    const badgeColor = p.stock === 0 ? '#ff4d4d' : (p.stock <= 5 ? '#ffa500' : '#28a745');
+                    return (
+                        <div
 [CONTENIDO SENSIBLE ELIMINADO EN: Home.jsx]
-              <span>#{item.id} - {item.nombre}</span>
-              <button
-                className={styles.eliminarBtn}
-                onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}
-              >
-                ELIM
-              </button>
+                            className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
+                            onClick={() => !esAgotado && seleccionarProducto(p)}
+                        >
+                            <div className={styles.stockBadge} style={{ backgroundColor: badgeColor }}>{p.stock}</div>
+                            <ProductImage product={p} className={styles.productImage} />
+                            <h3 className={styles.productTitle}>{p.nombre}</h3>
+                            <p className={styles.priceText}>
+                                $: {precio.toFixed(2)} - Bs.: {(precio * tasa).toFixed(2)} - Stock: {p.stock}
+                            </p>
+                        </div>
+                    );
+                })}
             </div>
-          ))}
-        </div>
 
-        <div className={styles.totalRow}>
-          Total: ${usd.toFixed(2)} | Bs. {bs.toFixed(2)}
-        </div>
+            <div className={styles.selectedContainer}>
+                <div
+                    className={styles.selectedHeader}
+                    onClick={() => setIsFreezerOpen(true)}
+                    style={{ cursor: 'pointer' }}
+                >
+                    Items: <span>{listaDeSeleccionados.length}</span>
+                    Tasa: <span>{tasa.toFixed(2)}</span>
+                </div>
 
-        <div className={styles.actionButtons}>
-          <button className={styles.vaciarBtn} onClick={handleVaciarLista}>
-            Vaciar
-          </button>
-          <button
-            className={styles.grabarBtn}
-            onClick={handleGrabar}
-            disabled={listaDeSeleccionados.length === 0}
-          >
-            Grabar
-          </button>
+                <div className={styles.selectedList}>
+                    {listaDeSeleccionados.map((item, index) => (
+[CONTENIDO SENSIBLE ELIMINADO EN: Home.jsx]
+                            <span>#{item.id} - {item.nombre}</span>
+                            <button onClick={() => eliminarItem(index)}>ELIM</button>
+                        </div>
+                    ))}
+                </div>
+
+                <div className={styles.totalRow}>
+                    Total: ${usd.toFixed(2)} | Bs. {bs.toFixed(2)}
+                </div>
+
+                <div className={styles.actionButtons}>
+                    <button className={styles.vaciarBtn} onClick={handleVaciarLista}>Vaciar</button>
+                    <button className={styles.grabarBtn} onClick={handleGrabar} disabled={listaDeSeleccionados.length === 0}>
+                        Grabar
+                    </button>
+
+                    <button
+                        className={styles.ubicarBtn}
+                        onClick={() => setIsFreezerOpen(true)}
+                    >
+                        Ubicar
+                    </button>
+                </div>
+            </div>
+
+            {isFreezerOpen && (
+                <div className={styles.modalOverlay} onClick={() => setIsFreezerOpen(false)}>
+                    <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle}>UBICACIÓN EN FREEZER</h3>
+                            <button
+                                className={styles.closeModalBtn}
+                                onClick={() => setIsFreezerOpen(false)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className={styles.modalBody}>
+                            <FreezerLayout productosSeleccionados={listaDeSeleccionados} />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-      
-      </div>      
-    <FreezerLayout />
-    </div>
-    
-    </>
-  );
+    );
 }
-
 
 export default Home;
 ************************************************************
 
 FILE: src/pages/Home.module.css
 ------------------------------
-
 .container {
-  padding: 15px;
-  padding-bottom: 280px; /* Espacio para el panel fijo inferior */
-  background-color: #fafafa;
-  min-height: 100dvh; /* Dynamic Viewport Height para móviles */
-  width: 100%;
-  box-sizing: border-box;
-  color: #333;
+    padding: 15px;
+    padding-bottom: 280px;
+    /* Espacio para el panel fijo inferior */
+    background-color: #fafafa;
+    min-height: 100dvh;
+    width: 100%;
+    box-sizing: border-box;
+    color: #333;
 }
 
 .filterBar {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding: 0 5px;
-  color: #2c3e50;
-  font-weight: bold;
-}
-
-.selectedHeader {
-  display: flex;
-  justify-content: space-between;
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #333;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 0 5px;
+    color: #2c3e50;
+    font-weight: bold;
 }
 
 .select {
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
-  font-size: 18px;
-  background-color: #00BFFF; /* Azul Natura */
-  color: #fff;
-  font-weight: bold;
-  text-align: center;
-  width: 100%;
-  box-sizing: border-box;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    font-size: 18px;
+    background-color: #00BFFF;
+    /* Azul Natura */
+    color: #fff;
+    font-weight: bold;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .grid {
-  display: grid;
-  grid-template-columns: 1fr; /* Una sola columna para máxima visibilidad en móvil */
-  gap: 16px;
-  width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    width: 100%;
 }
 
 .card {
-  position: relative;
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  padding: 15px;
-  cursor: pointer;
-  transition: transform 0.2s;
+    position: relative;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    padding: 15px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    touch-action: manipulation;
 }
 
 .card:active {
-  transform: scale(0.98); /* Feedback táctil para Android */
-}
-
-/* Mejora táctil para evitar zoom y retrasos */
-button, .card, select {
-  touch-action: manipulation;
+    transform: scale(0.98);
 }
 
 .stockBadge {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 14px;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  z-index: 10;
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    z-index: 10;
 }
 
 .cardDisabled {
-  opacity: 0.6;
-  filter: grayscale(1);
-  cursor: not-allowed !important;
+    opacity: 0.6;
+    filter: grayscale(1);
+    cursor: not-allowed !important;
 }
 
 .productImage {
-  width: 100%;
-  height: auto;
-  border-radius: 8px;
-  margin-bottom: 10px;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 10px;
 }
 
 .productTitle {
-  font-size: 1.1rem;
-  font-weight: bold;
-  margin: 0 0 5px 0;
-  color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin: 0 0 5px 0;
+    color: #2c3e50;
 }
 
 .priceText {
-  color: #28a745;
-  font-weight: bold;
+    color: #28a745;
+    font-weight: bold;
+    font-size: 0.9rem;
 }
 
 /* Panel de selección fijo en la base */
 .selectedContainer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: #fff;
-  padding: 15px;
-  border-top: 2px solid #00BFFF;
-  box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-  z-index: 9999; /* Asegurar que esté por encima de todo */
-  width: 100%;
-  box-sizing: border-box;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #fff;
+    padding: 15px;
+    border-top: 3px solid #00BFFF;
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.selectedHeader {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 1rem;
+    padding: 5px 0;
 }
 
 .selectedList {
-  max-height: 120px;
-  overflow-y: auto;
-  margin-bottom: 10px;
+    max-height: 120px;
+    overflow-y: auto;
+    margin-bottom: 10px;
 }
 
 .selectedItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 10px;
-  background-color: #f8f9fa;
-  margin-bottom: 5px;
-  border-radius: 4px;
-  color: #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background-color: #f8f9fa;
+    margin-bottom: 5px;
+    border-radius: 6px;
+    color: #000;
+    font-size: 0.9rem;
+}
+
+.eliminarBtn {
+    background-color: #ffeded;
+    color: #f44336;
+    border: 1px solid #f44336;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 .totalRow {
-  font-size: 1.1rem;
-  font-weight: bold;
-  text-align: center;
-  margin: 10px 0;
-  color: #007bff;
+    font-size: 1.2rem;
+    font-weight: 800;
+    text-align: center;
+    margin: 10px 0;
+    color: #007bff;
+    background-color: #eef6ff;
+    padding: 8px;
+    border-radius: 8px;
 }
 
+/* Botonera de acciones */
 .actionButtons {
-  display: flex;    /* Coloca los botones en la misma línea */
-  gap: 10px;        /* Espaciado entre botones */
+    display: flex;
+    gap: 8px;
 }
 
-.vaciarBtn, .grabarBtn {
-  padding: 15px;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
+.vaciarBtn,
+.grabarBtn,
+.ubicarBtn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: opacity 0.2s;
 }
 
-/* Actualización: Fondo rojo y ancho igualado (flex: 1) */
-.vaciarBtn { 
-  background-color: #f44336; 
-  color: white; 
-  flex: 1; 
+.vaciarBtn {
+    background-color: #f44336;
+    color: white;
 }
 
-
-/* Actualización: Fondo verde y ancho igualado (flex: 1) */
-.grabarBtn { 
-  background-color: #28a745; 
-  color: white; 
-  flex: 1; 
+.grabarBtn {
+    background-color: #28a745;
+    color: white;
 }
 
+.ubicarBtn {
+    background-color: #00BFFF;
+    color: white;
+}
 
-.grabarBtn:disabled { 
-  background-color: #ccc; 
+.grabarBtn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Estilos del Modal para FreezerLayout */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+    /* Por encima del panel inferior */
+}
+
+.modalContent {
+    background-color: #fff;
+    width: 92%;
+    max-width: 480px;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.modalHeader {
+    padding: 12px 15px;
+    background-color: #00BFFF;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modalTitle {
+    margin: 0;
+    color: white;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.closeModalBtn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 32px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+}
+
+.modalBody {
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    background-color: #f0f2f5;
+    min-height: 200px;
+    max-height: 70vh;
+    /* Limita la altura máxima al 70% del viewport */
+    overflow-y: auto;
+    /* Habilita scroll vertical */
 }
 ************************************************************
 
