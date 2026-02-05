@@ -218,6 +218,11 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>🧊</span>Freezer Grid
                     </Link>
 
+                    {/* Test Finanzas */}
+                    <Link to="/testfinanzas" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>💰</span>Test Finanzas
+                    </Link> 
+
                 </nav>
             </div>
         </>

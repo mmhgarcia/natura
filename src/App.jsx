@@ -17,6 +17,7 @@ import Estadisticas from "./pages/Estadisticas";
 import ResumenInventario from "./components/ResumenInventario";
 import RegistroGasto from "./components/RegistroGasto";
 import FreezerGrid from "./components/FreezerLayout/FreezerGrid";
+import TestFinanzas from "./finanzas/testFinanzas";
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
         <Route path="/resumeninventario" element={<ResumenInventario />} />
         <Route path="/registrogasto" element={<RegistroGasto />} />
         <Route path="/freezergrid" element={<FreezerGrid productosSeleccionados={[]} />} />
+        <Route path="/testfinanzas" element={<TestFinanzas />} />
 
         {/* Nueva ruta para Pedidos */}
         <Route path="/pedidos" element={<PedidosPage />} />
