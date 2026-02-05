@@ -1,5 +1,5 @@
 PROYECTO: NATURA
-FECHA DE GENERACIÓN: 03/02/2026 11:18:06
+FECHA DE GENERACIÓN: 04/02/2026 20:49:57
 ============================================================
 DESCRIPCIÓN TÉCNICA DEL STACK:
 - Framework: React con Vite (Arquitectura de componentes funcionales) [5, 6]
@@ -64,6 +64,12 @@ DESCRIPCIÓN TÉCNICA DEL STACK:
   📁 data/
     📄 data.json
     📄 grupos.json
+  📁 finanzas/
+    📄 cuentasService.js
+    📄 eventosService.js
+    📄 finanzasDB.js
+    📄 testFinanzas.jsx
+    📄 uuid.js
   📁 hooks/
     📄 useLocalStorageList.js
   📄 index.css
@@ -308,6 +314,7 @@ import Estadisticas from "./pages/Estadisticas";
 import ResumenInventario from "./components/ResumenInventario";
 import RegistroGasto from "./components/RegistroGasto";
 import FreezerGrid from "./components/FreezerLayout/FreezerGrid";
+import TestFinanzas from "./finanzas/testFinanzas";
 
 function App() {
   return (
@@ -326,6 +333,7 @@ function App() {
         <Route path="/resumeninventario" element={<ResumenInventario />} />
         <Route path="/registrogasto" element={<RegistroGasto />} />
         <Route path="/freezergrid" element={<FreezerGrid productosSeleccionados={[]} />} />
+        <Route path="/testfinanzas" element={<TestFinanzas />} />
 
         {/* Nueva ruta para Pedidos */}
         <Route path="/pedidos" element={<PedidosPage />} />
@@ -5696,6 +5704,11 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>🧊</span>Freezer Grid
                     </Link>
 
+                    {/* Test Finanzas */}
+                    <Link to="/testfinanzas" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>💰</span>Test Finanzas
+                    </Link> 
+
                 </nav>
             </div>
         </>
@@ -6345,6 +6358,172 @@ FILE: src/data/grupos.json
   "citrico": 0.4,
   "ninguno": 0.0
 }
+************************************************************
+
+FILE: src/finanzas/cuentasService.js
+------------------------------
+import { finanzasDB } from './finanzasDB';
+import { generarUUID } from './uuid';
+
+export async function crearCuenta(data) {
+  const cuenta = {
+    id: generarUUID(),
+    nombre: data.nombre,
+    tipo: data.tipo,
+    moneda_base: data.moneda_base,
+    activa: true
+  };
+
+  await finanzasDB.cuentas.add(cuenta);
+  return cuenta;
+}
+
+export async function listarCuentas() {
+  return await finanzasDB.cuentas.toArray();
+}
+
+export async function desactivarCuenta(id) {
+  await finanzasDB.cuentas.update(id, { activa: false });
+}
+
+
+************************************************************
+
+FILE: src/finanzas/eventosService.js
+------------------------------
+import { finanzasDB } from './finanzasDB';
+import { generarUUID } from './uuid';
+
+export async function crearEventoEconomico(evento) {
+  return finanzasDB.eventosEconomicos.add({
+    id: generarUUID(),
+    fecha: evento.fecha || new Date().toISOString(),
+    tipo: evento.tipo,                 // 'ingreso' | 'salida'
+    monto: evento.monto,
+    moneda: evento.moneda,             // 'USD' | 'BS'
+    tasa_bcv_usada: evento.tasa_bcv_usada || null,
+    cuenta_id: evento.cuenta_id,
+    origen: evento.origen,             // 'venta' | 'compra' | 'gasto' | 'retiro'
+    referencia_id: evento.referencia_id || null,
+    descripcion: evento.descripcion || ''
+  });
+}
+
+export async function listarEventos() {
+  return finanzasDB.eventosEconomicos
+    .orderBy('fecha')
+    .reverse()
+    .toArray();
+}
+
+export async function listarEventosPorCuenta(cuenta_id) {
+  return finanzasDB.eventosEconomicos
+    .where('cuenta_id')
+    .equals(cuenta_id)
+    .toArray();
+}
+
+************************************************************
+
+FILE: src/finanzas/finanzasDB.js
+------------------------------
+import Dexie from 'dexie';
+
+export const finanzasDB = new Dexie('natura_finanzas_db');
+
+finanzasDB.version(1).stores({
+  cuentas: 'id, nombre, tipo, moneda_base, activa',
+  eventosEconomicos: 'id, fecha, tipo, cuenta_id, origen'
+});
+
+
+************************************************************
+
+FILE: src/finanzas/testFinanzas.jsx
+------------------------------
+import { finanzasDB } from './finanzasDB';
+import { crearCuenta, listarCuentas } from './cuentasService';
+import { crearEventoEconomico, listarEventos } from './eventosService';
+
+export default function TestFinanzas() {
+
+  const ejecutarTest = async () => {
+    console.clear();
+    console.log('=== TEST FINANZAS NATURA ===');
+
+    try {
+      console.log('[1] abriendo DB...');
+      await finanzasDB.open();
+      console.log('[OK] DB finanzas abierta');
+
+      console.log('[2] creando cuentas...');
+      await crearCuenta({
+        nombre: 'Caja',
+        tipo: 'caja',
+        moneda_base: 'USD'
+      });
+
+      await crearCuenta({
+        nombre: 'Banco',
+        tipo: 'banco',
+        moneda_base: 'USD'
+      });
+
+      const cuentas = await listarCuentas();
+      console.log('[OK] cuentas:', cuentas);
+
+      const caja = cuentas.find(c => c.nombre === 'Caja');
+
+      console.log('[3] registrando ingreso db finanzas ...');
+      await crearEventoEconomico({
+        tipo: 'ingreso',
+        monto: 10,
+        moneda: 'USD',
+        cuenta_id: caja.id,
+        origen: 'test',
+        descripcion: 'Ingreso de prueba'
+      });
+
+      const eventos = await listarEventos();
+      console.log('[OK] eventos:', eventos);
+
+      console.log('=== TEST FINALIZADO ===');
+
+    } catch (err) {
+      console.error('[ERROR TEST FINANZAS]', err);
+    }
+  };
+
+  return (
+    <div style={{ padding: 16 }}>
+      <h2>Test Finanzas (diagnóstico)</h2>
+      <button onClick={ejecutarTest}>
+        Ejecutar test de finanzas
+      </button>
+      <p style={{ marginTop: 8 }}>
+        Ver resultados en la consola del navegador.
+      </p>
+    </div>
+  );
+}
+
+************************************************************
+
+FILE: src/finanzas/uuid.js
+------------------------------
+export function generarUUID() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  // Fallback RFC4122 v4
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 ************************************************************
 
 FILE: src/hooks/useLocalStorageList.js
@@ -9301,7 +9480,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig({  
   plugins: [
     react({
       babel: {
@@ -9349,6 +9528,9 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    target: 'es2020' // o 'es2015' para mayor compatibilidad
+  },
 })
 
 

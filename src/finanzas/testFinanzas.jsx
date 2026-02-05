@@ -1,6 +1,8 @@
 import { finanzasDB } from './finanzasDB';
 import { crearCuenta, listarCuentas } from './cuentasService';
 import { crearEventoEconomico, listarEventos } from './eventosService';
+import { calcularSaldoCuenta } from './saldosService';
+import { calcularSaldoConsolidado } from './saldosService';
 
 export default function TestFinanzas() {
 
@@ -43,6 +45,14 @@ export default function TestFinanzas() {
 
       const eventos = await listarEventos();
       console.log('[OK] eventos:', eventos);
+
+      // 🔹 NUEVO PASO: saldo derivado
+      const saldoCaja = await calcularSaldoCuenta(caja.id);
+      console.log('[OK] saldo Caja:', saldoCaja);
+
+      const saldoTotal = await calcularSaldoConsolidado();
+console.log('[OK] saldo consolidado:', saldoTotal);
+
 
       console.log('=== TEST FINALIZADO ===');
 
