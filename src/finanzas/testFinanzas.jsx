@@ -1,25 +1,30 @@
 import { useState } from 'react';
 import { finanzasDB } from './finanzasDB';
 import { crearCuenta, listarCuentas } from './cuentasService';
-import { crearEventoEconomico, listarEventos } from './eventosService';
-import { calcularSaldoCuenta } from './saldosService';
-import { calcularSaldoConsolidado } from './saldosService';
+import { crearEventoEconomico } from './eventosService';
 
 export default function TestFinanzas() {
-
   const [saldoCaja, setSaldoCaja] = useState('');
   const [saldoBanco, setSaldoBanco] = useState('');
 
+  // --------------------------------------------------
+  // Bootstrap financiero: limpiar y crear cuentas
+  // --------------------------------------------------
   const ejecutarTest = async () => {
     console.clear();
-    console.log('=== TEST FINANZAS NATURA ===');
+    console.log('=== TEST FINANZAS NATURA (BOOTSTRAP) ===');
 
     try {
       console.log('[1] abriendo DB...');
       await finanzasDB.open();
       console.log('[OK] DB finanzas abierta');
 
-      console.log('[2] creando cuentas...');
+      console.log('[2] limpiando tablas de finanzas...');
+      await finanzasDB.eventos.clear();
+      await finanzasDB.cuentas.clear();
+      console.log('[OK] tablas limpiadas');
+
+      console.log('[3] creando cuentas base...');
       await crearCuenta({
         nombre: 'Caja',
         tipo: 'caja',
@@ -33,137 +38,104 @@ export default function TestFinanzas() {
       });
 
       const cuentas = await listarCuentas();
-      console.log('[OK] cuentas:', cuentas);
+      console.log('[OK] cuentas creadas:', cuentas);
 
-      const caja = cuentas.find(c => c.nombre === 'Caja');
-
-      console.log('[3] registrando ingreso db finanzas ...');
-      await crearEventoEconomico({
-        tipo: 'ingreso',
-        monto: 10,
-        moneda: 'USD',
-        cuenta_id: caja.id,
-        origen: 'test',
-        descripcion: 'Ingreso de prueba'
-      });
-
-      // nuevo
-      console.log('[4] registrando gasto operativo...');
-      await crearEventoEconomico({
-        tipo: 'egreso',
-        monto: 3,
-        moneda: 'USD',
-        cuenta_id: caja.id,
-        origen: 'gasto',
-        categoria: 'servicios',
-        descripcion: 'Pago de electricidad'
-      });
-
-      console.log('[5] registrando retiro personal...');
-      await crearEventoEconomico({
-        tipo: 'egreso',
-        monto: 2,
-        moneda: 'USD',
-        cuenta_id: caja.id,
-        origen: 'retiro',
-        categoria: 'personal',
-        descripcion: 'Retiro personal'
-      });
-
-      const eventos = await listarEventos();
-      console.log('[OK] eventos:', eventos);
-
-      // 🔹 NUEVO PASO: saldo derivado
-      //const saldoCaja = await calcularSaldoCuenta(caja.id);
-      //console.log('[OK] saldo Caja:', saldoCaja);
-
-      //const saldoTotal = await calcularSaldoConsolidado();
-      //console.log('[OK] saldo consolidado:', saldoTotal);
-
-      const saldoCaja = await calcularSaldoCuenta(caja.id);
-      console.log('[OK] saldo Caja post-egresos:', saldoCaja);
-
-      const saldoTotal = await calcularSaldoConsolidado();
-      console.log('[OK] saldo consolidado post-egresos:', saldoTotal);
-
-      console.log('=== TEST FINALIZADO ===');
+      console.log('=== BOOTSTRAP FINALIZADO ===');
 
     } catch (err) {
       console.error('[ERROR TEST FINANZAS]', err);
     }
   };
 
-// -----carga de saldos iniciales
-const cargarSaldosIniciales = async () => {
-  const cuentas = await listarCuentas();
-  const caja = cuentas.find(c => c.nombre === 'Caja');
-  const banco = cuentas.find(c => c.nombre === 'Banco');
+  // --------------------------------------------------
+  // Carga manual de saldos iniciales (one-shot)
+  // --------------------------------------------------
+  const cargarSaldosIniciales = async () => {
+    try {
+      const cuentas = await listarCuentas();
+      const caja = cuentas.find(c => c.nombre === 'Caja');
+      const banco = cuentas.find(c => c.nombre === 'Banco');
 
-  if (saldoCaja > 0) {
-    await crearEventoEconomico({
-      tipo: 'ingreso',
-      monto: Number(saldoCaja),
-      moneda: 'USD',
-      cuenta_id: caja.id,
-      origen: 'saldo_inicial',
-      descripcion: 'Saldo inicial de caja'
-    });
-  }
+      if (!caja || !banco) {
+        console.warn('[WARN] Cuentas no existen. Ejecuta primero el bootstrap.');
+        return;
+      }
 
-  if (saldoBanco > 0) {
-    await crearEventoEconomico({
-      tipo: 'ingreso',
-      monto: Number(saldoBanco),
-      moneda: 'USD',
-      cuenta_id: banco.id,
-      origen: 'saldo_inicial',
-      descripcion: 'Saldo inicial de banco'
-    });
-  }
+      if (Number(saldoCaja) > 0) {
+        await crearEventoEconomico({
+          tipo: 'ingreso',
+          monto: Number(saldoCaja),
+          moneda: 'USD',
+          cuenta_id: caja.id,
+          origen: 'saldo_inicial',
+          descripcion: 'Saldo inicial de Caja'
+        });
+      }
 
-  console.log('[OK] Saldos iniciales cargados');
-};
+      if (Number(saldoBanco) > 0) {
+        await crearEventoEconomico({
+          tipo: 'ingreso',
+          monto: Number(saldoBanco),
+          moneda: 'USD',
+          cuenta_id: banco.id,
+          origen: 'saldo_inicial',
+          descripcion: 'Saldo inicial de Banco'
+        });
+      }
 
+      console.log('[OK] Saldos iniciales cargados');
 
+    } catch (err) {
+      console.error('[ERROR CARGA SALDOS]', err);
+    }
+  };
+
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
   return (
     <div style={{ padding: 16 }}>
-
       <h2>Test Finanzas (diagnóstico)</h2>
-      
+
       <button onClick={ejecutarTest}>
-        Ejecutar test de finanzas
+        Inicializar sistema financiero
       </button>
-      
+
       <p style={{ marginTop: 8 }}>
-        Ver resultados en la consola del navegador.
+        Limpia DB de finanzas y crea cuentas base (Caja / Banco).
       </p>
-      
-      <br/>
-    
-    <div>
-  
-    <label>Saldo inicial Caja (USD)</label>
-    <input
-      type="number"
-      value={saldoCaja}
-      onChange={e => setSaldoCaja(e.target.value)}
-    />
-  </div>
-  <br/>
-    <div>
-      <label>Saldo inicial Banco (USD)</label>
-      <input
-        type="number"
-        value={saldoBanco}
-        onChange={e => setSaldoBanco(e.target.value)}
-  />
-</div>
+
+      <hr />
+
+      <h3>Carga de saldos iniciales (one-shot)</h3>
+
+      <div>
+        <label>Saldo inicial Caja (USD)</label>
+        <br />
+        <input
+          type="number"
+          value={saldoCaja}
+          onChange={e => setSaldoCaja(e.target.value)}
+        />
+      </div>
+
+      <br />
+
+      <div>
+        <label>Saldo inicial Banco (USD)</label>
+        <br />
+        <input
+          type="number"
+          value={saldoBanco}
+          onChange={e => setSaldoBanco(e.target.value)}
+        />
+      </div>
+
+      <br />
+
       <button onClick={cargarSaldosIniciales}>
-        Cargar saldos iniciales (one-shot)
+        Cargar saldos iniciales
       </button>
     </div>
   );
-
 }
-
-
