@@ -1,6 +1,7 @@
 import { finanzasDB } from './finanzasDB';
 import { listarCuentas } from './cuentasService';
 //import { calcularSaldoCuenta } from './saldosService';
+import { EVENTO_TIPO } from './constants';
 
 /**
  * Retorna todos los eventos económicos asociados a una cuenta
@@ -32,11 +33,11 @@ export async function calcularSaldoCuenta(cuentaId) {
       saldos[moneda] = 0;
     }
 
-    if (ev.tipo === 'ingreso') {
+    if (ev.tipo === EVENTO_TIPO.INGRESO) {
       saldos[moneda] += ev.monto;
     }
 
-    if (ev.tipo === 'egreso') {
+    if (ev.tipo === EVENTO_TIPO.EGRESO ) {
       saldos[moneda] -= ev.monto;
     }
   }

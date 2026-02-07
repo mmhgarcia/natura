@@ -1,11 +1,12 @@
 import { finanzasDB } from './finanzasDB';
 import { generarUUID } from './uuid';
+import { EVENTO_TIPO } from './constants';
 
 export async function crearEventoEconomico(evento) {
   return finanzasDB.eventosEconomicos.add({
     id: generarUUID(),
     fecha: evento.fecha || new Date().toISOString(),
-    tipo: evento.tipo,                 // 'ingreso' | 'salida'
+    tipo: evento.tipo,                 // 'ingreso' | 'egreso'
     monto: evento.monto,
     moneda: evento.moneda,             // 'USD' | 'BS'
     tasa_bcv_usada: evento.tasa_bcv_usada || null,

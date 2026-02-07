@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { finanzasDB } from './finanzasDB';
 import { crearCuenta, listarCuentas } from './cuentasService';
 import { crearEventoEconomico } from './eventosService';
+import { EVENTO_TIPO } from './constants';
 
 export default function TestFinanzas() {
   const [saldoCaja, setSaldoCaja] = useState('');
@@ -63,7 +64,7 @@ export default function TestFinanzas() {
 
       if (Number(saldoCaja) > 0) {
         await crearEventoEconomico({
-          tipo: 'ingreso',
+          tipo:  EVENTO_TIPO.INGRESO,
           monto: Number(saldoCaja),
           moneda: 'USD',
           cuenta_id: caja.id,
@@ -74,7 +75,7 @@ export default function TestFinanzas() {
 
       if (Number(saldoBanco) > 0) {
         await crearEventoEconomico({
-          tipo: 'ingreso',
+          tipo: EVENTO_TIPO.INGRESO,
           monto: Number(saldoBanco),
           moneda: 'USD',
           cuenta_id: banco.id,
