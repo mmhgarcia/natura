@@ -1,3 +1,4 @@
+// src/pages/Home.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import { db } from '../lib/db/database.js';
@@ -22,15 +23,17 @@ const ProductImage = ({ product, className }) => {
     }, [product]);
 
     if (error) {
-        return <div className={className}>📷 {product.nombre}</div>;
+        return <div className={className} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: '8px', fontSize: '12px', color: '#666' }}>
+            📷 {product.nombre}
+        </div>;
     }
 
     return (
-        <img
-            src={src}
-            alt={product.nombre}
-            className={className}
-            onError={() => setError(true)}
+        <img 
+            src={src} 
+            alt={product.nombre} 
+            className={className} 
+            onError={() => setError(true)} 
         />
     );
 };
@@ -42,10 +45,7 @@ function Home() {
     const [tasa, setTasa] = useState(0);
     const [cargando, setCargando] = useState(true);
     const [filtroGrupo, setFiltroGrupo] = useState('todos');
-
-    // Estado para controlar la visibilidad del modal del Freezer
     const [isFreezerOpen, setIsFreezerOpen] = useState(false);
-
     const navigate = useNavigate();
 
     const enriquecerProductos = (listaProductos, listaGrupos) => {
@@ -69,7 +69,6 @@ function Home() {
                     db.getAll('grupos'),
                     getTasaBCV()
                 ]);
-
                 setGrupos(g);
                 const productosEnriquecidos = enriquecerProductos(p, g);
                 setProductos(productosEnriquecidos);
@@ -91,14 +90,14 @@ function Home() {
 
     const handleVaciarLista = () => {
         if (listaDeSeleccionados.length === 0) return;
-        const confirmar = window.confirm(`⚠️ ¿Estás seguro de que deseas vaciar la lista?`);
-        if (confirmar) setListaDeSeleccionados([]);
+        if (window.confirm(`⚠️ ¿Estás seguro de que deseas vaciar la lista?`)) {
+            setListaDeSeleccionados([]);
+        }
     };
 
     const handleGrabar = async () => {
         if (listaDeSeleccionados.length === 0) return;
-        const confirmar = window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`);
-        if (!confirmar) return;
+        if (!window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`)) return;
 
         try {
             const transaccionId = `TX-${Date.now()}`;
@@ -121,6 +120,9 @@ function Home() {
             });
             setListaDeSeleccionados([]);
             alert("✅ Venta procesada con éxito.");
+            // Recargar stock localmente
+            const p = await db.getAll('productos');
+            setProductos(enriquecerProductos(p, grupos));
         } catch (error) {
             alert("❌ Error al procesar la venta.");
         }
@@ -134,28 +136,26 @@ function Home() {
         setListaDeSeleccionados(prev => prev.filter((_, index) => index !== indexParaEliminar));
     };
 
-    const calcularTotales = () => {
-        let usd = listaDeSeleccionados.reduce((acc, item) => acc + (item.precio || 0), 0);
-        return { usd, bs: usd * tasa };
-    };
+    const { usd, bs } = listaDeSeleccionados.reduce((acc, item) => ({
+        usd: acc.usd + (item.precio || 0),
+        bs: acc.bs + ((item.precio || 0) * tasa)
+    }), { usd: 0, bs: 0 });
 
-    const { usd, bs } = calcularTotales();
-
-    if (cargando) return <div>Cargando tienda...</div>;
+    if (cargando) return <div className={styles.loading}>Cargando tienda...</div>;
 
     return (
         <div className={styles.container}>
             <div className={styles.filterBar}>
                 <label htmlFor="filtro-home">Filtrar por Grupo:</label>
-                <select
-                    id="filtro-home"
-                    value={filtroGrupo}
+                <select 
+                    id="filtro-home" 
+                    value={filtroGrupo} 
                     onChange={(e) => setFiltroGrupo(e.target.value)}
                     className={styles.select}
                 >
                     <option value="todos">Todos los helados</option>
                     {grupos.map(g => (
-                        <option key={g.id} value={g.nombre}>{g.nombre.toUpperCase()}</option>
+                        <option key={g.id} value={g.nombre}>{g.nombre}</option>
                     ))}
                 </select>
             </div>
@@ -164,39 +164,42 @@ function Home() {
                 {productosFiltrados.map(p => {
                     const precio = p.precio || 0;
                     const esAgotado = p.stock === 0;
-                    const badgeColor = p.stock === 0 ? '#ff4d4d' : (p.stock <= 5 ? '#ffa500' : '#28a745');
+                    const badgeColor = esAgotado ? '#ff4d4d' : (p.stock <= 5 ? '#ffa500' : '#28a745');
+
                     return (
-                        <div
-                            key={p.id}
+                        <div 
+                            key={p.id} 
                             className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
                             onClick={() => !esAgotado && seleccionarProducto(p)}
                         >
-                            <div className={styles.stockBadge} style={{ backgroundColor: badgeColor }}>{p.stock}</div>
+                            <div className={styles.stockBadge} style={{ backgroundColor: badgeColor }}>
+                                {p.stock}
+                            </div>
+                            
                             <ProductImage product={p} className={styles.productImage} />
+                            
                             <h3 className={styles.productTitle}>{p.nombre}</h3>
-                            <p className={styles.priceText}>
-                                $: {precio.toFixed(2)} - Bs.: {(precio * tasa).toFixed(2)} - Stock: {p.stock}
-                            </p>
+                            
+                            {/* Cambio solicitado: Se añade el ID a la izquierda del precio [2] */}
+                            <div className={styles.priceText}>
+                                ID: {p.id} - $: {precio.toFixed(2)} - Bs.: {(precio * tasa).toFixed(2)} - Stock: {p.stock}
+                            </div>
                         </div>
                     );
                 })}
             </div>
 
             <div className={styles.selectedContainer}>
-                <div
-                    className={styles.selectedHeader}
-                    onClick={() => setIsFreezerOpen(true)}
-                    style={{ cursor: 'pointer' }}
-                >
-                    Items: <span>{listaDeSeleccionados.length}</span>
-                    Tasa: <span>{tasa.toFixed(2)}</span>
+                <div className={styles.selectedHeader} onClick={() => setIsFreezerOpen(true)}>
+                    <span>🛒 Items: {listaDeSeleccionados.length}</span>
+                    <span>💰 Tasa: {tasa.toFixed(2)}</span>
                 </div>
-
+                
                 <div className={styles.selectedList}>
                     {listaDeSeleccionados.map((item, index) => (
-                        <div key={index} className={styles.selectedItem}>
+                        <div key={`${item.id}-${index}`} className={styles.selectedItem}>
                             <span>#{item.id} - {item.nombre}</span>
-                            <button onClick={() => eliminarItem(index)}>ELIM</button>
+                            <button className={styles.eliminarBtn} onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}>ELIM</button>
                         </div>
                     ))}
                 </div>
@@ -207,16 +210,8 @@ function Home() {
 
                 <div className={styles.actionButtons}>
                     <button className={styles.vaciarBtn} onClick={handleVaciarLista}>Vaciar</button>
-                    <button className={styles.grabarBtn} onClick={handleGrabar} disabled={listaDeSeleccionados.length === 0}>
-                        Grabar
-                    </button>
-
-                    <button
-                        className={styles.ubicarBtn}
-                        onClick={() => setIsFreezerOpen(true)}
-                    >
-                        Ubicar
-                    </button>
+                    <button className={styles.grabarBtn} onClick={handleGrabar} disabled={listaDeSeleccionados.length === 0}>Grabar</button>
+                    <button className={styles.ubicarBtn} onClick={() => setIsFreezerOpen(true)}>Ubicar</button>
                 </div>
             </div>
 
@@ -225,12 +220,7 @@ function Home() {
                     <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
                             <h3 className={styles.modalTitle}>UBICACIÓN EN FREEZER</h3>
-                            <button
-                                className={styles.closeModalBtn}
-                                onClick={() => setIsFreezerOpen(false)}
-                            >
-                                ×
-                            </button>
+                            <button className={styles.closeModalBtn} onClick={() => setIsFreezerOpen(false)}>×</button>
                         </div>
                         <div className={styles.modalBody}>
                             <FreezerLayout productosSeleccionados={listaDeSeleccionados} />

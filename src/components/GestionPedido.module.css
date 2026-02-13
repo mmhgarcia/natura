@@ -133,6 +133,9 @@
 .productList {
   height: 250px;
   overflow-y: auto;
+  padding-bottom: 40px;
+  /* Espacio extra al final para que el último item no quede tapado */
+  box-sizing: border-box;
 }
 
 .groupTitle {
