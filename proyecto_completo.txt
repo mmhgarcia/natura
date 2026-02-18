@@ -1,5 +1,5 @@
 PROYECTO: NATURA
-FECHA DE GENERACIÓN: 13/02/2026 08:10:26
+FECHA DE GENERACIÓN: 13/02/2026 09:46:16
 ============================================================
 DESCRIPCIÓN TÉCNICA DEL STACK:
 - Framework: React con Vite (Arquitectura de componentes funcionales) [5, 6]
@@ -2382,6 +2382,9 @@ FILE: src/components/GestionPedido.module.css
 .productList {
   height: 250px;
   overflow-y: auto;
+  padding-bottom: 40px;
+  /* Espacio extra al final para que el último item no quede tapado */
+  box-sizing: border-box;
 }
 
 .groupTitle {
