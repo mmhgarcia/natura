@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/db/database'; // Referencia a la base de datos dbTasaBCV [4, 5]
-import styles from './GestionPedido.module.css'; // [4]
+import { db } from '../lib/db/database'; 
+import styles from './GestionPedido.module.css'; 
 
 const GestionPedido = ({ pedido, onClose, onSave }) => {
     const getLocalToday = () => new Date().toLocaleDateString('en-CA');
@@ -25,14 +25,13 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     useEffect(() => {
         const cargarDatos = async () => {
             try {
-                // ACTUALIZACIÓN FASE 2: Prioriza el histórico de tasas [3]
                 const tasaConfig = await db.getUltimaTasaBCV();
-                const deliveryValor = await db.getConfigValue('delivery'); // [1, 6]
+                const deliveryValor = await db.getConfigValue('delivery');
 
                 const [todosLosProductos, todosLosGrupos] = await Promise.all([
                     db.getAll('productos'),
                     db.getAll('grupos')
-                ]); // [1, 7]
+                ]);
 
                 setProductos(todosLosProductos);
                 setListaGrupos(todosLosGrupos);
@@ -46,7 +45,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                         delivery_tasa: pedido.delivery_tasa !== undefined ? pedido.delivery_tasa : (deliveryValor || 0)
                     });
 
-                    // Soporte para ambos formatos (Diccionario antiguo o Array BI nuevo)
                     if (pedido.items) {
                         if (Array.isArray(pedido.items)) {
                             const dict = {};
@@ -60,7 +58,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                     }
                     setAplicarDelivery(pedido.delivery_aplicado ?? true);
                 } else {
-                    const ultimoPedido = await db.pedidos.orderBy('id').last(); // [8]
+                    const ultimoPedido = await db.pedidos.orderBy('id').last();
                     const siguienteNumero = ultimoPedido ? (parseInt(ultimoPedido.numero_pedido) + 1).toString() : "1";
 
                     setFormData(prev => ({
@@ -81,14 +79,18 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
         const calcularFinanzas = () => {
             let costoMercanciaUSD = 0;
             let ventaEstimadaUSD = 0;
+            const itemsParaProrrateo = [];
 
             Object.entries(cantidades).forEach(([prodId, qty]) => {
                 const producto = productos.find(p => p.id === parseInt(prodId));
                 if (producto && qty > 0) {
                     const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === producto.grupo.toLowerCase());
                     if (grupo) {
-                        costoMercanciaUSD += qty * (grupo.costo_$ || 0);
-                        ventaEstimadaUSD += qty * (grupo.precio || 0);
+                        const costoBase = grupo.costo_$ || 0;
+                        const precioVenta = grupo.precio || 0;
+                        costoMercanciaUSD += qty * costoBase;
+                        ventaEstimadaUSD += qty * precioVenta;
+                        itemsParaProrrateo.push({ qty, costoBase, precioVenta });
                     }
                 }
             });
@@ -96,7 +98,14 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
             const cargoDelivery = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
             const totalInversionUSD = costoMercanciaUSD + cargoDelivery;
             const tasaNum = parseFloat(formData.tasa) || 0;
-            const utilidadUSD = ventaEstimadaUSD - totalInversionUSD;
+
+            let utilidadRealUSD = 0;
+            itemsParaProrrateo.forEach(item => {
+                const inversionEnCategoria = item.qty * item.costoBase;
+                const factorProrrateo = costoMercanciaUSD > 0 ? (inversionEnCategoria / costoMercanciaUSD) : 0;
+                const deliveryAsignado = cargoDelivery * factorProrrateo;
+                utilidadRealUSD += (item.qty * item.precioVenta) - (inversionEnCategoria + deliveryAsignado);
+            });
 
             const ventaEstimadaBS = ventaEstimadaUSD * tasaNum;
 
@@ -106,7 +115,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                 ventaUsd: ventaEstimadaUSD,
                 ventaBs: ventaEstimadaBS
             });
-            setUtilidad({ usd: utilidadUSD, bs: utilidadUSD * tasaNum });
+            setUtilidad({ usd: utilidadRealUSD, bs: utilidadRealUSD * tasaNum });
         };
 
         if (productos.length > 0) calcularFinanzas();
@@ -114,7 +123,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
     const handleRecalcular = async () => {
         try {
-            // ACTUALIZACIÓN FASE 2: Obtiene la tasa más reciente del historial [2, 3]
             const nuevaTasa = await db.getUltimaTasaBCV();
             const nuevoDelivery = await db.getConfigValue('delivery');
             const gruposActualizados = await db.getAll('grupos');
@@ -147,14 +155,24 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
         if (!window.confirm(mensaje)) return;
 
-        // --- TRANSFORMACIÓN PARA BI --- [9, 10]
+        const cargoDeliveryTotal = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
+        const inversionBaseTotal = Object.entries(cantidades).reduce((acc, [prodId, qty]) => {
+            const p = productos.find(x => x.id === parseInt(prodId));
+            const g = listaGrupos.find(gr => gr.nombre.toLowerCase() === p?.grupo?.toLowerCase());
+            return acc + (qty * (g?.costo_$ || 0));
+        }, 0);
+
         const itemsBI = Object.entries(cantidades)
             .filter(([_, qty]) => qty > 0)
             .map(([prodId, qty]) => {
                 const prod = productos.find(p => p.id === parseInt(prodId));
                 const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === prod.grupo.toLowerCase());
                 const precioUnit = grupo?.precio || 0;
-                const costoUnit = grupo?.costo_$ || 0;
+                const costoBaseUnit = grupo?.costo_$ || 0;
+
+                const factor = inversionBaseTotal > 0 ? ((qty * costoBaseUnit) / inversionBaseTotal) : 0;
+                const deliveryPorUnidad = qty > 0 ? ((cargoDeliveryTotal * factor) / qty) : 0;
+                const costoIntegralUnit = costoBaseUnit + deliveryPorUnidad;
 
                 return {
                     productoId: parseInt(prodId),
@@ -162,9 +180,10 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                     grupo: prod.grupo,
                     cantidad: qty,
                     precioUnitario: precioUnit,
-                    costoUnitario: costoUnit,
+                    costoUnitario: costoBaseUnit,
+                    costoIntegralUnitario: costoIntegralUnit,
                     subtotalUsd: qty * precioUnit,
-                    utilidadUsd: qty * (precioUnit - costoUnit)
+                    utilidadUsd: qty * (precioUnit - costoIntegralUnit)
                 };
             });
 
@@ -205,6 +224,12 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
         }
         return acc;
     }, {});
+
+    const inversionBaseGlobal = Object.entries(cantidades).reduce((acc, [id, q]) => {
+        const p = productos.find(x => x.id === parseInt(id));
+        const g = listaGrupos.find(gr => gr.nombre.toLowerCase() === p?.grupo?.toLowerCase());
+        return acc + (q * (g?.costo_$ || 0));
+    }, 0);
 
     return (
         <div className={styles.overlay}>
@@ -275,11 +300,37 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                                 <div key={grupo}>
                                     <div className={styles.groupTitle}>{grupo.toUpperCase()}</div>
                                     {items.map((prod) => {
+                                        const qty = cantidades[prod.id] || 0;
+                                        const g = listaGrupos.find(gr => gr.nombre.toLowerCase() === prod.grupo.toLowerCase());
+                                        const cBase = g?.costo_$ || 0;
+                                        const pVenta = g?.precio || 0;
+                                        const cDeliveryTotal = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
+                                        
+                                        const factorProrrateo = inversionBaseGlobal > 0 ? ((qty * cBase) / inversionBaseGlobal) : 0;
+                                        const deliveryUnidad = qty > 0 ? (cDeliveryTotal * factorProrrateo) / qty : 0;
+                                        const costoInt = cBase + deliveryUnidad;
+                                        const margenPct = pVenta > 0 ? ((pVenta - costoInt) / pVenta) * 100 : 0;
+                                        const alertaMargen = qty > 0 && margenPct < 15;
+
                                         const badgeColor = prod.stock === 0 ? '#ff4d4d' : (prod.stock <= 5 ? '#ffa500' : '#28a745');
+                                        
                                         return (
-                                            <div key={prod.id} className={styles.productItem}>
+                                            <div key={prod.id} className={styles.productItem} style={{ borderLeft: alertaMargen ? '4px solid #f44336' : 'none' }}>
                                                 <div className={styles.stockBadgeSmall} style={{ backgroundColor: badgeColor }}>{prod.stock}</div>
-                                                <div className={styles.productName}>{prod.nombre}</div>
+                                                <div className={styles.productName}>
+                                                    {prod.nombre} <span style={{ fontSize: '0.85em', color: '#888', fontWeight: 'normal' }}>({prod.id})</span>
+                                                    
+                                                    {qty > 0 && (
+                                                        <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                                                            Costo Int: <span style={{ fontWeight: '600' }}>${costoInt.toFixed(3)}</span>
+                                                        </div>
+                                                    )}
+                                                    {alertaMargen && (
+                                                        <span style={{ color: '#f44336', fontSize: '10px', display: 'block', fontWeight: 'bold', marginTop: '2px' }}>
+                                                            ⚠️ MARGEN BAJO ({margenPct.toFixed(1)}%)
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className={styles.quantityControl}>
                                                     <button
                                                         type="button"
