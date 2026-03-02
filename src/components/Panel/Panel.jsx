@@ -20,6 +20,8 @@ export default function Panel() {
   // Estados para control de procesos
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [jsonText, setJsonText] = useState("");
   const [isMigrating, setIsMigrating] = useState(false); // Pedidos
   const [isMigratingSales, setIsMigratingSales] = useState(false); // Fase 2: Ventas
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -36,6 +38,42 @@ export default function Panel() {
       alert("❌ Error al exportar: " + (result.error?.message || "Error desconocido"));
     }
     setIsExporting(false);
+  };
+
+  /**
+   * Maneja la importación de la base de datos desde el texto del textarea
+   */
+  const handleImportExecute = async () => {
+    if (!jsonText.trim()) {
+      alert("⚠️ Por favor, pega el contenido del archivo JSON primero.");
+      return;
+    }
+
+    if (!window.confirm("⚠️ ¿Deseas IMPORTAR este respaldo?\n\nSe sobrescribirán todos los datos actuales por los que has pegado.")) {
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      // Validar si es un JSON válido antes de enviarlo
+      try {
+        JSON.parse(jsonText);
+      } catch (e) {
+        throw new Error("El texto no es un JSON válido. Asegúrate de copiar todo el contenido del archivo.");
+      }
+
+      const result = await importDatabase(jsonText);
+      if (result.success) {
+        alert("✅ Base de datos restaurada correctamente. La aplicación se recargará.");
+        window.location.reload();
+      } else {
+        alert("❌ Error al importar: " + (result.error || "Error desconocido"));
+      }
+    } catch (error) {
+      alert("❌ Error: " + error.message);
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   /**
@@ -184,7 +222,7 @@ export default function Panel() {
 
         {/* Importación de Respaldo */}
         <label className={styles.button} style={{ cursor: 'pointer', textAlign: 'center' }}>
-          {isImporting ? "⌛ Importando..." : "📥 Importar DB"}
+          {isImporting ? "⌛ Importando..." : "📥 Importar DB (Archivo)"}
           <input
             type="file"
             accept="application/json,.json"
@@ -193,6 +231,14 @@ export default function Panel() {
             style={{ display: 'none' }}
           />
         </label>
+
+        {/* Botón para abrir el Modal de Importación */}
+        <button
+          className={styles.button}
+          onClick={() => setShowImportModal(true)}
+        >
+          📥 Importar DB (Pegar JSON)
+        </button>
 
         {/* Fase 2: Migración Analítica de Ventas (Snapshot Financiero) */}
         <button
@@ -236,6 +282,45 @@ export default function Panel() {
           ↩️ Regresar
         </button>
       </div>
+
+      {/* MODAL DE IMPORTACIÓN */}
+      {showImportModal && (
+        <div className={styles.overlay}>
+          <div className={styles.modal}>
+            <h2 className={styles.modalTitle}>Importar Base de Datos</h2>
+            <p style={{ color: '#666', fontSize: '0.9rem' }}>
+              Abre el archivo de respaldo en tu celular, copia todo su contenido y pégalo aquí abajo.
+            </p>
+
+            <textarea
+              className={styles.textarea}
+              placeholder='Pega aquí el contenido JSON...'
+              value={jsonText}
+              onChange={(e) => setJsonText(e.target.value)}
+            />
+
+            <div className={styles.modalActions}>
+              <button
+                className={styles.cancelBtn}
+                onClick={() => {
+                  setShowImportModal(false);
+                  setJsonText("");
+                }}
+                disabled={isImporting}
+              >
+                Cancelar
+              </button>
+              <button
+                className={styles.confirmBtn}
+                onClick={handleImportExecute}
+                disabled={isImporting}
+              >
+                {isImporting ? "Procesando..." : "Ejecutar Importación"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

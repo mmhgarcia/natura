@@ -1,14 +1,20 @@
 import { db } from '../database';
 import 'dexie-export-import';
 
-export const importDatabase = async (file) => {
+export const importDatabase = async (input) => {
     try {
-        if (!file) {
-            return { success: false, error: 'No se seleccionó ningún archivo' };
+        if (!input) {
+            return { success: false, error: 'No se proporcionó ningún dato' };
+        }
+
+        let file = input;
+
+        // Si el input es un string, lo convertimos a Blob
+        if (typeof input === 'string') {
+            file = new Blob([input], { type: 'application/json' });
         }
 
         // Importar la base de datos usando dexie-export-import
-        // Esto sobrescribirá los datos actuales si el nombre de la BD coincide
         await db.db.import(file, {
             overwriteValues: true,
             clearTablesBeforeImport: true,
