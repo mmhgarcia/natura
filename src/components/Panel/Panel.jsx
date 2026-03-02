@@ -9,6 +9,7 @@ import {
   migrateOrdersToBI,
   migrateSalesToBI // Fase 2: Nueva importación para transformación de ventas
 } from "../../lib/db/utils/migrationService";
+import { importDatabase } from "../../lib/db/utils/importService";
 import styles from "./Panel.module.css";
 
 export default function Panel() {
@@ -18,6 +19,7 @@ export default function Panel() {
 
   // Estados para control de procesos
   const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false); // Pedidos
   const [isMigratingSales, setIsMigratingSales] = useState(false); // Fase 2: Ventas
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -34,6 +36,35 @@ export default function Panel() {
       alert("❌ Error al exportar: " + (result.error?.message || "Error desconocido"));
     }
     setIsExporting(false);
+  };
+
+  /**
+   * Maneja la importación de la base de datos desde un archivo JSON
+   */
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm("⚠️ ¿Deseas IMPORTAR este respaldo?\n\nSe sobrescribirán todos los datos actuales por los del archivo seleccionado.")) {
+      event.target.value = null; // Limpiar input para reintentar con el mismo archivo
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const result = await importDatabase(file);
+      if (result.success) {
+        alert("✅ Base de datos restaurada correctamente. La aplicación se recargará.");
+        window.location.reload(); // Recargar para asegurar que los hooks lean los nuevos datos
+      } else {
+        alert("❌ Error al importar: " + (result.error || "Error desconocido"));
+      }
+    } catch (error) {
+      alert("❌ Error crítico: " + error.message);
+    } finally {
+      setIsImporting(false);
+      event.target.value = null; // Limpiar input
+    }
   };
 
   /**
@@ -151,6 +182,18 @@ export default function Panel() {
           {isExporting ? "⌛ Exportando..." : "📤 Exportar DB"}
         </button>
 
+        {/* Importación de Respaldo */}
+        <label className={styles.button} style={{ cursor: 'pointer', textAlign: 'center' }}>
+          {isImporting ? "⌛ Importando..." : "📥 Importar DB"}
+          <input
+            type="file"
+            accept=".json"
+            onChange={handleImport}
+            disabled={isImporting}
+            style={{ display: 'none' }}
+          />
+        </label>
+
         {/* Fase 2: Migración Analítica de Ventas (Snapshot Financiero) */}
         <button
           className={styles.button}
@@ -181,7 +224,7 @@ export default function Panel() {
           {isLoadingHistory ? "⚙️ Cargando..." : "📉 Cargar Histórico BCV"}
         </button>
 
-        
+
         <hr style={{ width: '80%', margin: '20px 0', opacity: 0.2 }} />
 
 

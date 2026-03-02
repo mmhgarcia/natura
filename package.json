@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:wasm": "cd src/security/wasm && ./build.sh",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview --host --port 4173"
   },
   "dependencies": {
     "dexie": "^4.2.1",
