@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from "react-router-dom";
+import ConsultaStockModal from './ConsultaStockModal';
 
 export default function Sidebar({ isOpen, onClose }) {
     const navigate = useNavigate();
+    const [isStockModalOpen, setIsStockModalOpen] = useState(false);
 
     const handleAdminAccess = (e) => {
         e.preventDefault();
@@ -13,6 +15,11 @@ export default function Sidebar({ isOpen, onClose }) {
         } else {
             alert("Acceso denegado: PIN incorrecto.");
         }
+    };
+
+    const handleOpenStockModal = (e) => {
+        e.preventDefault();
+        setIsStockModalOpen(true);
     };
 
     // Función para manejar hover
@@ -61,7 +68,20 @@ export default function Sidebar({ isOpen, onClose }) {
             backgroundColor: '#00BFFF',
             // El header se queda fijo arriba
             flexShrink: 0,
-
+        },
+        title: {
+            margin: 0,
+            fontSize: '1.2rem',
+            color: 'white',
+            fontWeight: 'bold'
+        },
+        closeBtn: {
+            background: 'none',
+            border: 'none',
+            color: 'white',
+            fontSize: '1.8rem',
+            cursor: 'pointer',
+            lineHeight: 1
         },
         nav: {
             display: 'flex',
@@ -73,7 +93,6 @@ export default function Sidebar({ isOpen, onClose }) {
             minHeight: 0, // Importante para que flex-grow funcione con overflow
             WebkitOverflowScrolling: 'touch', // Scroll suave en móviles
         },
-        // ... tus otros estilos (title, closeBtn, icon se mantienen igual)
         link: {
             padding: '15px',
             textDecoration: 'none',
@@ -87,6 +106,9 @@ export default function Sidebar({ isOpen, onClose }) {
             transition: 'background-color 0.2s',
             // Evita que el texto se rompa en varias líneas si es largo
             whiteSpace: 'nowrap',
+        },
+        icon: {
+            fontSize: '1.2rem'
         },
         separator: {
             border: 'none',
@@ -153,6 +175,17 @@ export default function Sidebar({ isOpen, onClose }) {
 
                     {/* Separador visual horizontal */}
                     <hr style={styles.separator} />
+
+                    <Link
+                        to="#"
+                        onClick={handleOpenStockModal}
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>📦</span>
+                        <span>Consulta de Stock</span>
+                    </Link>
 
                     <Link to="/estadisticas" onClick={onClose} style={styles.link}>
                         <span style={styles.icon}>📊</span> Estadísticas
@@ -221,10 +254,15 @@ export default function Sidebar({ isOpen, onClose }) {
                     {/* Test Finanzas */}
                     <Link to="/testfinanzas" onClick={onClose} style={styles.link}>
                         <span style={styles.icon}>💰</span>Test Finanzas
-                    </Link> 
+                    </Link>
 
                 </nav>
             </div>
+
+            <ConsultaStockModal
+                isOpen={isStockModalOpen}
+                onClose={() => setIsStockModalOpen(false)}
+            />
         </>
     );
 }

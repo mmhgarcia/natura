@@ -1,0 +1,193 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.modal {
+    background-color: #ffffff;
+    width: 100%;
+    max-width: 600px;
+    max-height: 85vh;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    animation: modalScaleUp 0.3s ease-out;
+}
+
+@keyframes modalScaleUp {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.header {
+    padding: 16px 20px;
+    background-color: #00BFFF;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.closeBtn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+}
+
+.body {
+    padding: 20px;
+    overflow-y: auto;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.loading,
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-style: italic;
+}
+
+.grupoSection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.grupoTitle {
+    margin: 0;
+    padding: 8px 12px;
+    background-color: #f1f3f5;
+    border-left: 4px solid #00BFFF;
+    color: #495057;
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.tablaContainer {
+    width: 100%;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.tabla {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabla th {
+    text-align: left;
+    padding: 10px 12px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.tabla td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f1f3f5;
+    font-size: 0.95rem;
+    color: #343a40;
+}
+
+.tabla tr:last-child td {
+    border-bottom: none;
+}
+
+.idCol {
+    width: 60px;
+    color: #adb5bd !important;
+    font-weight: 600;
+    font-size: 0.85rem !important;
+}
+
+.nombreCol {
+    font-weight: 500;
+}
+
+.stockCol {
+    width: 80px;
+}
+
+.stockValue {
+    display: inline-block;
+    min-width: 32px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background-color: #e3f2fd;
+    color: #0d47a1;
+    font-weight: 700;
+    text-align: center;
+}
+
+.agotado td {
+    background-color: #fff5f5;
+    color: #fa5252 !important;
+}
+
+.agotado .stockValue {
+    background-color: #ffc9c9;
+    color: #e03131;
+}
+
+.textRight {
+    text-align: right !important;
+}
+
+.footer {
+    padding: 16px 20px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.cerrarFooterBtn {
+    padding: 10px 24px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.cerrarFooterBtn:hover {
+    background-color: #495057;
+}
