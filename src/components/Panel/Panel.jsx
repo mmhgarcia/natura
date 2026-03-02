@@ -187,7 +187,7 @@ export default function Panel() {
           {isImporting ? "⌛ Importando..." : "📥 Importar DB"}
           <input
             type="file"
-            accept=".json"
+            accept="application/json,.json"
             onChange={handleImport}
             disabled={isImporting}
             style={{ display: 'none' }}
