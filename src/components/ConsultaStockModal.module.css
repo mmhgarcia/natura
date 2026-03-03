@@ -63,7 +63,7 @@
 }
 
 .header {
-    padding: 16px 20px;
+    padding: 12px 20px;
     background-color: #00BFFF;
     color: white;
     display: flex;
@@ -72,10 +72,26 @@
     flex-shrink: 0;
 }
 
+.headerInfo {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
 .title {
     margin: 0;
     font-size: 1.15rem;
     font-weight: 700;
+}
+
+.totalBadge {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .closeBtn {
@@ -94,7 +110,7 @@
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px;
     background-color: #f8fafc;
 }
 
@@ -112,16 +128,30 @@
     gap: 8px;
 }
 
+.grupoHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #334155;
+    padding: 10px 14px;
+    border-radius: 8px;
+    color: white;
+}
+
 .grupoTitle {
     margin: 0;
-    padding: 10px 12px;
-    background-color: #334155;
-    color: white;
     font-size: 0.85rem;
     font-weight: 700;
-    border-radius: 6px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.grupoTotal {
+    font-size: 0.8rem;
+    font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.15);
+    padding: 2px 8px;
+    border-radius: 4px;
 }
 
 .tablaContainer {

@@ -61,13 +61,20 @@ const ConsultaStockModal = ({ isOpen, onClose }) => {
         }
     };
 
+    const totalExistencias = Object.values(productosPorGrupo).reduce((acc, grupo) => {
+        return acc + grupo.reduce((sum, p) => sum + (p.stock || 0), 0);
+    }, 0);
+
     if (!isOpen) return null;
 
     return (
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.header}>
-                    <h2 className={styles.title}>Existencias por Grupo</h2>
+                    <div className={styles.headerInfo}>
+                        <h2 className={styles.title}>Existencias</h2>
+                        <span className={styles.totalBadge}>Total: {totalExistencias}</span>
+                    </div>
                     <button className={styles.closeBtn} onClick={onClose}>×</button>
                 </div>
 
@@ -79,7 +86,12 @@ const ConsultaStockModal = ({ isOpen, onClose }) => {
                     ) : (
                         Object.keys(productosPorGrupo).sort().map(grupo => (
                             <div key={grupo} className={styles.grupoSection}>
-                                <h3 className={styles.grupoTitle}>{grupo}</h3>
+                                <div className={styles.grupoHeader}>
+                                    <h3 className={styles.grupoTitle}>{grupo}</h3>
+                                    <span className={styles.grupoTotal}>
+                                        {productosPorGrupo[grupo].reduce((sum, p) => sum + p.stock, 0)} uds
+                                    </span>
+                                </div>
                                 <div className={styles.tablaContainer}>
                                     <table className={styles.tabla}>
                                         <thead>
