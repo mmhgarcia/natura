@@ -40,13 +40,34 @@ const ConsultaStockModal = ({ isOpen, onClose }) => {
         }
     };
 
+    const handleUpdateStock = async (productoId, delta) => {
+        try {
+            await db.updateStock(productoId, delta);
+            // Actualizar el estado local inmediatamente
+            setProductosPorGrupo(prev => {
+                const nuevo = { ...prev };
+                Object.keys(nuevo).forEach(grupo => {
+                    nuevo[grupo] = nuevo[grupo].map(p => {
+                        if (p.id === productoId) {
+                            return { ...p, stock: Math.max(0, p.stock + delta) };
+                        }
+                        return p;
+                    });
+                });
+                return nuevo;
+            });
+        } catch (error) {
+            console.error("Error al actualizar stock:", error);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.header}>
-                    <h2 className={styles.title}>Consulta de Existencias</h2>
+                    <h2 className={styles.title}>Existencias por Grupo</h2>
                     <button className={styles.closeBtn} onClick={onClose}>×</button>
                 </div>
 
@@ -63,20 +84,37 @@ const ConsultaStockModal = ({ isOpen, onClose }) => {
                                     <table className={styles.tabla}>
                                         <thead>
                                             <tr>
-                                                <th>ID</th>
                                                 <th>Sabor</th>
-                                                <th className={styles.textRight}>Stock</th>
+                                                <th className={styles.textCenter}>Gestión Stock</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {productosPorGrupo[grupo].map(p => (
                                                 <tr key={p.id} className={p.stock === 0 ? styles.agotado : ''}>
-                                                    <td className={styles.idCol}>#{p.id}</td>
-                                                    <td className={styles.nombreCol}>{p.nombre}</td>
-                                                    <td className={`${styles.stockCol} ${styles.textRight}`}>
-                                                        <span className={styles.stockValue}>
-                                                            {p.stock}
-                                                        </span>
+                                                    <td className={styles.nombreCol}>
+                                                        <div className={styles.prodInfo}>
+                                                            <span className={styles.idBadge}>#{p.id}</span>
+                                                            {p.nombre}
+                                                        </div>
+                                                    </td>
+                                                    <td className={styles.stockCol}>
+                                                        <div className={styles.controlesStock}>
+                                                            <button
+                                                                className={styles.btnMenos}
+                                                                onClick={() => handleUpdateStock(p.id, -1)}
+                                                            >
+                                                                −
+                                                            </button>
+                                                            <span className={styles.stockValue}>
+                                                                {p.stock}
+                                                            </span>
+                                                            <button
+                                                                className={styles.btnMas}
+                                                                onClick={() => handleUpdateStock(p.id, 1)}
+                                                            >
+                                                                +
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -89,7 +127,7 @@ const ConsultaStockModal = ({ isOpen, onClose }) => {
                 </div>
 
                 <div className={styles.footer}>
-                    <button className={styles.cerrarFooterBtn} onClick={onClose}>Cerrar</button>
+                    <button className={styles.cerrarFooterBtn} onClick={onClose}>Listo</button>
                 </div>
             </div>
         </div>

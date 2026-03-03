@@ -10,20 +10,44 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px;
 }
 
 .modal {
     background-color: #ffffff;
     width: 100%;
-    max-width: 600px;
-    max-height: 85vh;
-    border-radius: 12px;
+    height: 100%;
+    /* Default to full height on mobile */
     display: flex;
     flex-direction: column;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     overflow: hidden;
-    animation: modalScaleUp 0.3s ease-out;
+    animation: modalSlideUp 0.3s ease-out;
+}
+
+@keyframes modalSlideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+/* Tablet and Desktop */
+@media (min-width: 768px) {
+    .overlay {
+        padding: 20px;
+    }
+
+    .modal {
+        width: 90%;
+        max-width: 500px;
+        height: auto;
+        max-height: 85vh;
+        border-radius: 12px;
+        animation: modalScaleUp 0.3s ease-out;
+    }
 }
 
 @keyframes modalScaleUp {
@@ -45,11 +69,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .title {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     font-weight: 700;
 }
 
@@ -60,47 +85,50 @@
     font-size: 2rem;
     cursor: pointer;
     line-height: 1;
-    padding: 0;
+    padding: 0 10px;
 }
 
 .body {
-    padding: 20px;
+    padding: 15px;
     overflow-y: auto;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 15px;
+    background-color: #f8fafc;
 }
 
 .loading,
 .empty {
     text-align: center;
     padding: 40px;
-    color: #666;
+    color: #64748b;
     font-style: italic;
 }
 
 .grupoSection {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
 }
 
 .grupoTitle {
     margin: 0;
-    padding: 8px 12px;
-    background-color: #f1f3f5;
-    border-left: 4px solid #00BFFF;
-    color: #495057;
-    font-size: 1rem;
+    padding: 10px 12px;
+    background-color: #334155;
+    color: white;
+    font-size: 0.85rem;
     font-weight: 700;
+    border-radius: 6px;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .tablaContainer {
     width: 100%;
-    border: 1px solid #e9ecef;
+    background-color: white;
     border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     overflow: hidden;
 }
 
@@ -111,83 +139,118 @@
 
 .tabla th {
     text-align: left;
-    padding: 10px 12px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    font-size: 0.85rem;
-    color: #6c757d;
-    font-weight: 600;
+    padding: 12px;
+    background-color: #f1f5f9;
+    border-bottom: 2px solid #e2e8f0;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
 .tabla td {
-    padding: 10px 12px;
-    border-bottom: 1px solid #f1f3f5;
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
     font-size: 0.95rem;
-    color: #343a40;
 }
 
-.tabla tr:last-child td {
-    border-bottom: none;
-}
-
-.idCol {
-    width: 60px;
-    color: #adb5bd !important;
-    font-weight: 600;
-    font-size: 0.85rem !important;
-}
-
-.nombreCol {
+.prodInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #1e293b;
     font-weight: 500;
 }
 
-.stockCol {
-    width: 80px;
+.idBadge {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    font-weight: 700;
+    background-color: #f8fafc;
+    padding: 2px 4px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.controlesStock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
 }
 
 .stockValue {
-    display: inline-block;
-    min-width: 32px;
-    padding: 2px 8px;
-    border-radius: 4px;
-    background-color: #e3f2fd;
-    color: #0d47a1;
-    font-weight: 700;
+    min-width: 30px;
     text-align: center;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #0f172a;
 }
 
-.agotado td {
-    background-color: #fff5f5;
-    color: #fa5252 !important;
+.btnMas,
+.btnMenos {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btnMas {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.btnMas:active {
+    background-color: #bbf7d0;
+    transform: scale(0.9);
+}
+
+.btnMenos {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.btnMenos:active {
+    background-color: #fecaca;
+    transform: scale(0.9);
 }
 
 .agotado .stockValue {
-    background-color: #ffc9c9;
-    color: #e03131;
+    color: #ef4444;
 }
 
-.textRight {
-    text-align: right !important;
+.textCenter {
+    text-align: center !important;
 }
 
 .footer {
-    padding: 16px 20px;
-    border-top: 1px solid #e9ecef;
+    padding: 12px 20px;
+    background-color: white;
+    border-top: 1px solid #e2e8f0;
     display: flex;
-    justify-content: flex-end;
+    justify-content: stretch;
+    flex-shrink: 0;
 }
 
 .cerrarFooterBtn {
-    padding: 10px 24px;
-    background-color: #6c757d;
+    flex: 1;
+    padding: 14px;
+    background-color: #00BFFF;
     color: white;
     border: none;
-    border-radius: 6px;
-    font-weight: 600;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1rem;
     cursor: pointer;
-    transition: background-color 0.2s;
 }
 
 .cerrarFooterBtn:hover {
-    background-color: #495057;
+    filter: brightness(0.9);
 }
