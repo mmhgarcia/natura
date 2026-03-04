@@ -27,10 +27,22 @@ const ResumenInventario = () => {
                 const productosOcultos = todosProductos.filter(p => p.visible === false).length;
                 const productos = todosProductos.filter(p => p.visible !== false);
 
-                // Obtener tasa y fecha del histórico
-                const ultimaEntrada = await db.historico_tasas.orderBy('fecha_tasa').last();
-                const valorTasa = ultimaEntrada ? ultimaEntrada.tasa : await db.getUltimaTasaBCV();
-                const fecha = ultimaEntrada ? ultimaEntrada.fecha_tasa : 'Config';
+                // Obtener tasa y fecha
+                let valorTasa = 0;
+                let fecha = 'Config';
+
+                try {
+                    const ultimaEntrada = await db.historico_tasas.orderBy('fecha_tasa').last();
+                    if (ultimaEntrada) {
+                        valorTasa = ultimaEntrada.tasa;
+                        fecha = ultimaEntrada.fecha_tasa;
+                    } else {
+                        valorTasa = await db.getUltimaTasaBCV();
+                    }
+                } catch (tError) {
+                    console.error("Error buscando tasa:", tError);
+                    valorTasa = await db.getUltimaTasaBCV();
+                }
 
                 setTasa(valorTasa);
                 setFechaTasa(fecha);
@@ -48,11 +60,29 @@ const ResumenInventario = () => {
                 const advertencias = [];
                 let productosHuerfanos = 0;
 
+                // 3.5. Extraer el Costo Integral (con delivery prorrateado) de los últimos pedidos
+                const pedidos = await db.getAll('pedidos');
+                const lastCostoIntegralMap = {}; // productoId -> costoIntegralUnitario
+
+                // Procesamos cronológicamente para que el último pisado sea el más reciente
+                pedidos.sort((a, b) => a.id - b.id).forEach(pedido => {
+                    if (pedido.items && Array.isArray(pedido.items)) {
+                        pedido.items.forEach(item => {
+                            if (item.costoIntegralUnitario) {
+                                lastCostoIntegralMap[item.productoId] = item.costoIntegralUnitario;
+                            }
+                        });
+                    }
+                });
+
                 // 4. Cálculo de totales basado en el stock actual de cada producto
                 const totales = productos.reduce((acc, p) => {
                     const info = gruposMap[p.grupo];
                     if (info) {
-                        acc.totalCosto += (p.stock || 0) * info.costo;
+                        // Usar el costo integral del último pedido si existe (Costo+Delivery), sino Costo Base
+                        const costoProrrateado = lastCostoIntegralMap[p.id] || info.costo;
+
+                        acc.totalCosto += (p.stock || 0) * costoProrrateado;
                         acc.totalVenta += (p.stock || 0) * info.precio;
                     } else if (p.stock > 0) {
                         // Producto con stock pero sin grupo válido
