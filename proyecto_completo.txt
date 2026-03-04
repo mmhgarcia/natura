@@ -1,5 +1,5 @@
 PROYECTO: NATURA
-FECHA DE GENERACIÓN: 13/02/2026 09:46:16
+FECHA DE GENERACIÓN: 04/03/2026 12:00:51
 ============================================================
 DESCRIPCIÓN TÉCNICA DEL STACK:
 - Framework: React con Vite (Arquitectura de componentes funcionales) [5, 6]
@@ -24,6 +24,8 @@ DESCRIPCIÓN TÉCNICA DEL STACK:
   📄 App.jsx
   📁 assets/
   📁 components/
+    📄 ConsultaStockModal.jsx
+    📄 ConsultaStockModal.module.css
     📄 Delivery.jsx
     📄 Footer.jsx
     📁 FreezerLayout/
@@ -93,6 +95,7 @@ DESCRIPCIÓN TÉCNICA DEL STACK:
         📄 Importer.js
         📄 deliveryUtil.js
         📄 exportService.js
+        📄 importService.js
         📄 migrationService.js
         📄 tasaUtil.js
     📁 types/
@@ -214,7 +217,7 @@ FILE: package.json
     "build": "vite build",
     "build:wasm": "cd src/security/wasm && ./build.sh",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview --host --port 4173"
   },
   "dependencies": {
     "dexie": "^4.2.1",
@@ -238,6 +241,7 @@ FILE: package.json
     "vite-plugin-pwa": "^1.2.0"
   }
 }
+
 ************************************************************
 
 FILE: public/wasm/security.js
@@ -347,6 +351,450 @@ function App() {
 }
 
 export default App;
+************************************************************
+
+FILE: src/components/ConsultaStockModal.jsx
+------------------------------
+import React, { useState, useEffect } from 'react';
+import { db } from '../lib/db/database';
+import styles from './ConsultaStockModal.module.css';
+
+const ConsultaStockModal = ({ isOpen, onClose }) => {
+    const [productosPorGrupo, setProductosPorGrupo] = useState({});
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (isOpen) {
+            cargarStock();
+        }
+    }, [isOpen]);
+
+    const cargarStock = async () => {
+        try {
+            setLoading(true);
+            const productos = await db.getAll('productos');
+
+            // Agrupar productos por el campo 'grupo'
+            const agrupados = productos.reduce((acc, p) => {
+                const grupo = p.grupo || 'Sin Grupo';
+                if (!acc[grupo]) {
+                    acc[grupo] = [];
+                }
+                acc[grupo].push(p);
+                return acc;
+            }, {});
+
+            // Ordenar productos dentro de cada grupo por nombre
+[CONTENIDO SENSIBLE ELIMINADO EN: ConsultaStockModal.jsx]
+                agrupados[grupo].sort((a, b) => a.nombre.localeCompare(b.nombre));
+            });
+
+            setProductosPorGrupo(agrupados);
+        } catch (error) {
+            console.error("Error al cargar stock:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateStock = async (productoId, delta) => {
+        try {
+            await db.updateStock(productoId, delta);
+            // Actualizar el estado local inmediatamente
+            setProductosPorGrupo(prev => {
+                const nuevo = { ...prev };
+[CONTENIDO SENSIBLE ELIMINADO EN: ConsultaStockModal.jsx]
+                    nuevo[grupo] = nuevo[grupo].map(p => {
+                        if (p.id === productoId) {
+                            return { ...p, stock: Math.max(0, p.stock + delta) };
+                        }
+                        return p;
+                    });
+                });
+                return nuevo;
+            });
+        } catch (error) {
+            console.error("Error al actualizar stock:", error);
+        }
+    };
+
+    const totalExistencias = Object.values(productosPorGrupo).reduce((acc, grupo) => {
+        return acc + grupo.reduce((sum, p) => sum + (p.stock || 0), 0);
+    }, 0);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className={styles.overlay} onClick={onClose}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.header}>
+                    <div className={styles.headerInfo}>
+                        <h2 className={styles.title}>Existencias</h2>
+                        <span className={styles.totalBadge}>Total: {totalExistencias}</span>
+                    </div>
+                    <button className={styles.closeBtn} onClick={onClose}>×</button>
+                </div>
+
+                <div className={styles.body}>
+                    {loading ? (
+                        <div className={styles.loading}>Cargando existencias...</div>
+[CONTENIDO SENSIBLE ELIMINADO EN: ConsultaStockModal.jsx]
+                        <div className={styles.empty}>No hay productos registrados.</div>
+                    ) : (
+[CONTENIDO SENSIBLE ELIMINADO EN: ConsultaStockModal.jsx]
+[CONTENIDO SENSIBLE ELIMINADO EN: ConsultaStockModal.jsx]
+                                <div className={styles.grupoHeader}>
+                                    <h3 className={styles.grupoTitle}>{grupo}</h3>
+                                    <span className={styles.grupoTotal}>
+                                        {productosPorGrupo[grupo].reduce((sum, p) => sum + p.stock, 0)} uds
+                                    </span>
+                                </div>
+                                <div className={styles.tablaContainer}>
+                                    <table className={styles.tabla}>
+                                        <thead>
+                                            <tr>
+                                                <th>Sabor</th>
+                                                <th className={styles.textCenter}>Gestión Stock</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {productosPorGrupo[grupo].map(p => (
+[CONTENIDO SENSIBLE ELIMINADO EN: ConsultaStockModal.jsx]
+                                                    <td className={styles.nombreCol}>
+                                                        <div className={styles.prodInfo}>
+                                                            <span className={styles.idBadge}>#{p.id}</span>
+                                                            {p.nombre}
+                                                        </div>
+                                                    </td>
+                                                    <td className={styles.stockCol}>
+                                                        <div className={styles.controlesStock}>
+                                                            <button
+                                                                className={styles.btnMenos}
+                                                                onClick={() => handleUpdateStock(p.id, -1)}
+                                                            >
+                                                                −
+                                                            </button>
+                                                            <span className={styles.stockValue}>
+                                                                {p.stock}
+                                                            </span>
+                                                            <button
+                                                                className={styles.btnMas}
+                                                                onClick={() => handleUpdateStock(p.id, 1)}
+                                                            >
+                                                                +
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                <div className={styles.footer}>
+                    <button className={styles.cerrarFooterBtn} onClick={onClose}>Listo</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default ConsultaStockModal;
+
+************************************************************
+
+FILE: src/components/ConsultaStockModal.module.css
+------------------------------
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal {
+    background-color: #ffffff;
+    width: 100%;
+    height: 100%;
+    /* Default to full height on mobile */
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    animation: modalSlideUp 0.3s ease-out;
+}
+
+[CONTENIDO SENSIBLE ELIMINADO EN: ConsultaStockModal.module.css]
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+/* Tablet and Desktop */
+@media (min-width: 768px) {
+    .overlay {
+        padding: 20px;
+    }
+
+    .modal {
+        width: 90%;
+        max-width: 500px;
+        height: auto;
+        max-height: 85vh;
+        border-radius: 12px;
+        animation: modalScaleUp 0.3s ease-out;
+    }
+}
+
+[CONTENIDO SENSIBLE ELIMINADO EN: ConsultaStockModal.module.css]
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.header {
+    padding: 12px 20px;
+    background-color: #00BFFF;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.headerInfo {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.totalBadge {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.closeBtn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 10px;
+}
+
+.body {
+    padding: 15px;
+    overflow-y: auto;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background-color: #f8fafc;
+}
+
+.loading,
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: #64748b;
+    font-style: italic;
+}
+
+.grupoSection {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.grupoHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #334155;
+    padding: 10px 14px;
+    border-radius: 8px;
+    color: white;
+}
+
+.grupoTitle {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.grupoTotal {
+    font-size: 0.8rem;
+    font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.15);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.tablaContainer {
+    width: 100%;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.tabla {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabla th {
+    text-align: left;
+    padding: 12px;
+    background-color: #f1f5f9;
+    border-bottom: 2px solid #e2e8f0;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.tabla td {
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.95rem;
+}
+
+.prodInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.idBadge {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    font-weight: 700;
+    background-color: #f8fafc;
+    padding: 2px 4px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.controlesStock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.stockValue {
+    min-width: 30px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #0f172a;
+}
+
+.btnMas,
+.btnMenos {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btnMas {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.btnMas:active {
+    background-color: #bbf7d0;
+    transform: scale(0.9);
+}
+
+.btnMenos {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.btnMenos:active {
+    background-color: #fecaca;
+    transform: scale(0.9);
+}
+
+.agotado .stockValue {
+    color: #ef4444;
+}
+
+.textCenter {
+    text-align: center !important;
+}
+
+.footer {
+    padding: 12px 20px;
+    background-color: white;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: stretch;
+    flex-shrink: 0;
+}
+
+.cerrarFooterBtn {
+    flex: 1;
+    padding: 14px;
+    background-color: #00BFFF;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.cerrarFooterBtn:hover {
+    filter: brightness(0.9);
+}
 ************************************************************
 
 FILE: src/components/Delivery.jsx
@@ -1910,8 +2358,8 @@ export default FreezerSlot;
 FILE: src/components/GestionPedido.jsx
 ------------------------------
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/db/database'; // Referencia a la base de datos dbTasaBCV [4, 5]
-import styles from './GestionPedido.module.css'; // [4]
+import { db } from '../lib/db/database'; 
+import styles from './GestionPedido.module.css'; 
 
 const GestionPedido = ({ pedido, onClose, onSave }) => {
     const getLocalToday = () => new Date().toLocaleDateString('en-CA');
@@ -1936,14 +2384,13 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     useEffect(() => {
         const cargarDatos = async () => {
             try {
-                // ACTUALIZACIÓN FASE 2: Prioriza el histórico de tasas [3]
                 const tasaConfig = await db.getUltimaTasaBCV();
-                const deliveryValor = await db.getConfigValue('delivery'); // [1, 6]
+                const deliveryValor = await db.getConfigValue('delivery');
 
                 const [todosLosProductos, todosLosGrupos] = await Promise.all([
                     db.getAll('productos'),
                     db.getAll('grupos')
-                ]); // [1, 7]
+                ]);
 
                 setProductos(todosLosProductos);
                 setListaGrupos(todosLosGrupos);
@@ -1957,7 +2404,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                         delivery_tasa: pedido.delivery_tasa !== undefined ? pedido.delivery_tasa : (deliveryValor || 0)
                     });
 
-                    // Soporte para ambos formatos (Diccionario antiguo o Array BI nuevo)
                     if (pedido.items) {
                         if (Array.isArray(pedido.items)) {
                             const dict = {};
@@ -1971,7 +2417,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                     }
                     setAplicarDelivery(pedido.delivery_aplicado ?? true);
                 } else {
-                    const ultimoPedido = await db.pedidos.orderBy('id').last(); // [8]
+                    const ultimoPedido = await db.pedidos.orderBy('id').last();
                     const siguienteNumero = ultimoPedido ? (parseInt(ultimoPedido.numero_pedido) + 1).toString() : "1";
 
                     setFormData(prev => ({
@@ -1992,14 +2438,18 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
         const calcularFinanzas = () => {
             let costoMercanciaUSD = 0;
             let ventaEstimadaUSD = 0;
+            const itemsParaProrrateo = [];
 
             Object.entries(cantidades).forEach(([prodId, qty]) => {
                 const producto = productos.find(p => p.id === parseInt(prodId));
                 if (producto && qty > 0) {
                     const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === producto.grupo.toLowerCase());
                     if (grupo) {
-                        costoMercanciaUSD += qty * (grupo.costo_$ || 0);
-                        ventaEstimadaUSD += qty * (grupo.precio || 0);
+                        const costoBase = grupo.costo_$ || 0;
+                        const precioVenta = grupo.precio || 0;
+                        costoMercanciaUSD += qty * costoBase;
+                        ventaEstimadaUSD += qty * precioVenta;
+                        itemsParaProrrateo.push({ qty, costoBase, precioVenta });
                     }
                 }
             });
@@ -2007,7 +2457,14 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
             const cargoDelivery = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
             const totalInversionUSD = costoMercanciaUSD + cargoDelivery;
             const tasaNum = parseFloat(formData.tasa) || 0;
-            const utilidadUSD = ventaEstimadaUSD - totalInversionUSD;
+
+            let utilidadRealUSD = 0;
+            itemsParaProrrateo.forEach(item => {
+                const inversionEnCategoria = item.qty * item.costoBase;
+                const factorProrrateo = costoMercanciaUSD > 0 ? (inversionEnCategoria / costoMercanciaUSD) : 0;
+                const deliveryAsignado = cargoDelivery * factorProrrateo;
+                utilidadRealUSD += (item.qty * item.precioVenta) - (inversionEnCategoria + deliveryAsignado);
+            });
 
             const ventaEstimadaBS = ventaEstimadaUSD * tasaNum;
 
@@ -2017,7 +2474,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                 ventaUsd: ventaEstimadaUSD,
                 ventaBs: ventaEstimadaBS
             });
-            setUtilidad({ usd: utilidadUSD, bs: utilidadUSD * tasaNum });
+            setUtilidad({ usd: utilidadRealUSD, bs: utilidadRealUSD * tasaNum });
         };
 
         if (productos.length > 0) calcularFinanzas();
@@ -2025,7 +2482,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
     const handleRecalcular = async () => {
         try {
-            // ACTUALIZACIÓN FASE 2: Obtiene la tasa más reciente del historial [2, 3]
             const nuevaTasa = await db.getUltimaTasaBCV();
             const nuevoDelivery = await db.getConfigValue('delivery');
             const gruposActualizados = await db.getAll('grupos');
@@ -2058,14 +2514,24 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 
         if (!window.confirm(mensaje)) return;
 
-        // --- TRANSFORMACIÓN PARA BI --- [9, 10]
+        const cargoDeliveryTotal = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
+        const inversionBaseTotal = Object.entries(cantidades).reduce((acc, [prodId, qty]) => {
+            const p = productos.find(x => x.id === parseInt(prodId));
+            const g = listaGrupos.find(gr => gr.nombre.toLowerCase() === p?.grupo?.toLowerCase());
+            return acc + (qty * (g?.costo_$ || 0));
+        }, 0);
+
         const itemsBI = Object.entries(cantidades)
             .filter(([_, qty]) => qty > 0)
             .map(([prodId, qty]) => {
                 const prod = productos.find(p => p.id === parseInt(prodId));
                 const grupo = listaGrupos.find(g => g.nombre.toLowerCase() === prod.grupo.toLowerCase());
                 const precioUnit = grupo?.precio || 0;
-                const costoUnit = grupo?.costo_$ || 0;
+                const costoBaseUnit = grupo?.costo_$ || 0;
+
+                const factor = inversionBaseTotal > 0 ? ((qty * costoBaseUnit) / inversionBaseTotal) : 0;
+                const deliveryPorUnidad = qty > 0 ? ((cargoDeliveryTotal * factor) / qty) : 0;
+                const costoIntegralUnit = costoBaseUnit + deliveryPorUnidad;
 
                 return {
                     productoId: parseInt(prodId),
@@ -2073,9 +2539,10 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                     grupo: prod.grupo,
                     cantidad: qty,
                     precioUnitario: precioUnit,
-                    costoUnitario: costoUnit,
+                    costoUnitario: costoBaseUnit,
+                    costoIntegralUnitario: costoIntegralUnit,
                     subtotalUsd: qty * precioUnit,
-                    utilidadUsd: qty * (precioUnit - costoUnit)
+                    utilidadUsd: qty * (precioUnit - costoIntegralUnit)
                 };
             });
 
@@ -2116,6 +2583,12 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
         }
         return acc;
     }, {});
+
+    const inversionBaseGlobal = Object.entries(cantidades).reduce((acc, [id, q]) => {
+        const p = productos.find(x => x.id === parseInt(id));
+        const g = listaGrupos.find(gr => gr.nombre.toLowerCase() === p?.grupo?.toLowerCase());
+        return acc + (q * (g?.costo_$ || 0));
+    }, 0);
 
     return (
         <div className={styles.overlay}>
@@ -2186,11 +2659,37 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
 [CONTENIDO SENSIBLE ELIMINADO EN: GestionPedido.jsx]
                                     <div className={styles.groupTitle}>{grupo.toUpperCase()}</div>
                                     {items.map((prod) => {
+                                        const qty = cantidades[prod.id] || 0;
+                                        const g = listaGrupos.find(gr => gr.nombre.toLowerCase() === prod.grupo.toLowerCase());
+                                        const cBase = g?.costo_$ || 0;
+                                        const pVenta = g?.precio || 0;
+                                        const cDeliveryTotal = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
+                                        
+                                        const factorProrrateo = inversionBaseGlobal > 0 ? ((qty * cBase) / inversionBaseGlobal) : 0;
+                                        const deliveryUnidad = qty > 0 ? (cDeliveryTotal * factorProrrateo) / qty : 0;
+                                        const costoInt = cBase + deliveryUnidad;
+                                        const margenPct = pVenta > 0 ? ((pVenta - costoInt) / pVenta) * 100 : 0;
+                                        const alertaMargen = qty > 0 && margenPct < 15;
+
                                         const badgeColor = prod.stock === 0 ? '#ff4d4d' : (prod.stock <= 5 ? '#ffa500' : '#28a745');
+                                        
                                         return (
 [CONTENIDO SENSIBLE ELIMINADO EN: GestionPedido.jsx]
                                                 <div className={styles.stockBadgeSmall} style={{ backgroundColor: badgeColor }}>{prod.stock}</div>
-                                                <div className={styles.productName}>{prod.nombre}</div>
+                                                <div className={styles.productName}>
+                                                    {prod.nombre} <span style={{ fontSize: '0.85em', color: '#888', fontWeight: 'normal' }}>({prod.id})</span>
+                                                    
+                                                    {qty > 0 && (
+                                                        <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                                                            Costo Int: <span style={{ fontWeight: '600' }}>${costoInt.toFixed(3)}</span>
+                                                        </div>
+                                                    )}
+                                                    {alertaMargen && (
+                                                        <span style={{ color: '#f44336', fontSize: '10px', display: 'block', fontWeight: 'bold', marginTop: '2px' }}>
+                                                            ⚠️ MARGEN BAJO ({margenPct.toFixed(1)}%)
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className={styles.quantityControl}>
                                                     <button
                                                         type="button"
@@ -2855,6 +3354,7 @@ import {
   migrateOrdersToBI,
   migrateSalesToBI // Fase 2: Nueva importación para transformación de ventas
 } from "../../lib/db/utils/migrationService";
+import { importDatabase } from "../../lib/db/utils/importService";
 import styles from "./Panel.module.css";
 
 export default function Panel() {
@@ -2864,6 +3364,9 @@ export default function Panel() {
 
   // Estados para control de procesos
   const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [jsonText, setJsonText] = useState("");
   const [isMigrating, setIsMigrating] = useState(false); // Pedidos
   const [isMigratingSales, setIsMigratingSales] = useState(false); // Fase 2: Ventas
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -2880,6 +3383,71 @@ export default function Panel() {
       alert("❌ Error al exportar: " + (result.error?.message || "Error desconocido"));
     }
     setIsExporting(false);
+  };
+
+  /**
+   * Maneja la importación de la base de datos desde el texto del textarea
+   */
+  const handleImportExecute = async () => {
+    if (!jsonText.trim()) {
+      alert("⚠️ Por favor, pega el contenido del archivo JSON primero.");
+      return;
+    }
+
+    if (!window.confirm("⚠️ ¿Deseas IMPORTAR este respaldo?\n\nSe sobrescribirán todos los datos actuales por los que has pegado.")) {
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      // Validar si es un JSON válido antes de enviarlo
+      try {
+        JSON.parse(jsonText);
+      } catch (e) {
+        throw new Error("El texto no es un JSON válido. Asegúrate de copiar todo el contenido del archivo.");
+      }
+
+      const result = await importDatabase(jsonText);
+      if (result.success) {
+        alert("✅ Base de datos restaurada correctamente. La aplicación se recargará.");
+        window.location.reload();
+      } else {
+        alert("❌ Error al importar: " + (result.error || "Error desconocido"));
+      }
+    } catch (error) {
+      alert("❌ Error: " + error.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  /**
+   * Maneja la importación de la base de datos desde un archivo JSON
+   */
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm("⚠️ ¿Deseas IMPORTAR este respaldo?\n\nSe sobrescribirán todos los datos actuales por los del archivo seleccionado.")) {
+      event.target.value = null; // Limpiar input para reintentar con el mismo archivo
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const result = await importDatabase(file);
+      if (result.success) {
+        alert("✅ Base de datos restaurada correctamente. La aplicación se recargará.");
+        window.location.reload(); // Recargar para asegurar que los hooks lean los nuevos datos
+      } else {
+        alert("❌ Error al importar: " + (result.error || "Error desconocido"));
+      }
+    } catch (error) {
+      alert("❌ Error crítico: " + error.message);
+    } finally {
+      setIsImporting(false);
+      event.target.value = null; // Limpiar input
+    }
   };
 
   /**
@@ -2997,6 +3565,26 @@ export default function Panel() {
           {isExporting ? "⌛ Exportando..." : "📤 Exportar DB"}
         </button>
 
+        {/* Importación de Respaldo */}
+        <label className={styles.button} style={{ cursor: 'pointer', textAlign: 'center' }}>
+          {isImporting ? "⌛ Importando..." : "📥 Importar DB (Archivo)"}
+          <input
+            type="file"
+            accept="application/json,.json"
+            onChange={handleImport}
+            disabled={isImporting}
+            style={{ display: 'none' }}
+          />
+        </label>
+
+        {/* Botón para abrir el Modal de Importación */}
+        <button
+          className={styles.button}
+          onClick={() => setShowImportModal(true)}
+        >
+          📥 Importar DB (Pegar JSON)
+        </button>
+
         {/* Fase 2: Migración Analítica de Ventas (Snapshot Financiero) */}
         <button
           className={styles.button}
@@ -3027,7 +3615,7 @@ export default function Panel() {
           {isLoadingHistory ? "⚙️ Cargando..." : "📉 Cargar Histórico BCV"}
         </button>
 
-        
+
         <hr style={{ width: '80%', margin: '20px 0', opacity: 0.2 }} />
 
 
@@ -3039,6 +3627,45 @@ export default function Panel() {
           ↩️ Regresar
         </button>
       </div>
+
+      {/* MODAL DE IMPORTACIÓN */}
+      {showImportModal && (
+        <div className={styles.overlay}>
+          <div className={styles.modal}>
+            <h2 className={styles.modalTitle}>Importar Base de Datos</h2>
+            <p style={{ color: '#666', fontSize: '0.9rem' }}>
+              Abre el archivo de respaldo en tu celular, copia todo su contenido y pégalo aquí abajo.
+            </p>
+
+            <textarea
+              className={styles.textarea}
+              placeholder='Pega aquí el contenido JSON...'
+              value={jsonText}
+              onChange={(e) => setJsonText(e.target.value)}
+            />
+
+            <div className={styles.modalActions}>
+              <button
+                className={styles.cancelBtn}
+                onClick={() => {
+                  setShowImportModal(false);
+                  setJsonText("");
+                }}
+                disabled={isImporting}
+              >
+                Cancelar
+              </button>
+              <button
+                className={styles.confirmBtn}
+                onClick={handleImportExecute}
+                disabled={isImporting}
+              >
+                {isImporting ? "Procesando..." : "Ejecutar Importación"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3052,8 +3679,10 @@ FILE: src/components/Panel/Panel.module.css
   height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;   /* centra verticalmente */
-  align-items: center;       /* centra horizontalmente */
+  justify-content: center;
+  /* centra verticalmente */
+  align-items: center;
+  /* centra horizontalmente */
   background: #fafafa;
 }
 
@@ -3102,6 +3731,81 @@ FILE: src/components/Panel/Panel.module.css
   background: #333;
 }
 
+/* Modal Styles */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: white;
+  width: 90%;
+  max-width: 500px;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.modalTitle {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
+}
+
+.textarea {
+  width: 100%;
+  height: 200px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  resize: none;
+  background: #fdfdfd;
+}
+
+.modalActions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.cancelBtn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #eee;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.confirmBtn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  background: #28a745;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.confirmBtn:disabled {
+  background: #94d3a2;
+  cursor: not-allowed;
+}
 ************************************************************
 
 FILE: src/components/Panel/hooks/useGrupos.js
@@ -5277,11 +5981,13 @@ label {
 
 FILE: src/components/Sidebar.jsx
 ------------------------------
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from "react-router-dom";
+import ConsultaStockModal from './ConsultaStockModal';
 
 export default function Sidebar({ isOpen, onClose }) {
     const navigate = useNavigate();
+    const [isStockModalOpen, setIsStockModalOpen] = useState(false);
 
     const handleAdminAccess = (e) => {
         e.preventDefault();
@@ -5292,6 +5998,11 @@ export default function Sidebar({ isOpen, onClose }) {
         } else {
             alert("Acceso denegado: PIN incorrecto.");
         }
+    };
+
+    const handleOpenStockModal = (e) => {
+        e.preventDefault();
+        setIsStockModalOpen(true);
     };
 
     // Función para manejar hover
@@ -5340,7 +6051,20 @@ export default function Sidebar({ isOpen, onClose }) {
             backgroundColor: '#00BFFF',
             // El header se queda fijo arriba
             flexShrink: 0,
-
+        },
+        title: {
+            margin: 0,
+            fontSize: '1.2rem',
+            color: 'white',
+            fontWeight: 'bold'
+        },
+        closeBtn: {
+            background: 'none',
+            border: 'none',
+            color: 'white',
+            fontSize: '1.8rem',
+            cursor: 'pointer',
+            lineHeight: 1
         },
         nav: {
             display: 'flex',
@@ -5352,7 +6076,6 @@ export default function Sidebar({ isOpen, onClose }) {
             minHeight: 0, // Importante para que flex-grow funcione con overflow
             WebkitOverflowScrolling: 'touch', // Scroll suave en móviles
         },
-        // ... tus otros estilos (title, closeBtn, icon se mantienen igual)
         link: {
             padding: '15px',
             textDecoration: 'none',
@@ -5366,6 +6089,9 @@ export default function Sidebar({ isOpen, onClose }) {
             transition: 'background-color 0.2s',
             // Evita que el texto se rompa en varias líneas si es largo
             whiteSpace: 'nowrap',
+        },
+        icon: {
+            fontSize: '1.2rem'
         },
         separator: {
             border: 'none',
@@ -5432,6 +6158,17 @@ export default function Sidebar({ isOpen, onClose }) {
 
                     {/* Separador visual horizontal */}
                     <hr style={styles.separator} />
+
+                    <Link
+                        to="#"
+                        onClick={handleOpenStockModal}
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>📦</span>
+                        <span>Consulta de Stock</span>
+                    </Link>
 
                     <Link to="/estadisticas" onClick={onClose} style={styles.link}>
                         <span style={styles.icon}>📊</span> Estadísticas
@@ -5500,10 +6237,15 @@ export default function Sidebar({ isOpen, onClose }) {
                     {/* Test Finanzas */}
                     <Link to="/testfinanzas" onClick={onClose} style={styles.link}>
                         <span style={styles.icon}>💰</span>Test Finanzas
-                    </Link> 
+                    </Link>
 
                 </nav>
             </div>
+
+            <ConsultaStockModal
+                isOpen={isStockModalOpen}
+                onClose={() => setIsStockModalOpen(false)}
+            />
         </>
     );
 }
@@ -7352,6 +8094,42 @@ export const exportDatabase = async () => {
         return { success: false, error };
     }
 };
+************************************************************
+
+FILE: src/lib/db/utils/importService.js
+------------------------------
+import { db } from '../database';
+import 'dexie-export-import';
+
+export const importDatabase = async (input) => {
+    try {
+        if (!input) {
+            return { success: false, error: 'No se proporcionó ningún dato' };
+        }
+
+        let file = input;
+
+        // Si el input es un string, lo convertimos a Blob
+        if (typeof input === 'string') {
+            file = new Blob([input], { type: 'application/json' });
+        }
+
+        // Importar la base de datos usando dexie-export-import
+        await db.db.import(file, {
+            overwriteValues: true,
+            clearTablesBeforeImport: true,
+            progressCallback: ({ totalRows, completedRows }) => {
+                console.log(`Import progress: ${completedRows}/${totalRows}`);
+            }
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error importing IndexedDB:", error);
+        return { success: false, error: error.message || error };
+    }
+};
+
 ************************************************************
 
 FILE: src/lib/db/utils/migrationService.js
