@@ -83,6 +83,17 @@ export const migrateOrdersToBI = async () => {
         ? pedido.items
         : Object.entries(pedido.items || {}).map(([id, qty]) => ({ productoId: parseInt(id), cantidad: qty }));
 
+      // Calcular la inversión base total (costos de productos sin delivery) para el factor de prorrateo
+      const inversionBaseTotal = itemsSnapshot.reduce((acc, item) => {
+        const prodId = item.productoId;
+        const qty = item.cantidad;
+        const prod = allProducts.find(p => p.id === prodId);
+        const grupo = prod ? allGroups.find(g => g.nombre.toLowerCase() === prod.grupo.toLowerCase()) : null;
+        return acc + (qty * (grupo?.costo_$ || 0));
+      }, 0);
+
+      const costoEnvio = pedido.delivery_aplicado ? (parseFloat(pedido.delivery_tasa) || 0) : 0;
+
       const itemsBI = itemsSnapshot.map((item) => {
         const prodId = item.productoId;
         const qty = item.cantidad;
@@ -93,7 +104,12 @@ export const migrateOrdersToBI = async () => {
           : null;
 
         const precioUnit = grupo?.precio || 0;
-        const costoUnit = grupo?.costo_$ || 0;
+        const costoBaseUnit = grupo?.costo_$ || 0;
+
+        // Lógica de prorrateo copiada de GestionPedido.jsx para exactitud BI
+        const factor = inversionBaseTotal > 0 ? ((qty * costoBaseUnit) / inversionBaseTotal) : 0;
+        const deliveryPorUnidad = qty > 0 ? ((costoEnvio * factor) / qty) : 0;
+        const costoIntegralUnit = costoBaseUnit + deliveryPorUnidad;
 
         return {
           productoId: parseInt(prodId),
@@ -101,16 +117,16 @@ export const migrateOrdersToBI = async () => {
           grupo: prod?.grupo || "Otros",
           cantidad: qty,
           precioUnitario: precioUnit,
-          costoUnitario: costoUnit,
+          costoUnitario: costoBaseUnit,
+          costoIntegralUnitario: costoIntegralUnit,
           subtotalUsd: qty * precioUnit,
-          utilidadUsd: qty * (precioUnit - costoUnit)
+          utilidadUsd: qty * (precioUnit - costoIntegralUnit)
         };
       });
 
       // 4. Recalcular totales para asegurar consistencia BI
       const subtotalCostoUsd = itemsBI.reduce((sum, item) => sum + (item.cantidad * item.costoUnitario), 0);
       const subtotalVentaUsd = itemsBI.reduce((sum, item) => sum + item.subtotalUsd, 0);
-      const costoEnvio = pedido.delivery_aplicado ? (parseFloat(pedido.delivery_tasa) || 0) : 0;
 
       const totalInversionUsd = subtotalCostoUsd + costoEnvio;
       const totalVentaUsd = subtotalVentaUsd; // La venta no suele incluir el delivery pagado al proveedor
