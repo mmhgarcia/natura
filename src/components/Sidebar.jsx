@@ -138,6 +138,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 </div>
 
                 <nav style={styles.nav}>
+                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>VENTAS</div>
                     {/* Opción Inicio */}
                     <Link
                         to="/"
@@ -147,7 +148,7 @@ export default function Sidebar({ isOpen, onClose }) {
                         onMouseLeave={handleMouseLeave}
                     >
                         <span style={styles.icon}>🏠</span>
-                        <span>Inicio</span>
+                        <span>Inicio (Tienda)</span>
                     </Link>
 
                     {/* Opción Pedidos */}
@@ -159,7 +160,7 @@ export default function Sidebar({ isOpen, onClose }) {
                         onMouseLeave={handleMouseLeave}
                     >
                         <span style={styles.icon}>📋</span>
-                        <span>Pedidos</span>
+                        <span>Gestión de Pedidos</span>
                     </Link>
 
                     <Link
@@ -173,8 +174,8 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Registrar Gastos</span>
                     </Link>
 
-                    {/* Separador visual horizontal */}
                     <hr style={styles.separator} />
+                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>INVENTARIO</div>
 
                     <Link
                         to="#"
@@ -187,18 +188,24 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Consulta de Stock</span>
                     </Link>
 
-                    <Link to="/estadisticas" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>📊</span> Estadísticas
-                    </Link>
-
                     <Link to="/resumeninventario" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>📊</span> Resumen de Inventario
+                        <span style={styles.icon}>📉</span> Resumen de Inventario
                     </Link>
 
-                    {/* Segundo separador visual */}
-                    <hr style={styles.separator} />
+                    <Link to="/freezergrid" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>🧊</span> Ubicación Freezer
+                    </Link>
 
-                    {/* Opción Tasa BCV */}
+                    <hr style={styles.separator} />
+                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>ANALÍTICA Y BI</div>
+
+                    <Link to="/estadisticas" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>📊</span> Estadísticas (BI)
+                    </Link>
+
+                    <hr style={styles.separator} />
+                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>CONFIGURACIÓN</div>
+
                     <Link
                         to="/tasabcv"
                         onClick={onClose}
@@ -210,7 +217,6 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Tasa BCV</span>
                     </Link>
 
-                    {/* Opción Tasa Delivery */}
                     <Link
                         to="/delivery"
                         onClick={onClose}
@@ -222,18 +228,16 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Tasa Delivery</span>
                     </Link>
 
-                    {/* Tercer separador visual */}
-                    <hr style={styles.separator} />
-
-                    {/* Grupos */}
                     <Link to="/admingrupos" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>📊</span> Grupos de Producto
+                        <span style={styles.icon}>📁</span> Grupos de Producto
                     </Link>
 
-                    {/* Productos */}
                     <Link to="/adminproductos" onClick={onClose} style={styles.link}>
                         <span style={styles.icon}>🍦</span> Productos
                     </Link>
+
+                    <hr style={styles.separator} />
+                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>SISTEMA</div>
 
                     {/* Acceso Administrativo */}
                     <a
@@ -246,17 +250,12 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Panel de Control</span>
                     </a>
 
-                    {/* FreezerGrid */}
-                    <Link to="/freezergrid" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>🧊</span>Freezer Grid
-                    </Link>
-
-                    {/* Test Finanzas */}
                     <Link to="/testfinanzas" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>💰</span>Test Finanzas
+                        <span style={styles.icon}>🧪</span> Test Finanzas
                     </Link>
 
                 </nav>
+
             </div>
 
             <ConsultaStockModal

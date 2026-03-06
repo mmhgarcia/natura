@@ -7,7 +7,7 @@ import { useProductos } from "./hooks/useProductos";
 import { exportDatabase } from "../../lib/db/utils/exportService";
 import {
   migrateOrdersToBI,
-  migrateSalesToBI // Fase 2: Nueva importación para transformación de ventas
+  migrateSalesToBI
 } from "../../lib/db/utils/migrationService";
 import { importDatabase } from "../../lib/db/utils/importService";
 import styles from "./Panel.module.css";
@@ -17,310 +17,235 @@ export default function Panel() {
   const { importarGrupos } = useGrupos();
   const { importarProductos } = useProductos();
 
-  // Estados para control de procesos
+  // Estado para controlar la vista activa en el Dashboard
+  const [activeAction, setActiveAction] = useState("overview");
+
+  // Estados para procesos
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
   const [jsonText, setJsonText] = useState("");
-  const [isMigrating, setIsMigrating] = useState(false); // Pedidos
-  const [isMigratingSales, setIsMigratingSales] = useState(false); // Fase 2: Ventas
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [isMigratingSales, setIsMigratingSales] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-  /**
-   * Maneja la exportación de la base de datos a un archivo JSON [4, 5]
-   */
   const handleExport = async () => {
     setIsExporting(true);
     const result = await exportDatabase();
-    if (result.success) {
-      alert("✅ Copia de seguridad guardada en Descargas");
-    } else {
-      alert("❌ Error al exportar: " + (result.error?.message || "Error desconocido"));
-    }
+    if (result.success) alert("✅ Copia de seguridad guardada en Descargas");
+    else alert("❌ Error: " + (result.error?.message || "Desconocido"));
     setIsExporting(false);
   };
 
-  /**
-   * Maneja la importación de la base de datos desde el texto del textarea
-   */
   const handleImportExecute = async () => {
-    if (!jsonText.trim()) {
-      alert("⚠️ Por favor, pega el contenido del archivo JSON primero.");
-      return;
-    }
-
-    if (!window.confirm("⚠️ ¿Deseas IMPORTAR este respaldo?\n\nSe sobrescribirán todos los datos actuales por los que has pegado.")) {
-      return;
-    }
-
+    if (!jsonText.trim()) return alert("⚠️ Pesta el JSON primero.");
+    if (!window.confirm("⚠️ ¿Restaurar respaldo? Se borrarán datos actuales.")) return;
     setIsImporting(true);
     try {
-      // Validar si es un JSON válido antes de enviarlo
-      try {
-        JSON.parse(jsonText);
-      } catch (e) {
-        throw new Error("El texto no es un JSON válido. Asegúrate de copiar todo el contenido del archivo.");
-      }
-
+      JSON.parse(jsonText);
       const result = await importDatabase(jsonText);
       if (result.success) {
-        alert("✅ Base de datos restaurada correctamente. La aplicación se recargará.");
+        alert("✅ Restaurado. Recargando...");
         window.location.reload();
-      } else {
-        alert("❌ Error al importar: " + (result.error || "Error desconocido"));
-      }
-    } catch (error) {
-      alert("❌ Error: " + error.message);
+      } else alert("❌ Error: " + result.error);
+    } catch (e) {
+      alert("❌ JSON Inválido");
     } finally {
       setIsImporting(false);
     }
   };
 
-  /**
-   * Maneja la importación de la base de datos desde un archivo JSON
-   */
-  const handleImport = async (event) => {
+  const handleImportFile = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    if (!window.confirm("⚠️ ¿Deseas IMPORTAR este respaldo?\n\nSe sobrescribirán todos los datos actuales por los del archivo seleccionado.")) {
-      event.target.value = null; // Limpiar input para reintentar con el mismo archivo
-      return;
-    }
-
+    if (!window.confirm("⚠️ ¿Importar archivo?")) return;
     setIsImporting(true);
     try {
       const result = await importDatabase(file);
       if (result.success) {
-        alert("✅ Base de datos restaurada correctamente. La aplicación se recargará.");
-        window.location.reload(); // Recargar para asegurar que los hooks lean los nuevos datos
-      } else {
-        alert("❌ Error al importar: " + (result.error || "Error desconocido"));
-      }
-    } catch (error) {
-      alert("❌ Error crítico: " + error.message);
+        alert("✅ Restaurado. Recargando...");
+        window.location.reload();
+      } else alert("❌ Error: " + result.error);
+    } catch (e) {
+      alert("❌ Error: " + e.message);
     } finally {
       setIsImporting(false);
-      event.target.value = null; // Limpiar input
+      event.target.value = null;
     }
   };
 
-  /**
-   * Fase 2: Ejecuta la migración de ventas antiguas al formato BI [Plan de Mejoras]
-   * Agrega costos y utilidades retroactivas a la tabla 'ventas'.
-   */
   const handleMigrateSalesBI = async () => {
-    const mensajeConfirmacion = "📈 ¿Deseas normalizar el historial de VENTAS para BI?\n\n" +
-      "Se asignarán costos y utilidades a las ventas pasadas basándose en los grupos actuales.";
-
-    if (!window.confirm(mensajeConfirmacion)) return;
-
+    if (!window.confirm("📈 ¿Normalizar historial de VENTAS?")) return;
     setIsMigratingSales(true);
     try {
       const result = await migrateSalesToBI();
-      if (result.success) {
-        alert(result.message);
-      } else {
-        alert("❌ Error: " + result.error);
-      }
-    } catch (error) {
-      alert("❌ Error crítico: " + error.message);
-    } finally {
-      setIsMigratingSales(false);
-    }
+      alert(result.success ? result.message : "❌ Error: " + result.error);
+    } catch (e) { alert("❌ Error: " + e.message); }
+    finally { setIsMigratingSales(false); }
   };
 
-  /**
-   * Ejecuta la migración de pedidos antiguos al formato BI detallado [6, 7]
-   */
   const handleMigrateBI = async () => {
-    const mensajeConfirmacion = "⚠️ ¿Deseas iniciar la migración de pedidos al formato BI?\n\n" +
-      "Esta acción transformará los pedidos antiguos para habilitar la analítica financiera.";
-
-    if (!window.confirm(mensajeConfirmacion)) return;
-
+    if (!window.confirm("📊 ¿Migrar PEDIDOS al formato BI?")) return;
     setIsMigrating(true);
     try {
       const result = await migrateOrdersToBI();
-      if (result.success) {
-        alert(result.message);
-      } else {
-        alert("❌ Error en la migración: " + result.error);
-      }
-    } catch (error) {
-      alert("❌ Error crítico: " + error.message);
-    } finally {
-      setIsMigrating(false);
-    }
+      alert(result.success ? result.message : "❌ Error: " + result.error);
+    } catch (e) { alert("❌ Error: " + e.message); }
+    finally { setIsMigrating(false); }
   };
 
-  /**
-   * Carga masiva de los días de histórico de tasas BCV recolectados [8, 9]
-   */
   const handleLoadHistory = async () => {
-    if (!window.confirm("¿Deseas cargar el histórico de tasas BCV?")) return;
+    if (!window.confirm("📉 ¿Cargar histórico de tasas BCV?")) return;
     setIsLoadingHistory(true);
     try {
       const result = await db.cargarDatosInicialesHistorico();
-      if (result.success) {
-        alert(result.message);
-      } else {
-        alert("❌ Error: " + result.error);
-      }
-    } catch (err) {
-      alert("❌ Error crítico: " + err.message);
-    } finally {
-      setIsLoadingHistory(false);
-    }
+      alert(result.success ? result.message : "❌ Error: " + result.error);
+    } catch (e) { alert("❌ Error: " + e.message); }
+    finally { setIsLoadingHistory(false); }
   };
 
-  /**
-   * Importación masiva de grupos y productos iniciales [10, 11]
-   */
   const handleImportInitialData = async () => {
-    if (!window.confirm("¿Importar datos iniciales (Grupos y Productos)? Se sobrescribirán los datos existentes.")) return;
+    if (!window.confirm("📥 ¿Cargar datos iniciales (Grupos/Productos)?")) return;
+    const rG = await importarGrupos();
+    const rP = await importarProductos();
+    alert(`${rG.success ? "✅ Grupos OK" : "❌ Error Grupos"}\n${rP.success ? "✅ Productos OK" : "❌ Error Productos"}`);
+  };
 
-    const resultGrupos = await importarGrupos();
-    const resultProductos = await importarProductos();
-
-    let mensaje = "";
-
-    if (resultGrupos.success) {
-      mensaje += `✅ ${resultGrupos.message}\n`;
-    } else {
-      mensaje += `❌ Error Grupos: ${resultGrupos.error}\n`;
+  // Renderizado del contenido según la acción seleccionada
+  const renderContent = () => {
+    switch (activeAction) {
+      case "backups":
+        return (
+          <div className={styles.toolCard}>
+            <h2 className={styles.toolTitle}>Gestión de Respaldos (Backups)</h2>
+            <p className={styles.toolDescription}>Protege tu información exportando una copia de seguridad o restaura una anterior desde un archivo.</p>
+            <div className={styles.actionZone}>
+              <button className={styles.primaryButton} onClick={handleExport} disabled={isExporting}>
+                {isExporting ? "⌛ Exportando..." : "📤 Exportar Base de Datos (.json)"}
+              </button>
+              <label className={styles.primaryButton} style={{ cursor: 'pointer' }}>
+                {isImporting ? "⌛ Importando..." : "📥 Importar desde Archivo"}
+                <input type="file" accept=".json" onChange={handleImportFile} disabled={isImporting} style={{ display: 'none' }} />
+              </label>
+            </div>
+          </div>
+        );
+      case "import_json":
+        return (
+          <div className={styles.toolCard}>
+            <h2 className={styles.toolTitle}>Importación por Texto (JSON)</h2>
+            <p className={styles.toolDescription}>Si tienes el contenido del respaldo en el portapapeles, pégalo aquí para restaurar.</p>
+            <textarea
+              className={styles.textarea}
+              placeholder='Pega aquí el JSON...'
+              value={jsonText}
+              onChange={(e) => setJsonText(e.target.value)}
+            />
+            <button className={styles.primaryButton} onClick={handleImportExecute} disabled={isImporting}>
+              {isImporting ? "Procesando..." : "🚀 Ejecutar Restauración"}
+            </button>
+          </div>
+        );
+      case "bi_migrations":
+        return (
+          <div className={styles.toolCard}>
+            <h2 className={styles.toolTitle}>Inteligencia de Negocio (BI)</h2>
+            <p className={styles.toolDescription}>Transforma datos antiguos para que sean compatibles con las nuevas gráficas de rendimiento y costos.</p>
+            <div className={styles.actionZone}>
+              <button className={styles.primaryButton} onClick={handleMigrateSalesBI} disabled={isMigratingSales} style={{ backgroundColor: '#4a148c' }}>
+                {isMigratingSales ? "⚙️ Procesando..." : "📈 Normalizar Ventas (Fase 2)"}
+              </button>
+              <button className={styles.primaryButton} onClick={handleMigrateBI} disabled={isMigrating} style={{ backgroundColor: '#6a1b9a' }}>
+                {isMigrating ? "⚙️ Procesando..." : "📊 Normalizar Pedidos (BI)"}
+              </button>
+            </div>
+          </div>
+        );
+      case "maintenance":
+        return (
+          <div className={styles.toolCard}>
+            <h2 className={styles.toolTitle}>Mantenimiento del Sistema</h2>
+            <p className={styles.toolDescription}>Tareas de configuración inicial y carga de datos maestros.</p>
+            <div className={styles.actionZone}>
+              <button className={styles.primaryButton} onClick={handleImportInitialData} style={{ backgroundColor: '#16a34a' }}>
+                📥 Cargar Grupos y Productos Iniciales
+              </button>
+              <button className={styles.primaryButton} onClick={handleLoadHistory} disabled={isLoadingHistory} style={{ backgroundColor: '#f39c12' }}>
+                {isLoadingHistory ? "⚙️ Cargando..." : "📉 Cargar Histórico Tasas BCV"}
+              </button>
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className={styles.toolCard}>
+            <h2 className={styles.toolTitle}>Bienvenido al Panel de Control</h2>
+            <p className={styles.toolDescription}>Selecciona una opción del menú lateral para gestionar la base de datos, realizar migraciones de analítica o configurar el sistema.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '40px' }}>
+              <div style={{ padding: '20px', border: '1px solid #eee', borderRadius: '12px', textAlign: 'center' }}>
+                <span style={{ fontSize: '2rem' }}>📂</span>
+                <h4>Respaldos</h4>
+              </div>
+              <div style={{ padding: '20px', border: '1px solid #eee', borderRadius: '12px', textAlign: 'center' }}>
+                <span style={{ fontSize: '2rem' }}>📊</span>
+                <h4>Analítica</h4>
+              </div>
+            </div>
+          </div>
+        );
     }
-
-    if (resultProductos.success) {
-      mensaje += `✅ ${resultProductos.message}\n`;
-    } else {
-      mensaje += `❌ Error Productos: ${resultProductos.error}\n`;
-    }
-
-    alert(mensaje);
   };
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>PANEL DE CONTROL</h1>
-
-      <div className={styles.buttons}>
-
-        {/* Importación de Configuración Inicial [12] */}
-        <button className={styles.button} onClick={handleImportInitialData}>
-          📥 Cargar Datos Iniciales (Grupos y Productos)
-        </button>
-
-        {/* Gestión de Datos y Backups [4] */}
-        <button
-          className={styles.button}
-          onClick={handleExport}
-          disabled={isExporting}
-        >
-          {isExporting ? "⌛ Exportando..." : "📤 Exportar DB"}
-        </button>
-
-        {/* Importación de Respaldo */}
-        <label className={styles.button} style={{ cursor: 'pointer', textAlign: 'center' }}>
-          {isImporting ? "⌛ Importando..." : "📥 Importar DB (Archivo)"}
-          <input
-            type="file"
-            accept="application/json,.json"
-            onChange={handleImport}
-            disabled={isImporting}
-            style={{ display: 'none' }}
-          />
-        </label>
-
-        {/* Botón para abrir el Modal de Importación */}
-        <button
-          className={styles.button}
-          onClick={() => setShowImportModal(true)}
-        >
-          📥 Importar DB (Pegar JSON)
-        </button>
-
-        {/* Fase 2: Migración Analítica de Ventas (Snapshot Financiero) */}
-        <button
-          className={styles.button}
-          onClick={handleMigrateSalesBI}
-          disabled={isMigratingSales}
-          style={{ backgroundColor: '#4a148c' }} // Púrpura oscuro para diferenciar
-        >
-          {isMigratingSales ? "⚙️ Transformando..." : "📈 Migrar Ventas a BI"}
-        </button>
-
-        {/* Migración Analítica de Pedidos [3] */}
-        <button
-          className={styles.button}
-          onClick={handleMigrateBI}
-          disabled={isMigrating}
-          style={{ backgroundColor: '#6a1b9a' }}
-        >
-          {isMigrating ? "⚙️ Migrando..." : "📊 Migrar Pedidos a BI"}
-        </button>
-
-        {/* Carga de Histórico de Tasas [3] */}
-        <button
-          className={styles.button}
-          onClick={handleLoadHistory}
-          disabled={isLoadingHistory}
-          style={{ backgroundColor: '#f39c12' }}
-        >
-          {isLoadingHistory ? "⚙️ Cargando..." : "📉 Cargar Histórico BCV"}
-        </button>
-
-
-        <hr style={{ width: '80%', margin: '20px 0', opacity: 0.2 }} />
-
-
-        {/* Botón Regresar [12] */}
-        <button
-          className={`${styles.button} ${styles.back}`}
-          onClick={() => navigate("/")}
-        >
-          ↩️ Regresar
-        </button>
-      </div>
-
-      {/* MODAL DE IMPORTACIÓN */}
-      {showImportModal && (
-        <div className={styles.overlay}>
-          <div className={styles.modal}>
-            <h2 className={styles.modalTitle}>Importar Base de Datos</h2>
-            <p style={{ color: '#666', fontSize: '0.9rem' }}>
-              Abre el archivo de respaldo en tu celular, copia todo su contenido y pégalo aquí abajo.
-            </p>
-
-            <textarea
-              className={styles.textarea}
-              placeholder='Pega aquí el contenido JSON...'
-              value={jsonText}
-              onChange={(e) => setJsonText(e.target.value)}
-            />
-
-            <div className={styles.modalActions}>
-              <button
-                className={styles.cancelBtn}
-                onClick={() => {
-                  setShowImportModal(false);
-                  setJsonText("");
-                }}
-                disabled={isImporting}
-              >
-                Cancelar
-              </button>
-              <button
-                className={styles.confirmBtn}
-                onClick={handleImportExecute}
-                disabled={isImporting}
-              >
-                {isImporting ? "Procesando..." : "Ejecutar Importación"}
-              </button>
-            </div>
-          </div>
+      {/* SIDEBAR */}
+      <aside className={styles.sidebar}>
+        <div className={styles.sidebarHeader}>
+          <h1 className={styles.sidebarTitle}>Natura Ice Admin</h1>
         </div>
-      )}
+
+        <nav className={styles.sidebarNav}>
+          <div className={styles.navSection}>
+            <span className={styles.sectionLabel}>Datos y Seguridad</span>
+            <button className={`${styles.navButton} ${activeAction === 'backups' ? styles.navButtonActive : ''}`} onClick={() => setActiveAction('backups')}>
+              <span>📂</span> Respaldos y Archivos
+            </button>
+            <button className={`${styles.navButton} ${activeAction === 'import_json' ? styles.navButtonActive : ''}`} onClick={() => setActiveAction('import_json')}>
+              <span>✏️</span> Importación Manual
+            </button>
+          </div>
+
+          <div className={styles.navSection}>
+            <span className={styles.sectionLabel}>Optimización</span>
+            <button className={`${styles.navButton} ${activeAction === 'bi_migrations' ? styles.navButtonActive : ''}`} onClick={() => setActiveAction('bi_migrations')}>
+              <span>📈</span> Migraciones BI
+            </button>
+          </div>
+
+          <div className={styles.navSection}>
+            <span className={styles.sectionLabel}>Sistema</span>
+            <button className={`${styles.navButton} ${activeAction === 'maintenance' ? styles.navButtonActive : ''}`} onClick={() => setActiveAction('maintenance')}>
+              <span>🛠️</span> Mantenimiento
+            </button>
+          </div>
+        </nav>
+
+        <div className={styles.sidebarFooter}>
+          <button className={`${styles.navButton} ${styles.backBtn}`} onClick={() => navigate("/")}>
+            <span>↩️</span> Regresar al Inicio
+          </button>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main className={styles.mainContent}>
+        <header className={styles.topBar}>
+          <span className={styles.viewTitle}>PANEL DE CONTROL / {activeAction.toUpperCase().replace("_", " ")}</span>
+        </header>
+
+        <div className={styles.contentArea}>
+          {renderContent()}
+        </div>
+      </main>
     </div>
   );
 }
