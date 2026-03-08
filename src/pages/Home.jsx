@@ -23,17 +23,17 @@ const ProductImage = ({ product, className }) => {
     }, [product]);
 
     if (error) {
-        return <div className={className} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: '8px', fontSize: '12px', color: '#666' }}>
+        return <div className={className} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: '50%', fontSize: '10px', color: '#666', textAlign: 'center', padding: '5px' }}>
             📷 {product.nombre}
         </div>;
     }
 
     return (
-        <img 
-            src={src} 
-            alt={product.nombre} 
-            className={className} 
-            onError={() => setError(true)} 
+        <img
+            src={src}
+            alt={product.nombre}
+            className={className}
+            onError={() => setError(true)}
         />
     );
 };
@@ -147,9 +147,9 @@ function Home() {
         <div className={styles.container}>
             <div className={styles.filterBar}>
                 <label htmlFor="filtro-home">Filtrar por Grupo:</label>
-                <select 
-                    id="filtro-home" 
-                    value={filtroGrupo} 
+                <select
+                    id="filtro-home"
+                    value={filtroGrupo}
                     onChange={(e) => setFiltroGrupo(e.target.value)}
                     className={styles.select}
                 >
@@ -167,22 +167,23 @@ function Home() {
                     const badgeColor = esAgotado ? '#ff4d4d' : (p.stock <= 5 ? '#ffa500' : '#28a745');
 
                     return (
-                        <div 
-                            key={p.id} 
+                        <div
+                            key={p.id}
                             className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
                             onClick={() => !esAgotado && seleccionarProducto(p)}
                         >
                             <div className={styles.stockBadge} style={{ backgroundColor: badgeColor }}>
                                 {p.stock}
                             </div>
-                            
+
                             <ProductImage product={p} className={styles.productImage} />
-                            
+
                             <h3 className={styles.productTitle}>{p.nombre}</h3>
-                            
+
                             {/* Cambio solicitado: Se añade el ID a la izquierda del precio [2] */}
                             <div className={styles.priceText}>
-                                ID: {p.id} - $: {precio.toFixed(2)} - Bs.: {(precio * tasa).toFixed(2)} - Stock: {p.stock}
+                                <div>ID: {p.id} • $: {precio.toFixed(2)}</div>
+                                <div>Bs.: {(precio * tasa).toFixed(2)} • Stk: {p.stock}</div>
                             </div>
                         </div>
                     );
@@ -194,7 +195,7 @@ function Home() {
                     <span>🛒 Items: {listaDeSeleccionados.length}</span>
                     <span>💰 Tasa: {tasa.toFixed(2)}</span>
                 </div>
-                
+
                 <div className={styles.selectedList}>
                     {listaDeSeleccionados.map((item, index) => (
                         <div key={`${item.id}-${index}`} className={styles.selectedItem}>
