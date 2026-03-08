@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import ConsultaStockModal from './ConsultaStockModal';
+import { handleDescargarCatalogo } from './DescargarCatalogo';
 
 export default function Sidebar({ isOpen, onClose }) {
     const navigate = useNavigate();
@@ -190,6 +191,21 @@ export default function Sidebar({ isOpen, onClose }) {
 
                     <Link to="/resumeninventario" onClick={onClose} style={styles.link}>
                         <span style={styles.icon}>📉</span> Resumen de Inventario
+                    </Link>
+
+                    <Link
+                        to="#"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handleDescargarCatalogo();
+                            onClose();
+                        }}
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>📄</span>
+                        <span>Descargar Catálogo</span>
                     </Link>
 
                     <Link to="/freezergrid" onClick={onClose} style={styles.link}>
