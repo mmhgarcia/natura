@@ -4,7 +4,10 @@ export const handleDescargarCatalogo = async () => {
     try {
         // Obtener datos de la base de datos
         const grupos = await db.getAll('grupos');
-        const productos = await db.getAll('productos');
+        const allProductos = await db.getAll('productos');
+
+        // Filtrar productos que tengan stock > 0
+        const productos = allProductos.filter(p => (p.stock || 0) > 0);
 
         // Fecha actual en formato DD/MM/YYYY
         const today = new Date();
