@@ -11,6 +11,7 @@ import {
 } from "../../lib/db/utils/migrationService";
 import { importDatabase } from "../../lib/db/utils/importService";
 import styles from "./Panel.module.css";
+import TasaTrend from "./TasaTrend";
 
 export default function Panel() {
   const navigate = useNavigate();
@@ -160,6 +161,8 @@ export default function Panel() {
             </div>
           </div>
         );
+      case "trends":
+        return <TasaTrend />;
       case "maintenance":
         return (
           <div className={styles.toolCard}>
@@ -218,6 +221,9 @@ export default function Panel() {
             <span className={styles.sectionLabel}>Optimización</span>
             <button className={`${styles.navButton} ${activeAction === 'bi_migrations' ? styles.navButtonActive : ''}`} onClick={() => setActiveAction('bi_migrations')}>
               <span>📈</span> Migraciones BI
+            </button>
+            <button className={`${styles.navButton} ${activeAction === 'trends' ? styles.navButtonActive : ''}`} onClick={() => setActiveAction('trends')}>
+              <span>📊</span> Tendencias BCV
             </button>
           </div>
 
