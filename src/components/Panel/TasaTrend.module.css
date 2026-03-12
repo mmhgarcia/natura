@@ -66,16 +66,16 @@
 }
 
 .controlsPanel {
-  position: absolute;
+  position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(30, 30, 45, 0.95);
+  background: rgba(30, 30, 45, 0.98);
   backdrop-filter: blur(10px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding: 15px 24px;
-  z-index: 1000;
-  box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.3);
+  z-index: 21000;
+  box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.5);
 }
 
 .controls {
