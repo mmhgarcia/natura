@@ -2,40 +2,52 @@
   background: #1e1e2d;
   color: #fff;
   height: 100%;
-  max-height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  font-family: inherit;
+}
+
+.topPanel {
+  padding: 15px 20px 5px;
+  background: #1e1e2d;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  z-index: 10;
 }
 
 .scrollContent {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 15px 20px;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.controlsPanel {
+  padding: 12px 20px;
+  background: #252538;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+  z-index: 20;
 }
 
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 20px;
-  flex-wrap: wrap;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  letter-spacing: -0.5px;
+  color: #fff;
 }
 
 .subtitle {
-  margin: 4px 0 0;
-  font-size: 0.85rem;
+  margin: 2px 0 0;
+  font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.5);
 }
 
@@ -44,68 +56,43 @@
   background: rgba(255, 255, 255, 0.1);
   border: none;
   color: #fff;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   transition: all 0.2s ease;
-}
-
-.closeBtn:hover {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
-}
-
-.printBtn:hover {
-  background: rgba(74, 222, 128, 0.2);
-  color: #4ade80;
-}
-
-.controlsPanel {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(30, 30, 45, 0.98);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 15px 24px;
-  z-index: 21000;
-  box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.5);
 }
 
 .controls {
   display: flex;
-  align-items: center;
-  gap: 20px;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .sliderGroup {
-  flex: 1;
-  min-width: 200px;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .rangeLabel {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.6);
 }
 
-.rangeLabel strong {
+.rangeValue {
+  font-size: 0.9rem;
+  font-weight: bold;
   color: #ff7300;
 }
 
 .slider {
   -webkit-appearance: none;
-  appearance: none;
   width: 100%;
   height: 6px;
   background: rgba(255, 255, 255, 0.1);

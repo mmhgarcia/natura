@@ -150,7 +150,7 @@ export default function TasaTrend({ onClose }) {
 
     return (
         <div className={styles.container}>
-            <div className={styles.scrollContent}>
+            <div className={styles.topPanel}>
                 <header className={styles.header}>
                     <div className={styles.titleInfo}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -162,7 +162,7 @@ export default function TasaTrend({ onClose }) {
                             </button>
                             <h2 className={styles.title}>Analítica de Tendencia BCV</h2>
                         </div>
-                        <p className={styles.subtitle}>Basado en algoritmo de regresión lineal sobre {historico.length} registros</p>
+                        <p className={styles.subtitle}>Basado en {historico.length} registros (Regresión Lineal)</p>
                     </div>
                 </header>
 
@@ -180,7 +180,9 @@ export default function TasaTrend({ onClose }) {
                         📈 Gráfico
                     </button>
                 </div>
+            </div>
 
+            <div className={styles.scrollContent}>
                 {activeTab === 'metrics' && (
                     <div className={styles.statsGrid}>
                         <div className={styles.statCard}>
@@ -202,7 +204,7 @@ export default function TasaTrend({ onClose }) {
 
                 {activeTab === 'chart' && (
                     <div className={styles.chartWrapper}>
-                        <ResponsiveContainer width="100%" height={350}>
+                        <ResponsiveContainer width="100%" height={300}>
                             <AreaChart data={analysis?.chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorTasa" x1="0" y1="0" x2="0" y2="1">
@@ -222,10 +224,7 @@ export default function TasaTrend({ onClose }) {
                                     tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
                                     minTickGap={30}
                                 />
-                                <YAxis
-                                    hide={true}
-                                    domain={['dataMin - 5', 'dataMax + 5']}
-                                />
+                                <YAxis hide={true} domain={['dataMin - 2', 'dataMax + 2']} />
                                 <Tooltip
                                     contentStyle={{
                                         backgroundColor: '#1e1e2d',
@@ -264,17 +263,18 @@ export default function TasaTrend({ onClose }) {
                     </div>
                 )}
 
-                <div className={styles.disclaimer} style={{ marginBottom: showCalendar ? '180px' : '100px' }}>
-                    * Nota: Esta proyección es un cálculo matemático lineal. No considera factores económicos externos ni intervenciones del mercado. Úsese solo como referencia.
+                <div className={styles.disclaimer}>
+                    * Nota: Esta proyección es un cálculo matemático lineal. No considera factores económicos externos ni intervenciones del mercado.
                 </div>
             </div>
 
             <div className={styles.controlsPanel}>
                 <div className={styles.controls}>
                     <div className={styles.sliderGroup}>
-                        <label className={styles.rangeLabel}>
-                            Proyectar a: <strong>{predictionDays} días</strong>
-                        </label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label className={styles.rangeLabel}>Proyección a futuro</label>
+                            <span className={styles.rangeValue}>{predictionDays} días</span>
+                        </div>
                         <input
                             type="range"
                             min="1"
@@ -288,7 +288,7 @@ export default function TasaTrend({ onClose }) {
                         onClick={() => setShowCalendar(!showCalendar)}
                         className={`${styles.calendarToggle} ${showCalendar ? styles.activeToggle : ''}`}
                     >
-                        {showCalendar ? '📅 Ocultar Calendario' : '📅 Seleccionar Meta'}
+                        {showCalendar ? '📅 Ocultar' : '📅 Fecha Meta'}
                     </button>
                     {showCalendar && (
                         <div className={styles.calendarWrapper}>
@@ -299,7 +299,6 @@ export default function TasaTrend({ onClose }) {
                                 min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
                                 className={styles.dateInput}
                             />
-                            <p className={styles.dateHint}>Ajuste automático a la fecha objetivo.</p>
                         </div>
                     )}
                 </div>
