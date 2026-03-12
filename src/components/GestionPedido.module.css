@@ -15,8 +15,10 @@
   background-color: #fff;
   width: 95%;
   max-width: 500px;
-  max-height: 95vh;
-  padding: 0px 15px 15px 15px;
+  max-height: 90vh;
+  /* Reducido de 95vh */
+  padding: 0px 12px 12px 12px;
+  /* Reducido padding */
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -51,7 +53,8 @@
 .content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  /* Reducido de 8px */
   overflow-y: auto;
 }
 
@@ -135,10 +138,10 @@
 }
 
 .productList {
-  height: 250px;
+  height: 180px;
+  /* Reducido de 250px */
   overflow-y: auto;
-  padding-bottom: 40px;
-  /* Espacio extra al final para que el último item no quede tapado */
+  padding-bottom: 20px;
   box-sizing: border-box;
 }
 
