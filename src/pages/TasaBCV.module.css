@@ -222,7 +222,10 @@
     width: 100%;
     max-width: 1000px;
     height: auto;
-    max-height: 90vh;
+    max-height: 95vh;
+    overflow-y: auto;
+    background: #1e1e2d;
+    border-radius: 16px;
     animation: slideUp 0.3s ease-out;
 }
 

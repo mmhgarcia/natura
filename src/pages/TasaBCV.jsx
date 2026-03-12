@@ -137,6 +137,14 @@ export default function TasaBCV() {
           {message && <div className={styles.infoBar}>{message}</div>}
         </form>
 
+        {/* Botón de Tendencia - Movido debajo del formulario */}
+        <button
+          onClick={() => setIsTrendModalOpen(true)}
+          className={styles.trendBtn}
+        >
+          📊 VER TENDENCIA TASA
+        </button>
+
         {/* Listado de Datos con estilo Product List */}
         <div className={styles.productListContainer}>
           <div className={styles.productListHeader}>REGISTROS EN HISTORICO</div>
@@ -173,14 +181,6 @@ export default function TasaBCV() {
             )}
           </div>
         </div>
-
-        {/* Botón de Tendencia */}
-        <button
-          onClick={() => setIsTrendModalOpen(true)}
-          className={styles.trendBtn}
-        >
-          📊 VER TENDENCIA TASA
-        </button>
       </div>
 
       {/* Modal de Tendencia Pantalla Completa */}
