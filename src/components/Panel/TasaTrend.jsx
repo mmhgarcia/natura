@@ -105,6 +105,16 @@ export default function TasaTrend({ onClose }) {
         };
     }, [historico, predictionDays]);
 
+    const handlePrint = () => {
+        const originalTitle = document.title;
+        const dateStr = new Date().toISOString().split('T')[0];
+        document.title = `Informe_Tendencia_BCV_${dateStr}`;
+        window.print();
+        setTimeout(() => {
+            document.title = originalTitle;
+        }, 100);
+    };
+
     if (loading) return <div className={styles.loading}>Analizando tendencias...</div>;
     if (historico.length < 2) {
         return (
@@ -121,8 +131,11 @@ export default function TasaTrend({ onClose }) {
                 <div className={styles.titleInfo}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                         {onClose && (
-                            <button onClick={onClose} className={styles.closeBtn}>✕</button>
+                            <button onClick={onClose} className={styles.closeBtn} title="Cerrar">✕</button>
                         )}
+                        <button onClick={handlePrint} className={styles.printBtn} title="Exportar a PDF / Imprimir">
+                            🖨️
+                        </button>
                         <h2 className={styles.title}>Analítica de Tendencia BCV</h2>
                     </div>
                     <p className={styles.subtitle}>Basado en algoritmo de regresión lineal sobre {historico.length} registros</p>

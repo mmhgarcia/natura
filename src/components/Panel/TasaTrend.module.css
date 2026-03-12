@@ -47,6 +47,57 @@
   color: #f87171;
 }
 
+.printBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.printBtn:hover {
+  background: rgba(74, 222, 128, 0.2);
+  color: #4ade80;
+}
+
+@media print {
+
+  .closeBtn,
+  .printBtn,
+  .controls,
+  .disclaimer {
+    display: none !important;
+  }
+
+  .container {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  .statCard {
+    background: #f0f0f0 !important;
+    border: 1px solid #ddd !important;
+  }
+
+  .statValue {
+    color: black !important;
+  }
+
+  .subtitle {
+    color: #666 !important;
+  }
+}
+
 .subtitle {
   margin: 4px 0 0;
   font-size: 0.85rem;
