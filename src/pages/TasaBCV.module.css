@@ -204,21 +204,20 @@
 
 .modalOverlay {
     position: fixed;
-    top: 0;
+    top: 60px;
+    /* Debajo del Header de la App */
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: calc(100vh - 60px);
     background-color: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(5px);
-    z-index: 1000;
+    z-index: 20000;
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    /* Asegura que la parte superior sea visible */
     padding: 20px;
     box-sizing: border-box;
     overflow-y: auto;
-    /* Permite scroll en el overlay también */
 }
 
 .modalFullContent {
