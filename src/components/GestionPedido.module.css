@@ -302,3 +302,19 @@
   /* Negro solicitado */
   /* Aquí podrías añadir un estilo diferente, como otro color o margen */
 }
+
+.inputTasa {
+  width: 85px;
+  padding: 2px 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #000;
+}
+
+.inputGroupInline {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}

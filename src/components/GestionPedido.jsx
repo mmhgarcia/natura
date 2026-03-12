@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/db/database'; 
-import styles from './GestionPedido.module.css'; 
+import { db } from '../lib/db/database';
+import styles from './GestionPedido.module.css';
 
 const GestionPedido = ({ pedido, onClose, onSave }) => {
     const getLocalToday = () => new Date().toLocaleDateString('en-CA');
@@ -280,7 +280,17 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                     </div>
 
                     <div className={styles.infoBar}>
-                        <span>Tasa: {formData.tasa || '---'}</span>
+                        <div className={styles.inputGroupInline}>
+                            <span>Tasa BCV:</span>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={formData.tasa}
+                                onChange={(e) => setFormData({ ...formData, tasa: e.target.value })}
+                                className={styles.inputTasa}
+                                disabled={esVisualizacion}
+                            />
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <input
                                 type="checkbox"
@@ -305,7 +315,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                                         const cBase = g?.costo_$ || 0;
                                         const pVenta = g?.precio || 0;
                                         const cDeliveryTotal = aplicarDelivery ? (parseFloat(formData.delivery_tasa) || 0) : 0;
-                                        
+
                                         const factorProrrateo = inversionBaseGlobal > 0 ? ((qty * cBase) / inversionBaseGlobal) : 0;
                                         const deliveryUnidad = qty > 0 ? (cDeliveryTotal * factorProrrateo) / qty : 0;
                                         const costoInt = cBase + deliveryUnidad;
@@ -313,13 +323,13 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                                         const alertaMargen = qty > 0 && margenPct < 15;
 
                                         const badgeColor = prod.stock === 0 ? '#ff4d4d' : (prod.stock <= 5 ? '#ffa500' : '#28a745');
-                                        
+
                                         return (
                                             <div key={prod.id} className={styles.productItem} style={{ borderLeft: alertaMargen ? '4px solid #f44336' : 'none' }}>
                                                 <div className={styles.stockBadgeSmall} style={{ backgroundColor: badgeColor }}>{prod.stock}</div>
                                                 <div className={styles.productName}>
                                                     {prod.nombre} <span style={{ fontSize: '0.85em', color: '#888', fontWeight: 'normal' }}>({prod.id})</span>
-                                                    
+
                                                     {qty > 0 && (
                                                         <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
                                                             Costo Int: <span style={{ fontWeight: '600' }}>${costoInt.toFixed(3)}</span>
