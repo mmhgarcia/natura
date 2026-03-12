@@ -18,6 +18,7 @@ export default function TasaTrend({ onClose }) {
     const [historico, setHistorico] = useState([]);
     const [predictionDays, setPredictionDays] = useState(7);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('metrics'); // 'metrics' or 'chart'
 
     useEffect(() => {
         async function loadData() {
@@ -156,84 +157,103 @@ export default function TasaTrend({ onClose }) {
                 </div>
             </header>
 
-            <div className={styles.statsGrid}>
-                <div className={styles.statCard}>
-                    <span className={styles.statLabel}>Tasa Actual</span>
-                    <span className={styles.statValue}>Bs. {analysis?.lastRate.toFixed(2)}</span>
-                </div>
-                <div className={styles.statCard}>
-                    <span className={styles.statLabel}>Proyección ({predictionDays}d)</span>
-                    <span className={styles.statValue}>Bs. {analysis?.finalProjectedRate.toFixed(2)}</span>
-                </div>
-                <div className={`${styles.statCard} ${analysis?.isUp ? styles.up : styles.down}`}>
-                    <span className={styles.statLabel}>Variación Estimada</span>
-                    <span className={styles.statValue}>
-                        {analysis?.isUp ? '▲' : '▼'} {Math.abs(analysis?.variantPercentage || 0).toFixed(2)}%
-                    </span>
-                </div>
+            <div className={styles.tabs}>
+                <button
+                    className={`${styles.tabBtn} ${activeTab === 'metrics' ? styles.activeTab : ''}`}
+                    onClick={() => setActiveTab('metrics')}
+                >
+                    📊 Métricas y Proyección
+                </button>
+                <button
+                    className={`${styles.tabBtn} ${activeTab === 'chart' ? styles.activeTab : ''}`}
+                    onClick={() => setActiveTab('chart')}
+                >
+                    📈 Gráfico de Tendencia
+                </button>
             </div>
 
-            <div className={styles.chartWrapper}>
-                <ResponsiveContainer width="100%" height={350}>
-                    <AreaChart data={analysis?.chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                        <defs>
-                            <linearGradient id="colorTasa" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#8884d8" stopOpacity={0.1} />
-                                <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-                            </linearGradient>
-                            <linearGradient id="colorProj" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#ff7300" stopOpacity={0.1} />
-                                <stop offset="95%" stopColor="#ff7300" stopOpacity={0} />
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                        <XAxis
-                            dataKey="name"
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
-                            minTickGap={30}
-                        />
-                        <YAxis
-                            hide={true}
-                            domain={['dataMin - 5', 'dataMax + 5']}
-                        />
-                        <Tooltip
-                            contentStyle={{
-                                backgroundColor: '#1e1e2d',
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                borderRadius: '8px',
-                                fontSize: '12px',
-                                color: '#fff'
-                            }}
-                            itemStyle={{ color: '#fff' }}
-                            labelStyle={{ color: 'rgba(255,255,255,0.6)', marginBottom: '5px' }}
-                        />
-                        <Area
-                            type="monotone"
-                            dataKey="tasa"
-                            stroke="#8884d8"
-                            strokeWidth={3}
-                            fillOpacity={1}
-                            fill="url(#colorTasa)"
-                            name="Tasa Real"
-                            connectNulls
-                        />
-                        <Area
-                            type="monotone"
-                            dataKey="proyeccion"
-                            stroke="#ff7300"
-                            strokeWidth={2}
-                            strokeDasharray="5 5"
-                            fillOpacity={1}
-                            fill="url(#colorProj)"
-                            name="Proyección"
-                            connectNulls
-                        />
-                        <ReferenceLine x={historico[historico.length - 1]?.fecha_tasa} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
-                    </AreaChart>
-                </ResponsiveContainer>
-            </div>
+            {activeTab === 'metrics' && (
+                <div className={styles.statsGrid}>
+                    <div className={styles.statCard}>
+                        <span className={styles.statLabel}>Tasa Actual</span>
+                        <span className={styles.statValue}>Bs. {analysis?.lastRate.toFixed(2)}</span>
+                    </div>
+                    <div className={styles.statCard}>
+                        <span className={styles.statLabel}>Proyección ({predictionDays}d)</span>
+                        <span className={styles.statValue}>Bs. {analysis?.finalProjectedRate.toFixed(2)}</span>
+                    </div>
+                    <div className={`${styles.statCard} ${analysis?.isUp ? styles.up : styles.down}`}>
+                        <span className={styles.statLabel}>Variación Estimada</span>
+                        <span className={styles.statValue}>
+                            {analysis?.isUp ? '▲' : '▼'} {Math.abs(analysis?.variantPercentage || 0).toFixed(2)}%
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'chart' && (
+                <div className={styles.chartWrapper}>
+                    <ResponsiveContainer width="100%" height={350}>
+                        <AreaChart data={analysis?.chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorTasa" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.1} />
+                                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                                </linearGradient>
+                                <linearGradient id="colorProj" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#ff7300" stopOpacity={0.1} />
+                                    <stop offset="95%" stopColor="#ff7300" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                            <XAxis
+                                dataKey="name"
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
+                                minTickGap={30}
+                            />
+                            <YAxis
+                                hide={true}
+                                domain={['dataMin - 5', 'dataMax + 5']}
+                            />
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: '#1e1e2d',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: '8px',
+                                    fontSize: '12px',
+                                    color: '#fff'
+                                }}
+                                itemStyle={{ color: '#fff' }}
+                                labelStyle={{ color: 'rgba(255,255,255,0.6)', marginBottom: '5px' }}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="tasa"
+                                stroke="#8884d8"
+                                strokeWidth={3}
+                                fillOpacity={1}
+                                fill="url(#colorTasa)"
+                                name="Tasa Real"
+                                connectNulls
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="proyeccion"
+                                stroke="#ff7300"
+                                strokeWidth={2}
+                                strokeDasharray="5 5"
+                                fillOpacity={1}
+                                fill="url(#colorProj)"
+                                name="Proyección"
+                                connectNulls
+                            />
+                            <ReferenceLine x={historico[historico.length - 1]?.fecha_tasa} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            )}
 
             <div className={styles.disclaimer}>
                 * Nota: Esta proyección es un cálculo matemático lineal. No considera factores económicos externos ni intervenciones del mercado. Úsese solo como referencia.
