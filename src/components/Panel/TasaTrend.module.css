@@ -1,13 +1,13 @@
 .container {
   background: #1e1e2d;
-  border-radius: 16px;
+  border-radius: 0;
   padding: 24px;
   color: #fff;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  min-height: 100%;
 }
 
 .header {
@@ -118,6 +118,8 @@
   flex-direction: column;
   gap: 8px;
   min-width: 200px;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .rangeLabel {
@@ -137,6 +139,8 @@
   background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
   outline: none;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .slider::-webkit-slider-thumb {
