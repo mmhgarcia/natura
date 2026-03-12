@@ -166,6 +166,42 @@ export default function TasaTrend({ onClose }) {
                     </div>
                 </header>
 
+                <div className={styles.controlsPanel}>
+                    <div className={styles.controls}>
+                        <div className={styles.sliderGroup}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <label className={styles.rangeLabel}>Proyección a futuro</label>
+                                <span className={styles.rangeValue}>{predictionDays} días</span>
+                            </div>
+                            <input
+                                type="range"
+                                min="1"
+                                max="60"
+                                value={predictionDays}
+                                onChange={(e) => setPredictionDays(parseInt(e.target.value))}
+                                className={styles.slider}
+                            />
+                        </div>
+                        <button
+                            onClick={() => setShowCalendar(!showCalendar)}
+                            className={`${styles.calendarToggle} ${showCalendar ? styles.activeToggle : ''}`}
+                        >
+                            {showCalendar ? '📅 Ocultar' : '📅 Fecha Meta'}
+                        </button>
+                        {showCalendar && (
+                            <div className={styles.calendarWrapper}>
+                                <input
+                                    type="date"
+                                    value={targetDateStr}
+                                    onChange={(e) => handleDateChange(e.target.value)}
+                                    min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+                                    className={styles.dateInput}
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 <div className={styles.tabs}>
                     <button
                         className={`${styles.tabBtn} ${activeTab === 'metrics' ? styles.activeTab : ''}`}
@@ -265,42 +301,6 @@ export default function TasaTrend({ onClose }) {
 
                 <div className={styles.disclaimer}>
                     * Nota: Esta proyección es un cálculo matemático lineal. No considera factores económicos externos ni intervenciones del mercado.
-                </div>
-            </div>
-
-            <div className={styles.controlsPanel}>
-                <div className={styles.controls}>
-                    <div className={styles.sliderGroup}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <label className={styles.rangeLabel}>Proyección a futuro</label>
-                            <span className={styles.rangeValue}>{predictionDays} días</span>
-                        </div>
-                        <input
-                            type="range"
-                            min="1"
-                            max="60"
-                            value={predictionDays}
-                            onChange={(e) => setPredictionDays(parseInt(e.target.value))}
-                            className={styles.slider}
-                        />
-                    </div>
-                    <button
-                        onClick={() => setShowCalendar(!showCalendar)}
-                        className={`${styles.calendarToggle} ${showCalendar ? styles.activeToggle : ''}`}
-                    >
-                        {showCalendar ? '📅 Ocultar' : '📅 Fecha Meta'}
-                    </button>
-                    {showCalendar && (
-                        <div className={styles.calendarWrapper}>
-                            <input
-                                type="date"
-                                value={targetDateStr}
-                                onChange={(e) => handleDateChange(e.target.value)}
-                                min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
-                                className={styles.dateInput}
-                            />
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

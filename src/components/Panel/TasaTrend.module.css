@@ -11,9 +11,8 @@
 }
 
 .topPanel {
-  padding: 15px 20px 5px;
+  padding: 20px;
   background: #1e1e2d;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   z-index: 10;
 }
 
@@ -27,11 +26,12 @@
 }
 
 .controlsPanel {
-  padding: 12px 20px;
-  background: #252538;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
-  z-index: 20;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  margin-bottom: 25px;
+  /* Gap before tabs */
 }
 
 .header {
@@ -184,7 +184,7 @@
   background: rgba(255, 255, 255, 0.03);
   padding: 6px;
   border-radius: 12px;
-  margin: 5px 0;
+  margin: 0;
 }
 
 .tabBtn {
