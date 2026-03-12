@@ -213,9 +213,12 @@
     z-index: 1000;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
+    /* Asegura que la parte superior sea visible */
     padding: 20px;
     box-sizing: border-box;
+    overflow-y: auto;
+    /* Permite scroll en el overlay también */
 }
 
 .modalFullContent {

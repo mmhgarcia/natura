@@ -16,6 +16,16 @@
   align-items: flex-start;
   gap: 20px;
   flex-wrap: wrap;
+  position: sticky;
+  top: -24px;
+  /* Compensa el padding del contenedor */
+  background: #1e1e2d;
+  z-index: 10;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin: -24px -24px 10px -24px;
+  padding: 24px;
+  border-radius: 16px 16px 0 0;
 }
 
 .title {
