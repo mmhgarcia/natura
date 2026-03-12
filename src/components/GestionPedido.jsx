@@ -238,17 +238,18 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
         <div className={styles.overlay}>
             <div className={styles.modal}>
                 <div className={styles.header}>
-                    <div className={styles.titleWrapper}>
-                        <span className={styles.title}>GESTIÓN DE PEDIDOS</span>
+                    <span className={styles.title}>GESTIÓN DE PEDIDOS</span>
+                    <div className={styles.headerActions}>
                         <button
                             type="button"
                             className={styles.trendBtnHeader}
                             onClick={() => setIsTrendModalOpen(true)}
+                            title="Ver Tendencia Dolar"
                         >
-                            📊 Tendencia Dolar
+                            📊
                         </button>
+                        <button type="button" className={styles.closeButton} onClick={onClose}>×</button>
                     </div>
-                    <button type="button" className={styles.closeButton} onClick={onClose}>×</button>
                 </div>
 
                 <form onSubmit={handleSubmit} className={styles.content}>
