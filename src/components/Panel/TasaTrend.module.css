@@ -86,6 +86,8 @@
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
   }
 
   .statCard {
