@@ -19,6 +19,7 @@ export default function TasaTrend({ onClose }) {
     const [predictionDays, setPredictionDays] = useState(7);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('metrics'); // 'metrics' or 'chart'
+    const [showCalendar, setShowCalendar] = useState(false);
 
     useEffect(() => {
         async function loadData() {
@@ -106,6 +107,27 @@ export default function TasaTrend({ onClose }) {
         };
     }, [historico, predictionDays]);
 
+    const handleDateChange = (dateStr) => {
+        if (!dateStr) return;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const target = new Date(dateStr);
+        target.setHours(0, 0, 0, 0);
+
+        const diffTime = target.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays >= 1) {
+            setPredictionDays(diffDays);
+        }
+    };
+
+    const targetDateStr = useMemo(() => {
+        const d = new Date();
+        d.setDate(d.getDate() + predictionDays);
+        return d.toISOString().split('T')[0];
+    }, [predictionDays]);
+
     const handlePrint = () => {
         const originalTitle = document.title;
         const dateStr = new Date().toISOString().split('T')[0];
@@ -149,11 +171,29 @@ export default function TasaTrend({ onClose }) {
                     <input
                         type="range"
                         min="1"
-                        max="30"
+                        max="60"
                         value={predictionDays}
                         onChange={(e) => setPredictionDays(parseInt(e.target.value))}
                         className={styles.slider}
                     />
+                    <button
+                        onClick={() => setShowCalendar(!showCalendar)}
+                        className={`${styles.calendarToggle} ${showCalendar ? styles.activeToggle : ''}`}
+                    >
+                        {showCalendar ? '🔼 Cerrar Calendario' : '📅 Seleccionar Fecha Meta'}
+                    </button>
+                    {showCalendar && (
+                        <div className={styles.calendarWrapper}>
+                            <input
+                                type="date"
+                                value={targetDateStr}
+                                onChange={(e) => handleDateChange(e.target.value)}
+                                min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+                                className={styles.dateInput}
+                            />
+                            <p className={styles.dateHint}>La proyección se ajustará automáticamente a la fecha seleccionada.</p>
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -194,7 +234,7 @@ export default function TasaTrend({ onClose }) {
             {activeTab === 'chart' && (
                 <div className={styles.chartWrapper}>
                     <ResponsiveContainer width="100%" height={350}>
-                        <AreaChart data={analysis?.chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <AreaChart data={analysis?.chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorTasa" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#8884d8" stopOpacity={0.1} />
