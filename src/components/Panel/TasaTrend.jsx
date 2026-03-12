@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 import styles from './TasaTrend.module.css';
 
-export default function TasaTrend() {
+export default function TasaTrend({ onClose }) {
     const [historico, setHistorico] = useState([]);
     const [predictionDays, setPredictionDays] = useState(7);
     const [loading, setLoading] = useState(true);
@@ -119,7 +119,12 @@ export default function TasaTrend() {
         <div className={styles.container}>
             <header className={styles.header}>
                 <div className={styles.titleInfo}>
-                    <h2 className={styles.title}>Analítica de Tendencia BCV</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        {onClose && (
+                            <button onClick={onClose} className={styles.closeBtn}>✕</button>
+                        )}
+                        <h2 className={styles.title}>Analítica de Tendencia BCV</h2>
+                    </div>
                     <p className={styles.subtitle}>Basado en algoritmo de regresión lineal sobre {historico.length} registros</p>
                 </div>
 

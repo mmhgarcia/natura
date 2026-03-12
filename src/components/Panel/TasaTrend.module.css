@@ -3,11 +3,11 @@
   border-radius: 16px;
   padding: 24px;
   color: #fff;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   gap: 20px;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .header {
@@ -25,14 +25,34 @@
   letter-spacing: -0.5px;
 }
 
+.closeBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.closeBtn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
 .subtitle {
   margin: 4px 0 0;
   font-size: 0.85rem;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .controls {
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   padding: 12px 20px;
   border-radius: 12px;
   display: flex;
@@ -43,7 +63,7 @@
 
 .rangeLabel {
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.7);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .rangeLabel strong {
@@ -54,7 +74,7 @@
   -webkit-appearance: none;
   width: 100%;
   height: 4px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
   outline: none;
 }
@@ -66,7 +86,7 @@
   background: #ff7300;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(255,115,0,0.4);
+  box-shadow: 0 0 10px rgba(255, 115, 0, 0.4);
 }
 
 .statsGrid {
@@ -76,7 +96,7 @@
 }
 
 .statCard {
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   padding: 16px;
   border-radius: 12px;
   display: flex;
@@ -87,12 +107,12 @@
 
 .statCard:hover {
   transform: translateY(-2px);
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .statLabel {
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -103,20 +123,26 @@
   font-family: 'JetBrains Mono', monospace;
 }
 
-.up .statValue { color: #4ade80; }
-.down .statValue { color: #f87171; }
+.up .statValue {
+  color: #4ade80;
+}
+
+.down .statValue {
+  color: #f87171;
+}
 
 .chartWrapper {
   margin-top: 10px;
   padding: 10px;
 }
 
-.loading, .emptyState {
+.loading,
+.emptyState {
   background: #1e1e2d;
   border-radius: 16px;
   padding: 60px 40px;
   text-align: center;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255, 255, 255, 0.6);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -125,16 +151,17 @@
 
 .disclaimer {
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.3);
+  color: rgba(255, 255, 255, 0.3);
   font-style: italic;
   padding-top: 12px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 @media (max-width: 600px) {
   .header {
     flex-direction: column;
   }
+
   .controls {
     width: 100%;
   }

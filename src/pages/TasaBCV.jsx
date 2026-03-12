@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
-import { db } from "../lib/db/database"; 
+import { db } from "../lib/db/database";
 import styles from './TasaBCV.module.css';
+import TasaTrend from '../components/Panel/TasaTrend';
 
 export default function TasaBCV() {
   const [historico, setHistorico] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editandoId, setEditandoId] = useState(null);
-  
+  const [isTrendModalOpen, setIsTrendModalOpen] = useState(false);
+
   // Estado para el formulario (Add/Edit)
   const [formData, setFormData] = useState({
     fecha_tasa: new Date().toISOString().split('T'),
     tasa: ''
   });
-  
+
   const [message, setMessage] = useState('');
 
   // 1. READ: Cargar historial al iniciar
@@ -54,7 +56,7 @@ export default function TasaBCV() {
         await db.add('historico_tasas', dataToSave);
         setMessage('✅ Nueva tasa agregada');
       }
-      
+
       resetForm();
       cargarHistorico();
       setTimeout(() => setMessage(''), 3000);
@@ -73,17 +75,17 @@ export default function TasaBCV() {
 
   const startEdit = (reg) => {
     setEditandoId(reg.id);
-    setFormData({ 
-      fecha_tasa: reg.fecha_tasa, 
-      tasa: reg.tasa.toString() 
+    setFormData({
+      fecha_tasa: reg.fecha_tasa,
+      tasa: reg.tasa.toString()
     });
   };
 
   const resetForm = () => {
     setEditandoId(null);
-    setFormData({ 
-      fecha_tasa: new Date().toISOString().split('T'), 
-      tasa: '' 
+    setFormData({
+      fecha_tasa: new Date().toISOString().split('T'),
+      tasa: ''
     });
   };
 
@@ -102,20 +104,20 @@ export default function TasaBCV() {
           <div className={styles.topRow}>
             <div className={styles.inputGroup}>
               <label className={styles.label}>Fecha de Tasa</label>
-              <input 
-                type="date" 
-                value={formData.fecha_tasa} 
-                onChange={(e) => setFormData({...formData, fecha_tasa: e.target.value})}
+              <input
+                type="date"
+                value={formData.fecha_tasa}
+                onChange={(e) => setFormData({ ...formData, fecha_tasa: e.target.value })}
                 className={styles.inputSmall}
               />
             </div>
             <div className={styles.inputGroup}>
               <label className={styles.label}>Valor Tasa (Bs.)</label>
-              <input 
-                type="number" 
-                step="0.01" 
-                value={formData.tasa} 
-                onChange={(e) => setFormData({...formData, tasa: e.target.value})}
+              <input
+                type="number"
+                step="0.01"
+                value={formData.tasa}
+                onChange={(e) => setFormData({ ...formData, tasa: e.target.value })}
                 placeholder="0.00"
                 className={styles.inputSmall}
               />
@@ -150,15 +152,15 @@ export default function TasaBCV() {
                     <strong>{reg.fecha_tasa}</strong> — Bs. {reg.tasa.toFixed(2)}
                   </div>
                   <div className={styles.quantityControl}>
-                    <button 
-                      onClick={() => startEdit(reg)} 
+                    <button
+                      onClick={() => startEdit(reg)}
                       className={styles.qtyBtn}
                       title="Editar"
                     >
                       ✏️
                     </button>
-                    <button 
-                      onClick={() => handleEliminar(reg.id)} 
+                    <button
+                      onClick={() => handleEliminar(reg.id)}
                       className={styles.qtyBtn}
                       style={{ color: '#f44336' }}
                       title="Eliminar"
@@ -171,7 +173,24 @@ export default function TasaBCV() {
             )}
           </div>
         </div>
+
+        {/* Botón de Tendencia */}
+        <button
+          onClick={() => setIsTrendModalOpen(true)}
+          className={styles.trendBtn}
+        >
+          📊 VER TENDENCIA TASA
+        </button>
       </div>
+
+      {/* Modal de Tendencia Pantalla Completa */}
+      {isTrendModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalFullContent}>
+            <TasaTrend onClose={() => setIsTrendModalOpen(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
