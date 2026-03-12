@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../lib/db/database';
 import styles from './GestionPedido.module.css';
+import TasaTrend from './Panel/TasaTrend';
+
 
 const GestionPedido = ({ pedido, onClose, onSave }) => {
     const getLocalToday = () => new Date().toLocaleDateString('en-CA');
@@ -19,6 +21,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     const [aplicarDelivery, setAplicarDelivery] = useState(true);
     const [totales, setTotales] = useState({ usd: 0, bs: 0, ventaUsd: 0, ventaBs: 0 });
     const [utilidad, setUtilidad] = useState({ usd: 0, bs: 0 });
+    const [isTrendModalOpen, setIsTrendModalOpen] = useState(false);
 
     const esVisualizacion = !!pedido && pedido.estatus === 'Cerrado';
 
@@ -235,8 +238,17 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
         <div className={styles.overlay}>
             <div className={styles.modal}>
                 <div className={styles.header}>
-                    <span className={styles.title}>GESTIÓN DE PEDIDOS</span>
-                    <button className={styles.closeButton} onClick={onClose}>×</button>
+                    <div className={styles.titleWrapper}>
+                        <span className={styles.title}>GESTIÓN DE PEDIDOS</span>
+                        <button
+                            type="button"
+                            className={styles.trendBtnHeader}
+                            onClick={() => setIsTrendModalOpen(true)}
+                        >
+                            📊 Tendencia Dolar
+                        </button>
+                    </div>
+                    <button type="button" className={styles.closeButton} onClick={onClose}>×</button>
                 </div>
 
                 <form onSubmit={handleSubmit} className={styles.content}>
@@ -388,6 +400,15 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                     </div>
                 </form>
             </div>
+
+            {/* Modal de Tendencia Pantalla Completa */}
+            {isTrendModalOpen && (
+                <div className={styles.modalOverlayTrend}>
+                    <div className={styles.modalFullContentTrend}>
+                        <TasaTrend onClose={() => setIsTrendModalOpen(false)} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
