@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../lib/db/database';
 import styles from './GestionPedido.module.css';
-import TasaTrend from './Panel/TasaTrend';
-
 
 const GestionPedido = ({ pedido, onClose, onSave }) => {
     const getLocalToday = () => new Date().toLocaleDateString('en-CA');
@@ -21,7 +19,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
     const [aplicarDelivery, setAplicarDelivery] = useState(true);
     const [totales, setTotales] = useState({ usd: 0, bs: 0, ventaUsd: 0, ventaBs: 0 });
     const [utilidad, setUtilidad] = useState({ usd: 0, bs: 0 });
-    const [isTrendModalOpen, setIsTrendModalOpen] = useState(false);
 
     const esVisualizacion = !!pedido && pedido.estatus === 'Cerrado';
 
@@ -239,17 +236,7 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
             <div className={styles.modal}>
                 <div className={styles.header}>
                     <span className={styles.title}>GESTIÓN DE PEDIDOS</span>
-                    <div className={styles.headerActions}>
-                        <button
-                            type="button"
-                            className={styles.trendBtnHeader}
-                            onClick={() => setIsTrendModalOpen(true)}
-                            title="Ver Tendencia Dolar"
-                        >
-                            📊
-                        </button>
-                        <button type="button" className={styles.closeButton} onClick={onClose}>×</button>
-                    </div>
+                    <button className={styles.closeButton} onClick={onClose}>×</button>
                 </div>
 
                 <form onSubmit={handleSubmit} className={styles.content}>
@@ -293,14 +280,14 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                     </div>
 
                     <div className={styles.infoBar}>
-                        <div className={styles.inputGroupInline}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <span>Tasa BCV:</span>
                             <input
                                 type="number"
                                 step="0.01"
                                 value={formData.tasa}
                                 onChange={(e) => setFormData({ ...formData, tasa: e.target.value })}
-                                className={styles.inputTasa}
+                                style={{ width: '80px', padding: '2px 5px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '14px', fontWeight: 'bold' }}
                                 disabled={esVisualizacion}
                             />
                         </div>
@@ -401,15 +388,6 @@ const GestionPedido = ({ pedido, onClose, onSave }) => {
                     </div>
                 </form>
             </div>
-
-            {/* Modal de Tendencia Pantalla Completa */}
-            {isTrendModalOpen && (
-                <div className={styles.modalOverlayTrend}>
-                    <div className={styles.modalFullContentTrend}>
-                        <TasaTrend onClose={() => setIsTrendModalOpen(false)} />
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
