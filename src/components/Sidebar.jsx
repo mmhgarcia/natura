@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import ConsultaStockModal from './ConsultaStockModal';
+import ConsultaVentasModal from './ConsultaVentasModal';
 import { handleDescargarCatalogo } from './DescargarCatalogo';
 
 export default function Sidebar({ isOpen, onClose }) {
     const navigate = useNavigate();
     const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+    const [isVentasModalOpen, setIsVentasModalOpen] = useState(false);
 
     const handleAdminAccess = (e) => {
         e.preventDefault();
@@ -21,6 +23,11 @@ export default function Sidebar({ isOpen, onClose }) {
     const handleOpenStockModal = (e) => {
         e.preventDefault();
         setIsStockModalOpen(true);
+    };
+
+    const handleOpenVentasModal = (e) => {
+        e.preventDefault();
+        setIsVentasModalOpen(true);
     };
 
     // Función para manejar hover
@@ -175,6 +182,17 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Registrar Gastos</span>
                     </Link>
 
+                    <Link
+                        to="#"
+                        onClick={handleOpenVentasModal}
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>💰</span>
+                        <span>Consulta Ventas Diarias</span>
+                    </Link>
+
                     <hr style={styles.separator} />
                     <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>INVENTARIO</div>
 
@@ -277,6 +295,11 @@ export default function Sidebar({ isOpen, onClose }) {
             <ConsultaStockModal
                 isOpen={isStockModalOpen}
                 onClose={() => setIsStockModalOpen(false)}
+            />
+
+            <ConsultaVentasModal
+                isOpen={isVentasModalOpen}
+                onClose={() => setIsVentasModalOpen(false)}
             />
         </>
     );

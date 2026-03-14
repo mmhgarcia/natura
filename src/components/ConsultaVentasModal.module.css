@@ -1,0 +1,251 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.modal {
+    background-color: #ffffff;
+    width: 95%;
+    max-width: 800px;
+    height: 90vh;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.header {
+    padding: 24px;
+    background: linear-gradient(135deg, #00BFFF 0%, #0099CC 100%);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.headerTitleGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.closeBtn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.closeBtn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.body {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background-color: #f8f9fa;
+    scroll-behavior: smooth;
+}
+
+.dateSection {
+    margin-bottom: 30px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.dateHeader {
+    padding: 12px 20px;
+    background-color: #f0f9ff;
+    border-bottom: 2px solid #e0f2fe;
+    color: #0369a1;
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tableContainer {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.tabla th {
+    text-align: left;
+    padding: 12px 20px;
+    background-color: #ffffff;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.tabla td {
+    padding: 14px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+}
+
+.textRight {
+    text-align: right;
+}
+
+.textCenter {
+    text-align: center;
+}
+
+.idCell {
+    color: #94a3b8;
+    font-weight: 500;
+    width: 50px;
+}
+
+.nombreCell {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.cantCell {
+    font-weight: 500;
+    width: 80px;
+}
+
+.totalCell {
+    font-weight: 700;
+    color: #0f172a;
+    width: 140px;
+}
+
+.dateFooter {
+    padding: 15px 20px;
+    background-color: #f8fafc;
+    border-top: 2px dashed #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.footerTotalLabel {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.footer {
+    padding: 16px 24px;
+    background-color: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.cerrarBtn {
+    padding: 10px 24px;
+    background-color: #0f172a;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.cerrarBtn:hover {
+    background-color: #1e293b;
+}
+
+.loading,
+.empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #64748b;
+    font-size: 1.1rem;
+}
+
+/* Scrollbar styling */
+.body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.body::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
