@@ -179,7 +179,7 @@ export default function Sidebar({ isOpen, onClose }) {
                         onMouseLeave={handleMouseLeave}
                     >
                         <span style={styles.icon}>💸</span>
-                        <span>Registrar Gastos</span>
+                        <span>Movimientos de Caja</span>
                     </Link>
 
                     <Link

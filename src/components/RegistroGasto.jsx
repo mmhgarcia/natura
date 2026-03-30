@@ -139,7 +139,7 @@ const RegistroGasto = ({ onClose }) => {
     <div className={styles.container}>
       {/* Header Fijo */}
       <div className={styles.mainHeader}>
-        <span className={styles.mainTitle}>💸 Registro de Gastos</span>
+        <span className={styles.mainTitle}>💸 Movimientos de Caja</span>
         <button className={styles.closeMainButton} onClick={() => onClose ? onClose() : navigate(-1)}>×</button>
       </div>
 
