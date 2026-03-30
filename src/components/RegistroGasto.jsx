@@ -15,6 +15,7 @@ const RegistroGasto = ({ onClose }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
 
   const [gasto, setGasto] = useState({
+    tipo: 'Egreso',
     descripcion: '',
     montoUsd: '',
     montoBs: '',
@@ -47,6 +48,7 @@ const RegistroGasto = ({ onClose }) => {
 
   const resetForm = () => {
     setGasto({
+      tipo: 'Egreso',
       descripcion: '',
       montoUsd: '',
       montoBs: '',
@@ -98,6 +100,7 @@ const RegistroGasto = ({ onClose }) => {
   const handleEdit = (item) => {
     setGasto({
       ...item,
+      tipo: item.tipo || 'Egreso',
       fecha: item.fecha.split('T')[0], // Ajustar fecha para input type="date"
       montoUsd: item.montoUsd.toString(),
       montoBs: item.montoBs.toString()
@@ -163,14 +166,17 @@ const RegistroGasto = ({ onClose }) => {
           gastosVisibles.map((item) => (
             <div key={item.id} className={styles.expenseItem}>
               <div className={styles.expenseInfo}>
-                <span className={styles.expenseDesc}>{item.descripcion}</span>
+                <span className={styles.expenseDesc} style={{ fontWeight: '600', color: item.tipo === 'Ingreso' ? '#2e7d32' : '#374151' }}>
+                  {item.tipo === 'Ingreso' ? '🟢 ' : '🔴 '}
+                  {item.descripcion}
+                </span>
                 <span className={styles.expenseMeta}>
                   {new Date(item.fecha).toLocaleDateString()} • {item.categoria}
                 </span>
               </div>
               <div className={styles.expenseActions}>
-                <div className={styles.expenseAmount}>
-                  ${item.montoUsd?.toFixed(2)}
+                <div className={styles.expenseAmount} style={{ color: item.tipo === 'Ingreso' ? '#2e7d32' : '#d32f2f', fontWeight: 'bold' }}>
+                  {item.tipo === 'Ingreso' ? '+' : '-'}${item.montoUsd?.toFixed(2)}
                   <span className={styles.amountBs}>Bs. {item.montoBs?.toFixed(2)}</span>
                 </div>
                 <div className={styles.actionButtons}>
@@ -198,6 +204,17 @@ const RegistroGasto = ({ onClose }) => {
             </div>
 
             <form onSubmit={handleSubmit} className={styles.content}>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                <label style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', padding: '10px', backgroundColor: gasto.tipo === 'Egreso' ? '#fee2e2' : '#f3f4f6', border: gasto.tipo === 'Egreso' ? '2px solid #ef4444' : '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer', fontWeight: gasto.tipo === 'Egreso' ? '700' : '500', color: gasto.tipo === 'Egreso' ? '#b91c1c' : '#6b7280', transition: 'all 0.2s' }}>
+                  <input type="radio" value="Egreso" checked={gasto.tipo === 'Egreso'} onChange={() => setGasto({ ...gasto, tipo: 'Egreso', categoria: 'Operativo' })} style={{ display: 'none' }} />
+                  🔴 Egreso (Gasto)
+                </label>
+                <label style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', padding: '10px', backgroundColor: gasto.tipo === 'Ingreso' ? '#dcfce7' : '#f3f4f6', border: gasto.tipo === 'Ingreso' ? '2px solid #22c55e' : '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer', fontWeight: gasto.tipo === 'Ingreso' ? '700' : '500', color: gasto.tipo === 'Ingreso' ? '#15803d' : '#6b7280', transition: 'all 0.2s' }}>
+                  <input type="radio" value="Ingreso" checked={gasto.tipo === 'Ingreso'} onChange={() => setGasto({ ...gasto, tipo: 'Ingreso', categoria: 'Aporte de Capital' })} style={{ display: 'none' }} />
+                  🟢 Ingreso (Aporte)
+                </label>
+              </div>
+
               <div className={styles.inputRow}>
                 <div className={styles.inputGroup}>
                   <label className={styles.label}>Fecha</label>
@@ -258,10 +275,20 @@ const RegistroGasto = ({ onClose }) => {
                     value={gasto.categoria}
                     onChange={(e) => setGasto({ ...gasto, categoria: e.target.value })}
                   >
-                    <option value="Operativo">🏢 Operativo</option>
-                    <option value="Personal">👤 Personal</option>
-                    <option value="Inversión">📈 Inversión</option>
-                    <option value="Otros">❓ Otros</option>
+                    {gasto.tipo === 'Ingreso' ? (
+                      <>
+                        <option value="Aporte de Capital">💵 Aporte de Capital</option>
+                        <option value="Préstamo">🏦 Préstamo</option>
+                        <option value="Saldo Inicial">⚖️ Saldo Inicial</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="Operativo">🏢 Operativo</option>
+                        <option value="Personal">👤 Personal</option>
+                        <option value="Inversión">📈 Inversión</option>
+                        <option value="Otros">❓ Otros</option>
+                      </>
+                    )}
                   </select>
                 </div>
                 <div className={styles.inputGroup}>

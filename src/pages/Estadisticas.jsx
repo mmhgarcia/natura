@@ -29,7 +29,8 @@ const Estadisticas = () => {
     inversionTotalUsd: 0,
     ingresosEfectivo: 0,
     ingresosPagoMovil: 0,
-    ingresosZelle: 0
+    ingresosZelle: 0,
+    aportesCapitalUsd: 0
   });
 
   useEffect(() => {
@@ -86,18 +87,23 @@ const Estadisticas = () => {
           else ingresosEfectivoSum += ventaItem;
         });
 
-        // 5. Procesar Gastos y Retiros
+        // 5. Procesar Gastos, Retiros y Aportes
         let gastosOperativosSum = 0;
         let retirosPersonalesSum = 0;
         let inversionesSum = 0;
+        let aportesCapitalSum = 0;
 
         gastosFiltrados.forEach(g => {
-          if (g.categoria === 'Personal') {
-            retirosPersonalesSum += g.montoUsd || 0;
-          } else if (g.categoria === 'Inversión') {
-            inversionesSum += g.montoUsd || 0;
+          if (g.tipo === 'Ingreso') {
+            aportesCapitalSum += g.montoUsd || 0;
           } else {
-            gastosOperativosSum += g.montoUsd || 0;
+            if (g.categoria === 'Personal') {
+              retirosPersonalesSum += g.montoUsd || 0;
+            } else if (g.categoria === 'Inversión') {
+              inversionesSum += g.montoUsd || 0;
+            } else {
+              gastosOperativosSum += g.montoUsd || 0;
+            }
           }
         });
 
@@ -156,7 +162,8 @@ const Estadisticas = () => {
           inversionTotalUsd: inversionesSum,
           ingresosEfectivo: ingresosEfectivoSum,
           ingresosPagoMovil: ingresosPagoMovilSum,
-          ingresosZelle: ingresosZelleSum
+          ingresosZelle: ingresosZelleSum,
+          aportesCapitalUsd: aportesCapitalSum
         });
 
         // Datos para el gráfico de Ranking
@@ -376,9 +383,14 @@ const Estadisticas = () => {
             <span>(↻) Inversión / Reposición:</span>
             <span style={{ fontWeight: 'bold' }}>-${metricas.inversionTotalUsd.toFixed(2)}</span>
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic', marginTop: '5px' }}>
-            * Retiros e Inversiones NO bajan tu utilidad contable, pero sí restan efectivo de caja.
-
+          {metricas.aportesCapitalUsd > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#15803d', fontSize: '0.9rem', marginTop: '5px' }}>
+              <span>(💰) Aportes / Ingreso de Capital:</span>
+              <span style={{ fontWeight: 'bold' }}>+${metricas.aportesCapitalUsd.toFixed(2)}</span>
+            </div>
+          )}
+          <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic', marginTop: '8px', lineHeight: '1.4' }}>
+            * Retiros, Inversiones y Aportes NO modifican tu utilidad operativa o margen, pero sí afectan la cantidad de dinero físico en tu caja/bancos.
           </div>
         </div>
       </div>
