@@ -95,10 +95,14 @@ function Home() {
         }
     };
 
-    const handleGrabar = async () => {
-        if (listaDeSeleccionados.length === 0) return;
-        if (!window.confirm(`¿Desea procesar la venta de ${listaDeSeleccionados.length} helados?`)) return;
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
 
+    const handleGrabarClick = () => {
+        if (listaDeSeleccionados.length === 0) return;
+        setShowPaymentModal(true);
+    };
+
+    const procesarVenta = async (metodoPago) => {
         try {
             const transaccionId = `TX-${Date.now()}`;
             await db.transaction('rw', [db.ventas, db.productos], async () => {
@@ -113,18 +117,22 @@ function Home() {
                         tasaVenta: tasa,
                         transaccionId: transaccionId,
                         cantidad: 1,
-                        fecha: new Date().toISOString()
+                        fecha: new Date().toISOString(),
+                        metodoPago: metodoPago
                     });
                     await db.updateStock(item.id, -1);
                 }
             });
             setListaDeSeleccionados([]);
-            alert("✅ Venta procesada con éxito.");
+            setShowPaymentModal(false);
+            alert(`✅ Venta procesada con éxito (${metodoPago}).`);
+
             // Recargar stock localmente
             const p = await db.getAll('productos');
             setProductos(enriquecerProductos(p, grupos));
         } catch (error) {
             alert("❌ Error al procesar la venta.");
+            setShowPaymentModal(false);
         }
     };
 
@@ -211,7 +219,7 @@ function Home() {
 
                 <div className={styles.actionButtons}>
                     <button className={styles.vaciarBtn} onClick={handleVaciarLista}>Vaciar</button>
-                    <button className={styles.grabarBtn} onClick={handleGrabar} disabled={listaDeSeleccionados.length === 0}>Grabar</button>
+                    <button className={styles.grabarBtn} onClick={handleGrabarClick} disabled={listaDeSeleccionados.length === 0}>Grabar</button>
                     <button className={styles.ubicarBtn} onClick={() => setIsFreezerOpen(true)}>Ubicar</button>
                 </div>
             </div>
@@ -225,6 +233,28 @@ function Home() {
                         </div>
                         <div className={styles.modalBody}>
                             <FreezerLayout productosSeleccionados={listaDeSeleccionados} />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showPaymentModal && (
+                <div className={styles.modalOverlay} onClick={() => setShowPaymentModal(false)} style={{ zIndex: 9999 }}>
+                    <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', padding: '24px', borderRadius: '16px', maxWidth: '320px' }}>
+                        <h2 style={{ margin: '0 0 5px', color: '#1a7a4a', fontSize: '22px' }}>Confirmar Venta</h2>
+                        <p style={{ margin: '0 0 20px', color: '#666', fontSize: '14px' }}>{listaDeSeleccionados.length} helado(s)</p>
+
+                        <div style={{ backgroundColor: '#f9fafb', borderRadius: '12px', padding: '15px', marginBottom: '20px' }}>
+                            <h1 style={{ margin: '0 0 5px', color: '#111827', fontSize: '28px' }}>${usd.toFixed(2)}</h1>
+                            <h2 style={{ margin: '0', color: '#4b5563', fontSize: '18px' }}>Bs. {bs.toFixed(2)}</h2>
+                        </div>
+
+                        <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#374151', fontWeight: '600' }}>¿Método de pago?</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <button onClick={() => procesarVenta('Efectivo')} style={{ padding: '12px', fontSize: '15px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}>💵 Efectivo</button>
+                            <button onClick={() => procesarVenta('Pago Móvil')} style={{ padding: '12px', fontSize: '15px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}>📱 Pago Móvil</button>
+                            <button onClick={() => procesarVenta('Zelle')} style={{ padding: '12px', fontSize: '15px', backgroundColor: '#8b5cf6', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}>💳 Zelle / USD</button>
+                            <button onClick={() => setShowPaymentModal(false)} style={{ padding: '12px', fontSize: '14px', backgroundColor: 'transparent', color: '#6b7280', border: 'none', borderRadius: '10px', cursor: 'pointer', marginTop: '5px', fontWeight: '600' }}>Cancelar</button>
                         </div>
                     </div>
                 </div>
