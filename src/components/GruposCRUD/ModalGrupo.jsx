@@ -20,6 +20,32 @@ const ModalGrupo = ({ grupo, onClose, onSave }) => {
     }
   }, [grupo]);
 
+  const calcularPrecio = (costo, margen) => {
+    const m = parseFloat(margen) || 0;
+    if (m <= 0) return null; // null = no recalcular
+    return parseFloat((parseFloat(costo) * (1 + m / 100)).toFixed(2));
+  };
+
+  const handleCostoChange = (e) => {
+    const nuevoCosto = parseFloat(e.target.value) || 0;
+    const nuevoPrecio = calcularPrecio(nuevoCosto, formData.margen);
+    setFormData(prev => ({
+      ...prev,
+      costo_$: nuevoCosto,
+      ...(nuevoPrecio !== null ? { precio: nuevoPrecio } : {})
+    }));
+  };
+
+  const handleMargenChange = (e) => {
+    const nuevoMargen = parseFloat(e.target.value) || 0;
+    const nuevoPrecio = calcularPrecio(formData.costo_$, nuevoMargen);
+    setFormData(prev => ({
+      ...prev,
+      margen: nuevoMargen,
+      ...(nuevoPrecio !== null ? { precio: nuevoPrecio } : {})
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -50,12 +76,21 @@ const ModalGrupo = ({ grupo, onClose, onSave }) => {
             />
           </div>
           <div style={modalStyles.field}>
-            <label style={{ color: '#000' }}>Precio ($):</label>
+            <label style={{ color: '#000' }}>
+              Precio ($):
+              {(parseFloat(formData.margen) > 0) && (
+                <span style={{ fontSize: '11px', color: '#888', marginLeft: '6px', fontStyle: 'italic' }}>
+                  (calculado por margen)
+                </span>
+              )}
+            </label>
             <input
               type="number"
               step="0.01"
               value={formData.precio}
               onChange={e => setFormData({ ...formData, precio: parseFloat(e.target.value) })}
+              readOnly={parseFloat(formData.margen) > 0}
+              style={parseFloat(formData.margen) > 0 ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
             />
           </div>
           <div style={modalStyles.field}>
@@ -64,7 +99,7 @@ const ModalGrupo = ({ grupo, onClose, onSave }) => {
               type="number"
               step="0.01"
               value={formData.costo_$}
-              onChange={e => setFormData({ ...formData, costo_$: parseFloat(e.target.value) })}
+              onChange={handleCostoChange}
             />
           </div>
           <div style={modalStyles.field}>
@@ -75,7 +110,7 @@ const ModalGrupo = ({ grupo, onClose, onSave }) => {
               min="0"
               max="100"
               value={formData.margen}
-              onChange={e => setFormData({ ...formData, margen: parseFloat(e.target.value) })}
+              onChange={handleMargenChange}
             />
           </div>
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
