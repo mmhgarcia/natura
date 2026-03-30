@@ -5,7 +5,8 @@ const ModalGrupo = ({ grupo, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     nombre: '',
     precio: 0,
-    costo_$: 0
+    costo_$: 0,
+    margen: 0
   });
 
   useEffect(() => {
@@ -13,7 +14,8 @@ const ModalGrupo = ({ grupo, onClose, onSave }) => {
       setFormData({
         nombre: grupo.nombre || '',
         precio: grupo.precio || 0,
-        costo_$: grupo.costo_$ || 0
+        costo_$: grupo.costo_$ || 0,
+        margen: grupo.margen ?? 0
       });
     }
   }, [grupo]);
@@ -36,38 +38,49 @@ const ModalGrupo = ({ grupo, onClose, onSave }) => {
   return (
     <div style={modalStyles.overlay}>
       <div style={modalStyles.modal}>
-        <h2 style={{color: '#000'}}>GESTIÓN DE GRUPO</h2>
+        <h2 style={{ color: '#000' }}>GESTIÓN DE GRUPO</h2>
         <form onSubmit={handleSubmit}>
           <div style={modalStyles.field}>
-            <label style={{color: '#000'}}>Nombre:</label>
-            <input 
-              type="text" 
-              value={formData.nombre} 
-              onChange={e => setFormData({...formData, nombre: e.target.value})}
-              required 
+            <label style={{ color: '#000' }}>Nombre:</label>
+            <input
+              type="text"
+              value={formData.nombre}
+              onChange={e => setFormData({ ...formData, nombre: e.target.value })}
+              required
             />
           </div>
           <div style={modalStyles.field}>
-            <label style={{color: '#000'}}>Precio ($):</label>
-            <input 
-              type="number" 
+            <label style={{ color: '#000' }}>Precio ($):</label>
+            <input
+              type="number"
               step="0.01"
-              value={formData.precio} 
-              onChange={e => setFormData({...formData, precio: parseFloat(e.target.value)})}
+              value={formData.precio}
+              onChange={e => setFormData({ ...formData, precio: parseFloat(e.target.value) })}
             />
           </div>
           <div style={modalStyles.field}>
-            <label style={{color: '#000'}}>Costo ($):</label>
-            <input 
-              type="number" 
+            <label style={{ color: '#000' }}>Costo ($):</label>
+            <input
+              type="number"
               step="0.01"
-              value={formData.costo_$} 
-              onChange={e => setFormData({...formData, costo_$: parseFloat(e.target.value)})}
+              value={formData.costo_$}
+              onChange={e => setFormData({ ...formData, costo_$: parseFloat(e.target.value) })}
             />
           </div>
-          <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
-            <button type="submit" style={{backgroundColor: '#28a745', color: '#fff'}}>Guardar</button>
-            <button type="button" onClick={onClose} style={{backgroundColor: '#ccc'}}>Cancelar</button>
+          <div style={modalStyles.field}>
+            <label style={{ color: '#000' }}>Margen (%):</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              value={formData.margen}
+              onChange={e => setFormData({ ...formData, margen: parseFloat(e.target.value) })}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+            <button type="submit" style={{ backgroundColor: '#28a745', color: '#fff' }}>Guardar</button>
+            <button type="button" onClick={onClose} style={{ backgroundColor: '#ccc' }}>Cancelar</button>
           </div>
         </form>
       </div>
