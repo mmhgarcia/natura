@@ -60,7 +60,7 @@ const GruposCRUD = () => {
   return (
     <div style={styles.container}>
       {/* Título actualizado y color blanco para visibilidad [1, 2] */}
-      <h1 style={styles.title}>Panel de Grupos</h1>
+      <h1 style={styles.title}>🏷️ Gestión de Grupos</h1>
 
       {error && <div style={styles.errorAlert}>{error}</div>}
 
@@ -69,21 +69,37 @@ const GruposCRUD = () => {
       </button>
 
       <div style={styles.lista}>
+        {/* Header de columnas */}
+        {grupos.length > 0 && (
+          <div style={styles.listHeader}>
+            <span style={{ flex: 2 }}>Nombre</span>
+            <span style={{ flex: 1, textAlign: 'right' }}>Precio</span>
+            <span style={{ flex: 1, textAlign: 'right' }}>Costo</span>
+            <span style={{ flex: 1, textAlign: 'right' }}>Margen</span>
+            <span style={{ width: '130px', textAlign: 'right' }}>Acciones</span>
+          </div>
+        )}
         {grupos.length === 0 ? (
           <div style={styles.vacio}>No hay grupos registrados.</div>
         ) : (
           grupos.map(grupo => (
             <div key={grupo.id} style={styles.item}>
-              <div style={styles.itemInfo}>
+              <div style={{ ...styles.itemInfo, flex: 2 }}>
                 <div style={styles.itemNombre}>{grupo.nombre}</div>
-                {/* Visualización de Precio y nuevo campo Costo [10, 11] */}
-                <div style={styles.itemPrecio}>Precio: ${grupo.precio.toFixed(2)}</div>
-                <div style={styles.itemCosto}>
-                  Costo: ${grupo.costo_$ ? grupo.costo_$.toFixed(2) : "0.00"}
-                </div>
                 <div style={styles.itemId}>ID: {grupo.id}</div>
               </div>
-              <div style={styles.itemActions}>
+              <div style={{ flex: 1, textAlign: 'right' }}>
+                <div style={styles.itemPrecio}>${grupo.precio.toFixed(2)}</div>
+              </div>
+              <div style={{ flex: 1, textAlign: 'right' }}>
+                <div style={styles.itemCosto}>${grupo.costo_$ ? grupo.costo_$.toFixed(2) : '0.00'}</div>
+              </div>
+              <div style={{ flex: 1, textAlign: 'right' }}>
+                <div style={styles.itemMargen}>
+                  {grupo.margen ? `${grupo.margen}%` : '—'}
+                </div>
+              </div>
+              <div style={{ ...styles.itemActions, width: '130px' }}>
                 <button onClick={() => handleEditar(grupo)} style={styles.btnEditar}>Editar</button>
                 <button onClick={() => handleEliminar(grupo)} style={styles.btnEliminar}>Eliminar</button>
               </div>
@@ -98,10 +114,10 @@ const GruposCRUD = () => {
 
       {/* Renderizado condicional del Modal para evitar duplicidad [10, 12] */}
       {modalOpen && (
-        <ModalGrupo 
-          grupo={grupoEditando} 
-          onClose={() => setModalOpen(false)} 
-          onSave={cargarGrupos} 
+        <ModalGrupo
+          grupo={grupoEditando}
+          onClose={() => setModalOpen(false)}
+          onSave={cargarGrupos}
         />
       )}
     </div>
@@ -109,24 +125,24 @@ const GruposCRUD = () => {
 };
 
 const styles = {
-  container: { padding: '20px', maxWidth: '800px', margin: '0 auto' },
-  // Estilo corregido: Blanco para contrastar con el fondo oscuro #242424 [2, 13]
-  title: { marginBottom: '20px', color: '#ffffff', fontWeight: 'bold', textAlign: 'center' },
+  container: { padding: '20px', maxWidth: '900px', margin: '0 auto' },
+  title: { marginBottom: '20px', color: '#1a7a4a', fontWeight: '700', textAlign: 'center', fontSize: '24px' },
   loading: { padding: '40px', textAlign: 'center', color: '#fff' },
   errorAlert: { backgroundColor: '#fee', color: '#c33', padding: '10px', borderRadius: '4px', marginBottom: '20px' },
   nuevoButton: { marginBottom: '20px', padding: '10px 15px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '500' },
   lista: { border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden', marginBottom: '20px' },
+  listHeader: { display: 'flex', alignItems: 'center', padding: '10px 15px', backgroundColor: '#f0fdf4', borderBottom: '2px solid #bbf7d0', fontSize: '12px', fontWeight: '700', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' },
   vacio: { padding: '40px', textAlign: 'center', color: '#666' },
-  item: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', borderBottom: '1px solid #eee', backgroundColor: 'white' },
+  item: { display: 'flex', alignItems: 'center', padding: '12px 15px', borderBottom: '1px solid #eee', backgroundColor: 'white' },
   itemInfo: { flex: 1 },
-  itemNombre: { fontWeight: 'bold', fontSize: '18px', marginBottom: '5px', color: '#333' },
-  itemPrecio: { color: '#007bff', marginBottom: '3px', fontWeight: '500' },
-  // Estilo específico para el campo de costo en rojo [11]
-  itemCosto: { color: '#dc3545', marginBottom: '3px', fontWeight: '500' },
-  itemId: { fontSize: '12px', color: '#999' },
-  itemActions: { display: 'flex', gap: '10px' },
-  btnEditar: { padding: '8px 12px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
-  btnEliminar: { padding: '8px 12px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
+  itemNombre: { fontWeight: '600', fontSize: '15px', marginBottom: '2px', color: '#1f2937' },
+  itemPrecio: { color: '#2563eb', fontWeight: '600', fontSize: '14px' },
+  itemCosto: { color: '#dc2626', fontWeight: '600', fontSize: '14px' },
+  itemMargen: { color: '#7c3aed', fontWeight: '600', fontSize: '14px' },
+  itemId: { fontSize: '11px', color: '#9ca3af' },
+  itemActions: { display: 'flex', gap: '8px' },
+  btnEditar: { padding: '6px 12px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' },
+  btnEliminar: { padding: '6px 12px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' },
   resumen: { marginTop: '20px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px', fontSize: '14px', textAlign: 'center', color: '#333' }
 };
 
