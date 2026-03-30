@@ -69,37 +69,27 @@ const GruposCRUD = () => {
       </button>
 
       <div style={styles.lista}>
-        {/* Header de columnas */}
-        {grupos.length > 0 && (
-          <div style={styles.listHeader}>
-            <span style={{ flex: 2 }}>Nombre</span>
-            <span style={{ flex: 1, textAlign: 'right' }}>Precio</span>
-            <span style={{ flex: 1, textAlign: 'right' }}>Costo</span>
-            <span style={{ flex: 1, textAlign: 'right' }}>Margen</span>
-            <span style={{ width: '130px', textAlign: 'right' }}>Acciones</span>
-          </div>
-        )}
         {grupos.length === 0 ? (
           <div style={styles.vacio}>No hay grupos registrados.</div>
         ) : (
           grupos.map(grupo => (
             <div key={grupo.id} style={styles.item}>
-              <div style={{ ...styles.itemInfo, flex: 2 }}>
+              <div style={styles.itemInfo}>
                 <div style={styles.itemNombre}>{grupo.nombre}</div>
                 <div style={styles.itemId}>ID: {grupo.id}</div>
-              </div>
-              <div style={{ flex: 1, textAlign: 'right' }}>
-                <div style={styles.itemPrecio}>${grupo.precio.toFixed(2)}</div>
-              </div>
-              <div style={{ flex: 1, textAlign: 'right' }}>
-                <div style={styles.itemCosto}>${grupo.costo_$ ? grupo.costo_$.toFixed(2) : '0.00'}</div>
-              </div>
-              <div style={{ flex: 1, textAlign: 'right' }}>
-                <div style={styles.itemMargen}>
-                  {grupo.margen ? `${grupo.margen}%` : '—'}
+                <div style={styles.itemMeta}>
+                  <span style={styles.itemPrecio}>Precio: ${grupo.precio.toFixed(2)}</span>
+                  <span style={styles.itemSep}>·</span>
+                  <span style={styles.itemCosto}>Costo: ${grupo.costo_$ ? grupo.costo_$.toFixed(2) : '0.00'}</span>
+                  {grupo.margen ? (
+                    <>
+                      <span style={styles.itemSep}>·</span>
+                      <span style={styles.itemMargen}>Margen: {grupo.margen}%</span>
+                    </>
+                  ) : null}
                 </div>
               </div>
-              <div style={{ ...styles.itemActions, width: '130px' }}>
+              <div style={styles.itemActions}>
                 <button onClick={() => handleEditar(grupo)} style={styles.btnEditar}>Editar</button>
                 <button onClick={() => handleEliminar(grupo)} style={styles.btnEliminar}>Eliminar</button>
               </div>
@@ -139,7 +129,9 @@ const styles = {
   itemPrecio: { color: '#2563eb', fontWeight: '600', fontSize: '14px' },
   itemCosto: { color: '#dc2626', fontWeight: '600', fontSize: '14px' },
   itemMargen: { color: '#7c3aed', fontWeight: '600', fontSize: '14px' },
-  itemId: { fontSize: '11px', color: '#9ca3af' },
+  itemId: { fontSize: '11px', color: '#9ca3af', marginBottom: '4px' },
+  itemMeta: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' },
+  itemSep: { color: '#d1d5db', fontSize: '12px' },
   itemActions: { display: 'flex', gap: '8px' },
   btnEditar: { padding: '6px 12px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' },
   btnEliminar: { padding: '6px 12px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' },
