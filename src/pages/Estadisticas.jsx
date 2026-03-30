@@ -26,7 +26,10 @@ const Estadisticas = () => {
     proyeccionVenta: 0,
     proyeccionCosto: 0,
     proyeccionUtilidad: 0,
-    inversionTotalUsd: 0
+    inversionTotalUsd: 0,
+    ingresosEfectivo: 0,
+    ingresosPagoMovil: 0,
+    ingresosZelle: 0
   });
 
   useEffect(() => {
@@ -51,10 +54,19 @@ const Estadisticas = () => {
         const acumulado = {};
 
         // 3. Procesar Pedidos (Ventas a Distribuidores)
+        let ingresosEfectivoSum = 0;
+        let ingresosPagoMovilSum = 0;
+        let ingresosZelleSum = 0;
+
         pedidosCerrados.forEach(pedido => {
+          const metodo = pedido.metodoPago || 'Efectivo';
           if (Array.isArray(pedido.items)) {
             pedido.items.forEach(item => {
               actualizarAcumulado(acumulado, item);
+              const ventaItem = item.subtotalUsd || item.precioUsd || 0;
+              if (metodo === 'Pago Móvil') ingresosPagoMovilSum += ventaItem;
+              else if (metodo === 'Zelle') ingresosZelleSum += ventaItem;
+              else ingresosEfectivoSum += ventaItem;
             });
           }
         });
@@ -68,6 +80,10 @@ const Estadisticas = () => {
             subtotalUsd: venta.precioUsd,
             costoUnitario: venta.costoUnitarioUsd
           });
+          const ventaItem = venta.precioUsd || 0;
+          if (venta.metodoPago === 'Pago Móvil') ingresosPagoMovilSum += ventaItem;
+          else if (venta.metodoPago === 'Zelle') ingresosZelleSum += ventaItem;
+          else ingresosEfectivoSum += ventaItem;
         });
 
         // 5. Procesar Gastos y Retiros
@@ -137,7 +153,10 @@ const Estadisticas = () => {
           proyeccionVenta: invVenta,
           proyeccionCosto: invCosto,
           proyeccionUtilidad: invUtilidad,
-          inversionTotalUsd: inversionesSum
+          inversionTotalUsd: inversionesSum,
+          ingresosEfectivo: ingresosEfectivoSum,
+          ingresosPagoMovil: ingresosPagoMovilSum,
+          ingresosZelle: ingresosZelleSum
         });
 
         // Datos para el gráfico de Ranking
@@ -237,6 +256,33 @@ const Estadisticas = () => {
             <span className={styles.ingresosValue} style={{ color: '#e65100' }}>
               {metricas.margenPorcentaje.toFixed(1)}%
             </span>
+          </div>
+        </div>
+
+        {/* Flujo de Caja (Ingresos por Medio de Pago) */}
+        <div className={styles.mainCard} style={{ marginTop: '15px', backgroundColor: '#f0fdf4', padding: '15px' }}>
+          <h3 className={styles.chartTitle} style={{ color: '#15803d', margin: '0 0 10px', fontSize: '14px' }}>💳 FLUJO DE CAJA (INGRESOS)</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.95rem', color: '#166534' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>💵 Efectivo:</span>
+              <span style={{ fontWeight: 'bold' }}>${metricas.ingresosEfectivo.toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>📱 Pago Móvil:</span>
+              <span style={{ fontWeight: 'bold' }}>${metricas.ingresosPagoMovil.toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>💳 Zelle / USD:</span>
+              <span style={{ fontWeight: 'bold' }}>${metricas.ingresosZelle.toFixed(2)}</span>
+            </div>
+            <hr style={{ border: '0', borderTop: '1px solid #bbf7d0', margin: '4px 0' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', fontWeight: 'bold' }}>
+              <span>TOTAL (Venta Bruta Todos):</span>
+              <span>${(metricas.ingresosEfectivo + metricas.ingresosPagoMovil + metricas.ingresosZelle).toFixed(2)}</span>
+            </div>
+            <small style={{ color: '#15803d', fontSize: '0.75rem', opacity: 0.8, fontStyle: 'italic', marginTop: '2px' }}>
+              * El total refleja el universo completo sin filtrar por 'Top'.
+            </small>
           </div>
         </div>
 
