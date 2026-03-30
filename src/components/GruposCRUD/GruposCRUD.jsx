@@ -78,9 +78,13 @@ const GruposCRUD = () => {
                 <div style={styles.itemNombre}>{grupo.nombre}</div>
                 <div style={styles.itemId}>ID: {grupo.id}</div>
                 <div style={styles.itemMeta}>
-                  <span style={styles.itemPrecio}>Precio: ${grupo.precio.toFixed(2)}</span>
+                  <span style={styles.itemPrecio}>
+                    Precio: ${Number(grupo.precio || 0).toFixed(2)}
+                  </span>
                   <span style={styles.itemSep}>·</span>
-                  <span style={styles.itemCosto}>Costo: ${grupo.costo_$ ? grupo.costo_$.toFixed(2) : '0.00'}</span>
+                  <span style={styles.itemCosto}>
+                    Costo: ${Number(grupo.costo_$ || 0).toFixed(2)}
+                  </span>
                   {grupo.margen ? (
                     <>
                       <span style={styles.itemSep}>·</span>
