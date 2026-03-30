@@ -118,6 +118,20 @@ const RegistroGasto = ({ onClose }) => {
     }
   };
 
+  const [mostrarTodos, setMostrarTodos] = useState(false);
+
+  // Filtrado de gastos (Mes en curso vs Histórico)
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+
+  const gastosVisibles = mostrarTodos
+    ? gastos
+    : gastos.filter(item => {
+      const d = new Date(item.fecha);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+
   return (
     <div className={styles.container}>
       {/* Header Fijo */}
@@ -126,12 +140,27 @@ const RegistroGasto = ({ onClose }) => {
         <button className={styles.closeMainButton} onClick={() => onClose ? onClose() : navigate(-1)}>×</button>
       </div>
 
+      {/* Checkbox de Filtro */}
+      <div style={{ padding: '10px 20px', backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#4b5563', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={mostrarTodos}
+            onChange={(e) => setMostrarTodos(e.target.checked)}
+            style={{ width: '16px', height: '16px', accentColor: '#2196F3' }}
+          />
+          Mostrar histórico completo de gastos
+        </label>
+      </div>
+
       {/* Lista de Gastos */}
       <div className={styles.listContainer}>
-        {gastos.length === 0 ? (
-          <div className={styles.emptyState}>No hay gastos registrados.</div>
+        {gastosVisibles.length === 0 ? (
+          <div className={styles.emptyState}>
+            {mostrarTodos ? 'No hay gastos registrados en el historial.' : 'No hay gastos registrados en este mes.'}
+          </div>
         ) : (
-          gastos.map((item) => (
+          gastosVisibles.map((item) => (
             <div key={item.id} className={styles.expenseItem}>
               <div className={styles.expenseInfo}>
                 <span className={styles.expenseDesc}>{item.descripcion}</span>
