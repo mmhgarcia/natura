@@ -226,8 +226,25 @@ const ModalGrupo = ({ grupo, onClose, onSave }) => {
     }
   };
 
+  const [stockActual, setStockActual] = useState(0);
+
+  useEffect(() => {
+    if (grupo && grupo.nombre) {
+      db.getAll('productos').then(prods => {
+        const prodGrupo = prods.filter(p => p.grupo === grupo.nombre);
+        const stockTotal = prodGrupo.reduce((acc, p) => acc + (p.stock || 0), 0);
+        setStockActual(stockTotal);
+      });
+    }
+  }, [grupo]);
+
   const margenActivo = formData.margen.toString().trim() !== '' && parseNum(formData.margen) > 0;
   const esEdicion = !!grupo;
+
+  // Variables matemáticas para el Escenario
+  const utilidadVieja = esEdicion ? (parseNum(grupo?.precio) - parseNum(grupo?.costo_$)) * stockActual : 0;
+  const utilidadNueva = (parseNum(formData.precio) - parseNum(formData.costo_$)) * stockActual;
+  const diferenciaUtilidad = utilidadNueva - utilidadVieja;
 
   return (
     <div className="mg-overlay" onClick={(e) => e.target.className === 'mg-overlay' && onClose()}>
@@ -329,13 +346,38 @@ const ModalGrupo = ({ grupo, onClose, onSave }) => {
               </div>
             </div>
 
+            {/* Simulador Predictivo */}
+            {esEdicion && stockActual > 0 && (
+              <div style={{ marginTop: '22px', padding: '14px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px' }}>
+                <h4 style={{ margin: '0 0 10px', fontSize: '13.5px', color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
+                  🔭 Analizador de Escenarios
+                </h4>
+                <div style={{ fontSize: '12.5px', color: '#1e40af', lineHeight: '1.6' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                    <span>Utilidad Bruta Actual estimada:</span>
+                    <strong>${utilidadVieja.toFixed(2)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Utilidad con tu nueva proyección:</span>
+                    <strong>${utilidadNueva.toFixed(2)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #93c5fd', marginTop: '8px', paddingTop: '8px', fontWeight: 'bold' }}>
+                    <span>Impacto Neto en los {stockActual} helados:</span>
+                    <span style={{ fontSize: '14px', color: diferenciaUtilidad > 0 ? '#15803d' : (diferenciaUtilidad < 0 ? '#dc2626' : '#1e40af') }}>
+                      {diferenciaUtilidad > 0 ? '+' : ''}${diferenciaUtilidad.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Footer */}
             <div className="mg-footer">
               <button type="button" className="mg-btn mg-btn-cancel" onClick={onClose}>
                 Cancelar
               </button>
               <button type="submit" className="mg-btn mg-btn-save">
-                {esEdicion ? '💾 Actualizar' : '✅ Crear Grupo'}
+                {esEdicion ? '💾 Aplicar Impacto' : '✅ Crear Grupo'}
               </button>
             </div>
 
