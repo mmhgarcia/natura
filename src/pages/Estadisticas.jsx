@@ -33,6 +33,13 @@ const Estadisticas = () => {
     aportesCapitalUsd: 0
   });
 
+  // Estado para la Auditoría Específica de Cítricos
+  const [citricosData, setCitricosData] = useState({
+    unidades: 0,
+    totalUsd: 0,
+    utilidadUsd: 0
+  });
+
   useEffect(() => {
     const cargarAnaliticaBI = async () => {
       setCargando(true);
@@ -131,22 +138,54 @@ const Estadisticas = () => {
         // 9. Calcular Proyección de Inventario (NUEVO - Valor Futuro)
         let invVenta = 0;
         let invCosto = 0;
-        const gruposMap = new Map(gruposRaw.map(g => [g.nombre, g]));
+        let invUtilidad = 0;
 
-        if (Array.isArray(productosRaw)) {
-          productosRaw.forEach(p => {
-            if (p.stock > 0 && p.grupo) {
-              const g = gruposMap.get(p.grupo);
-              if (g) {
-                const costo = g.costo_$ || 0;
-                const precio = g.precio || 0;
-                invVenta += precio * p.stock;
-                invCosto += costo * p.stock;
-              }
-            }
-          });
-        }
-        const invUtilidad = invVenta - invCosto;
+        productosRaw.forEach(p => {
+          if (p.stock > 0 && acumulado[p.nombre]) {
+            const currentItem = acumulado[p.nombre];
+            const pvp = currentItem.pvp || (currentItem.ventaTotal / currentItem.cantidad) || 0;
+            const costo = (currentItem.costoTotal / currentItem.cantidad) || 0;
+            invVenta += (p.stock * pvp);
+            invCosto += (p.stock * costo);
+            invUtilidad += (p.stock * (pvp - costo));
+          }
+        });
+
+        // 6. Auditoría Analítica: Grupo Cítricos (Últimos 90 Días)
+        const limite90Dias = new Date();
+        limite90Dias.setDate(limite90Dias.getDate() - 90);
+
+        let cUnidades = 0;
+        let cTotalUsd = 0;
+        let cUtilidadUsd = 0;
+
+        const procesarItemCitrico = (item, isPedido = false) => {
+          if (!item.grupo) return;
+          const grupoNormalizado = item.grupo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          if (grupoNormalizado.includes("citrico")) {
+            cUnidades += item.cantidad || 1;
+            cTotalUsd += isPedido ? (item.subtotalUsd || 0) : (item.precioUsd || 0);
+            cUtilidadUsd += item.utilidadUsd || 0;
+          }
+        };
+
+        ventasRaw.forEach(v => {
+          const d = new Date(v.fecha);
+          if (d >= limite90Dias) procesarItemCitrico(v, false);
+        });
+
+        pedidosRaw.filter(p => p.estatus === 'Cerrado').forEach(p => {
+          const d = new Date(p.fecha_pedido);
+          if (d >= limite90Dias && Array.isArray(p.items)) {
+            p.items.forEach(item => procesarItemCitrico(item, true));
+          }
+        });
+
+        setCitricosData({
+          unidades: cUnidades,
+          totalUsd: cTotalUsd,
+          utilidadUsd: cUtilidadUsd
+        });
 
         setMetricas({
           ventaTotalUsd: ventaSum,
@@ -289,6 +328,32 @@ const Estadisticas = () => {
             </div>
             <small style={{ color: '#15803d', fontSize: '0.75rem', opacity: 0.8, fontStyle: 'italic', marginTop: '2px' }}>
               * El total refleja el universo completo sin filtrar por 'Top'.
+            </small>
+          </div>
+        </div>
+
+        {/* Módulo de Auditoría Especial: Cítricos */}
+        <div className={styles.mainCard} style={{ marginTop: '15px', backgroundColor: '#fffbe1', padding: '15px', borderLeft: '4px solid #f59e0b' }}>
+          <h3 className={styles.chartTitle} style={{ color: '#b45309', margin: '0 0 10px', fontSize: '14px' }}>
+            🍋 AUDITORÍA: GRUPO CÍTRICOS (Últimos 90 Días)
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.95rem', color: '#92400e' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>📦  Unidades Vendidas:</span>
+              <span style={{ fontWeight: 'bold' }}>{citricosData.unidades} unds.</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>💵  Ventas Generadas (Bruto):</span>
+              <span style={{ fontWeight: 'bold' }}>${citricosData.totalUsd.toFixed(2)}</span>
+            </div>
+            {citricosData.utilidadUsd > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', paddingTop: '4px', borderTop: '1px solid #fde68a' }}>
+                <span style={{ fontWeight: 'bold' }}>📈  Utilidad Neta del Grupo:</span>
+                <span style={{ fontWeight: 'bold', color: '#15803d' }}>${citricosData.utilidadUsd.toFixed(2)}</span>
+              </div>
+            )}
+            <small style={{ color: '#b45309', fontSize: '0.75rem', opacity: 0.8, fontStyle: 'italic', marginTop: '4px', lineHeight: '1.4' }}>
+              * Este bloque audita absolutamente toda la base de datos (90 días estáticos) ignorando el filtro de Tiempo superior.
             </small>
           </div>
         </div>
