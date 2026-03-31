@@ -23,7 +23,8 @@ const CSS = `
     background: #ffffff;
     border-radius: 16px;
     width: 92%; max-width: 420px;
-    max-height: 92vh; overflow-y: auto;
+    max-height: 92vh;
+    display: flex; flex-direction: column;
     box-shadow: 0 24px 64px rgba(0,0,0,.28);
     animation: mgSlideUp .22s cubic-bezier(.34,1.56,.64,1);
     overflow: hidden;
@@ -35,6 +36,7 @@ const CSS = `
     background: linear-gradient(135deg, #1a7a4a 0%, #22a86b 100%);
     padding: 22px 24px 18px;
     position: relative;
+    flex-shrink: 0;
   }
   .mg-header-icon {
     width: 40px; height: 40px;
@@ -62,7 +64,11 @@ const CSS = `
   .mg-close-btn:hover { background: rgba(255,255,255,.3); }
 
   /* Body */
-  .mg-body { padding: 22px 24px 24px; }
+  .mg-body { 
+    padding: 22px 24px 24px; 
+    overflow-y: auto; 
+    flex-grow: 1;
+  }
 
   /* Campo */
   .mg-field { margin-bottom: 16px; }
