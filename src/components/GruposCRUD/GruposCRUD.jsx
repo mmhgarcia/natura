@@ -55,6 +55,39 @@ const GruposCRUD = () => {
     setModalOpen(true); // Abre el modal para nuevo registro [1, 9]
   };
 
+  const handleExportarTXT = () => {
+    if (grupos.length === 0) {
+      alert("No hay grupos para exportar.");
+      return;
+    }
+
+    let contenido = "REPORTE DE ESTRUCTURA DE PRECIOS POR GRUPO\n";
+    contenido += " Generado el: " + new Date().toLocaleString() + "\n";
+    contenido += "============================================================\n";
+    contenido += "GRUPO".padEnd(30) + "COSTO".padStart(10) + "MARGEN".padStart(10) + "PRECIO".padStart(10) + "\n";
+    contenido += "------------------------------------------------------------\n";
+
+    grupos.forEach(g => {
+      const nombre = (g.nombre || 'Sin Nombre').substring(0, 28).padEnd(30);
+      const costo = `$${Number(g.costo_$ || 0).toFixed(2)}`.padStart(10);
+      const margen = `${g.margen || 0}%`.padStart(10);
+      const precio = `$${Number(g.precio || 0).toFixed(2)}`.padStart(10);
+
+      contenido += `${nombre}${costo}${margen}${precio}\n`;
+    });
+    contenido += "============================================================\n";
+
+    const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Estructura_Precios_Grupos_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) return <div style={styles.loading}>Cargando grupos...</div>;
 
   return (
@@ -64,9 +97,14 @@ const GruposCRUD = () => {
 
       {error && <div style={styles.errorAlert}>{error}</div>}
 
-      <button onClick={handleNuevoGrupo} style={styles.nuevoButton}>
-        + Agregar Nuevo Grupo
-      </button>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+        <button onClick={handleNuevoGrupo} style={styles.nuevoButton}>
+          + Agregar Nuevo Grupo
+        </button>
+        <button onClick={handleExportarTXT} style={styles.exportarButton}>
+          📄 Exportar a TXT
+        </button>
+      </div>
 
       <div style={styles.lista}>
         {grupos.length === 0 ? (
@@ -123,7 +161,8 @@ const styles = {
   title: { marginBottom: '20px', color: '#1a7a4a', fontWeight: '700', textAlign: 'center', fontSize: '24px' },
   loading: { padding: '40px', textAlign: 'center', color: '#fff' },
   errorAlert: { backgroundColor: '#fee', color: '#c33', padding: '10px', borderRadius: '4px', marginBottom: '20px' },
-  nuevoButton: { marginBottom: '20px', padding: '10px 15px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '500' },
+  nuevoButton: { padding: '10px 15px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '500', flexShrink: 0 },
+  exportarButton: { padding: '10px 15px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '500', flexShrink: 0 },
   lista: { border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden', marginBottom: '20px' },
   listHeader: { display: 'flex', alignItems: 'center', padding: '10px 15px', backgroundColor: '#f0fdf4', borderBottom: '2px solid #bbf7d0', fontSize: '12px', fontWeight: '700', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' },
   vacio: { padding: '40px', textAlign: 'center', color: '#666' },
