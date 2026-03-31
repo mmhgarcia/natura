@@ -12,7 +12,8 @@ const CSS = `
     position: fixed; inset: 0;
     background: rgba(10, 14, 26, 0.72);
     backdrop-filter: blur(4px);
-    display: flex; align-items: center; justify-content: center;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 80px 15px 20px 15px; /* 80px deja espacio para el header de la app + 20px libres */
     z-index: 3000;
     animation: mgFadeIn .18s ease;
   }
@@ -22,8 +23,8 @@ const CSS = `
     font-family: 'Inter', sans-serif;
     background: #ffffff;
     border-radius: 16px;
-    width: 92%; max-width: 420px;
-    max-height: 92vh;
+    width: 100%; max-width: 420px;
+    max-height: calc(100vh - 100px);
     display: flex; flex-direction: column;
     box-shadow: 0 24px 64px rgba(0,0,0,.28);
     animation: mgSlideUp .22s cubic-bezier(.34,1.56,.64,1);
