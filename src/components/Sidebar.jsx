@@ -237,8 +237,15 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>📊</span> Estadísticas (BI)
                     </Link>
 
-                    <Link to="/sabores-mas-vendidos" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>🍦</span> Sabores más Vendidos
+                    <Link
+                        to="/sabores-mas-vendidos"
+                        onClick={onClose}
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>🍦</span>
+                        <span>Sabores más Vendidos</span>
                     </Link>
 
                     <hr style={styles.separator} />
