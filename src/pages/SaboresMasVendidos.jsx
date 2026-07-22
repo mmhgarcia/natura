@@ -11,6 +11,7 @@ const SaboresMasVendidos = () => {
   const [cargando, setCargando] = useState(true);
   const [ventasRaw, setVentasRaw] = useState([]);
   const [pedidosRaw, setPedidosRaw] = useState([]);
+  const [productosRaw, setProductosRaw] = useState([]);
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -18,12 +19,14 @@ const SaboresMasVendidos = () => {
       try {
         // Asegurar que la base de datos esté inicializada
         await db.init();
-        const [ventas, pedidos] = await Promise.all([
+        const [ventas, pedidos, productos] = await Promise.all([
           db.getAll('ventas'),
-          db.getAll('pedidos')
+          db.getAll('pedidos'),
+          db.getAll('productos')
         ]);
         setVentasRaw(Array.isArray(ventas) ? ventas : []);
         setPedidosRaw(Array.isArray(pedidos) ? pedidos : []);
+        setProductosRaw(Array.isArray(productos) ? productos : []);
       } catch (error) {
         console.error("Error al cargar ventas y pedidos de Dexie:", error);
       } finally {
@@ -68,6 +71,14 @@ const SaboresMasVendidos = () => {
     const { inicio, fin } = rangoPeriodo;
     const acumulado = {};
 
+    // Crear mapa de stock para búsqueda rápida
+    const stockMap = {};
+    productosRaw.forEach(p => {
+      if (p && p.nombre) {
+        stockMap[p.nombre.toUpperCase().trim()] = p.stock || 0;
+      }
+    });
+
     // 1. Filtrar y acumular ventas directas
     ventasRaw.forEach(venta => {
       if (!venta || !venta.fecha) return;
@@ -83,7 +94,8 @@ const SaboresMasVendidos = () => {
           acumulado[key] = {
             nombre: venta.nombre,
             cantidad: 0,
-            grupo: venta.grupo || 'Otros'
+            grupo: venta.grupo || 'Otros',
+            stockActual: stockMap[key] || 0
           };
         }
         acumulado[key].cantidad += cantidad;
@@ -126,7 +138,8 @@ const SaboresMasVendidos = () => {
               acumulado[key] = {
                 nombre: item.nombre,
                 cantidad: 0,
-                grupo: item.grupo || 'Otros'
+                grupo: item.grupo || 'Otros',
+                stockActual: stockMap[key] || 0
               };
             }
             acumulado[key].cantidad += cantidad;
@@ -139,7 +152,7 @@ const SaboresMasVendidos = () => {
     return Object.values(acumulado)
       .filter(item => item && item.cantidad > 0)
       .sort((a, b) => b.cantidad - a.cantidad);
-  }, [ventasRaw, pedidosRaw, rangoPeriodo, cargando]);
+  }, [ventasRaw, pedidosRaw, productosRaw, rangoPeriodo, cargando]);
 
   // Filtrar sabores según la búsqueda
   const saboresFiltrados = useMemo(() => {
@@ -283,7 +296,9 @@ const SaboresMasVendidos = () => {
                             {medalla || posicionReal}
                           </div>
                           <div>
-                            <div className={styles.itemName}>{item.nombre}</div>
+                            <div className={styles.itemName}>
+                              {item.nombre} <span style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 'normal' }}>(Stock: {item.stockActual})</span>
+                            </div>
                             <span className={styles.itemGroup}>{item.grupo}</span>
                           </div>
                         </div>
