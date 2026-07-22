@@ -14,6 +14,7 @@ import PedidosPage from './pages/Pedidos';
 // Asegúrate de tener esto:
 import DeliveryPage from './pages/DeliveryPage';
 import Estadisticas from "./pages/Estadisticas";
+import SaboresMasVendidos from "./pages/SaboresMasVendidos";
 import ResumenInventario from "./components/ResumenInventario";
 import RegistroGasto from "./components/RegistroGasto";
 import FreezerGrid from "./components/FreezerLayout/FreezerGrid";
@@ -33,6 +34,7 @@ function App() {
         <Route path="/adminproductos" element={<ProductosPage />} />
         <Route path="/delivery" element={<DeliveryPage />} />
         <Route path="/estadisticas" element={<Estadisticas />} />
+        <Route path="/sabores-mas-vendidos" element={<SaboresMasVendidos />} />
         <Route path="/resumeninventario" element={<ResumenInventario />} />
         <Route path="/registrogasto" element={<RegistroGasto />} />
         <Route path="/freezergrid" element={<FreezerGrid productosSeleccionados={[]} />} />

@@ -237,6 +237,10 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>📊</span> Estadísticas (BI)
                     </Link>
 
+                    <Link to="/sabores-mas-vendidos" onClick={onClose} style={styles.link}>
+                        <span style={styles.icon}>🍦</span> Sabores más Vendidos
+                    </Link>
+
                     <hr style={styles.separator} />
                     <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>CONFIGURACIÓN</div>
 
