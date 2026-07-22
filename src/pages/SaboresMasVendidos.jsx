@@ -16,12 +16,14 @@ const SaboresMasVendidos = () => {
     const cargarDatos = async () => {
       setCargando(true);
       try {
+        // Asegurar que la base de datos esté inicializada
+        await db.init();
         const [ventas, pedidos] = await Promise.all([
           db.getAll('ventas'),
           db.getAll('pedidos')
         ]);
-        setVentasRaw(ventas);
-        setPedidosRaw(pedidos);
+        setVentasRaw(Array.isArray(ventas) ? ventas : []);
+        setPedidosRaw(Array.isArray(pedidos) ? pedidos : []);
       } catch (error) {
         console.error("Error al cargar ventas y pedidos de Dexie:", error);
       } finally {
@@ -34,12 +36,17 @@ const SaboresMasVendidos = () => {
   // Calcular etiquetas dinámicas de los meses
   const labelsMeses = useMemo(() => {
     const getMonthLabel = (monthsAgo) => {
-      const date = new Date();
-      date.setDate(1); // Prevenir desbordamiento de fin de mes
-      date.setMonth(date.getMonth() - monthsAgo);
-      const name = date.toLocaleDateString('es-ES', { month: 'short' });
-      const year = date.getFullYear();
-      return `${name.charAt(0).toUpperCase() + name.slice(1)} ${year}`;
+      try {
+        const date = new Date();
+        date.setDate(1); // Prevenir desbordamiento de fin de mes
+        date.setMonth(date.getMonth() - monthsAgo);
+        const name = date.toLocaleDateString('es-ES', { month: 'short' });
+        const year = date.getFullYear();
+        if (!name) return `${date.getMonth() + 1}/${year}`;
+        return `${name.charAt(0).toUpperCase() + name.slice(1)} ${year}`;
+      } catch (e) {
+        return `Mes -${monthsAgo}`;
+      }
     };
     return [getMonthLabel(0), getMonthLabel(1), getMonthLabel(2)];
   }, []);
@@ -63,8 +70,10 @@ const SaboresMasVendidos = () => {
 
     // 1. Filtrar y acumular ventas directas
     ventasRaw.forEach(venta => {
-      if (!venta.fecha) return;
+      if (!venta || !venta.fecha) return;
       const fechaVenta = new Date(venta.fecha);
+      if (isNaN(fechaVenta.getTime())) return; // Evitar fechas inválidas
+
       if (fechaVenta >= inicio && fechaVenta <= fin) {
         const key = (venta.nombre || '').toUpperCase().trim();
         if (!key) return;
@@ -83,21 +92,32 @@ const SaboresMasVendidos = () => {
 
     // 2. Filtrar y acumular pedidos cerrados
     pedidosRaw.forEach(pedido => {
-      if (pedido.estatus !== 'Cerrado') return;
+      if (!pedido || pedido.estatus !== 'Cerrado') return;
       const dateStr = pedido.fecha_pedido || pedido.createdAt || pedido.fecha;
       if (!dateStr) return;
 
       let fechaPedido;
-      if (dateStr.includes('T')) {
-        fechaPedido = new Date(dateStr);
+      const strVal = String(dateStr);
+      if (strVal.includes('T')) {
+        fechaPedido = new Date(strVal);
+      } else if (strVal.includes('-')) {
+        const parts = strVal.split('-');
+        if (parts.length === 3) {
+          const [year, month, day] = parts.map(Number);
+          fechaPedido = new Date(year, month - 1, day, 12, 0, 0); // seguro de zona horaria
+        } else {
+          fechaPedido = new Date(strVal);
+        }
       } else {
-        const [year, month, day] = dateStr.split('-').map(Number);
-        fechaPedido = new Date(year, month - 1, day, 12, 0, 0); // seguro de zona horaria
+        fechaPedido = new Date(isNaN(Number(dateStr)) ? dateStr : Number(dateStr));
       }
+
+      if (isNaN(fechaPedido.getTime())) return; // Evitar fechas inválidas
 
       if (fechaPedido >= inicio && fechaPedido <= fin) {
         if (Array.isArray(pedido.items)) {
           pedido.items.forEach(item => {
+            if (!item) return;
             const key = (item.nombre || '').toUpperCase().trim();
             if (!key) return;
 
@@ -117,7 +137,7 @@ const SaboresMasVendidos = () => {
 
     // Convertir a array, filtrar elementos con cantidad > 0, y ordenar descendentemente
     return Object.values(acumulado)
-      .filter(item => item.cantidad > 0)
+      .filter(item => item && item.cantidad > 0)
       .sort((a, b) => b.cantidad - a.cantidad);
   }, [ventasRaw, pedidosRaw, rangoPeriodo, cargando]);
 
@@ -126,8 +146,8 @@ const SaboresMasVendidos = () => {
     if (!busqueda.trim()) return saboresAgrupados;
     const cleanSearch = busqueda.toLowerCase().trim();
     return saboresAgrupados.filter(sabor => 
-      sabor.nombre.toLowerCase().includes(cleanSearch) || 
-      sabor.grupo.toLowerCase().includes(cleanSearch)
+      (sabor.nombre || '').toLowerCase().includes(cleanSearch) || 
+      (sabor.grupo || '').toLowerCase().includes(cleanSearch)
     );
   }, [saboresAgrupados, busqueda]);
 
@@ -138,10 +158,11 @@ const SaboresMasVendidos = () => {
     let maxQty = 0;
 
     saboresAgrupados.forEach(s => {
+      if (!s) return;
       totalUnidades += s.cantidad;
       if (s.cantidad > maxQty) {
         maxQty = s.cantidad;
-        saborEstrella = s.nombre;
+        saborEstrella = s.nombre || 'Ninguno';
       }
     });
 
@@ -165,7 +186,7 @@ const SaboresMasVendidos = () => {
           <span>←</span> Atrás
         </button>
         <h1 className={styles.title}>🍦 Ránking de Sabores</h1>
-        <div style={{ width: '60px' }} /> {/* Compensación visual */}
+        <div style={{ width: '60px' }} />
       </div>
 
       <div className={styles.mainCard}>
@@ -232,11 +253,10 @@ const SaboresMasVendidos = () => {
             ) : (
               <div className={styles.list}>
                 {saboresFiltrados.map((item, index) => {
-                  // Calcular la posición real en el ranking completo (no en el filtrado)
-                  const posicionReal = saboresAgrupados.findIndex(s => s.nombre === item.nombre) + 1;
+                  if (!item) return null;
+                  const posicionReal = saboresAgrupados.findIndex(s => s && s.nombre === item.nombre) + 1;
                   const pct = (item.cantidad / maxCantidad) * 100;
                   
-                  // Asignar clase de barra y medalla según ranking
                   let rankClass = '';
                   let progressClass = '';
                   let medalla = '';
