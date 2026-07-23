@@ -163,15 +163,14 @@ function Home() {
 
     const esConsulta = (texto) => {
         const norm = normalizeText(texto);
-        return norm.startsWith('hay ') || norm.includes('?');
+        return norm.startsWith('quedan ') || norm.includes('?');
     };
 
     const procesarConsulta = (texto) => {
-        // Extraer fragmentos entre 'hay', 'y', ',' y '?'
         const norm = normalizeText(texto).replace(/[?¿]/g, '');
-        // Quitar la palabra 'hay' inicial y luego separar por ' y ' o ','
-        const sinHay = norm.replace(/^hay\s+/, '');
-        const terminos = sinHay.split(/\s+y\s+|,\s*/).map(t => t.trim()).filter(Boolean);
+        // Quitar la palabra 'quedan' inicial y luego separar por ' y ' o ','
+        const sinQuedan = norm.replace(/^quedan\s+/, '');
+        const terminos = sinQuedan.split(/\s+y\s+|,\s*/).map(t => t.trim()).filter(Boolean);
 
         const resultados = terminos.map(termino => {
             const found = productos.find(p => {
@@ -305,7 +304,7 @@ function Home() {
                     <input 
                         type="text" 
                         className={styles.voiceInput} 
-                        placeholder="Ej: 3 vainilla, 2 choco oreo / hay dalmata?" 
+                        placeholder="Ej: 3 vainilla / quedan dalmatas?" 
                         value={voiceInput}
                         onChange={(e) => setVoiceInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
