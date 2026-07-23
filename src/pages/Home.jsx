@@ -48,6 +48,7 @@ function Home() {
     const [isFreezerOpen, setIsFreezerOpen] = useState(false);
     const [voiceInput, setVoiceInput] = useState('');
     const [isListening, setIsListening] = useState(false);
+    const [toast, setToast] = useState(null);
     const navigate = useNavigate();
 
     const enriquecerProductos = (listaProductos, listaGrupos) => {
@@ -155,8 +156,47 @@ function Home() {
 
     const normalizeText = (text) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+    const showToast = (message, duration = 2000) => {
+        setToast(message);
+        setTimeout(() => setToast(null), duration);
+    };
+
+    const esConsulta = (texto) => {
+        const norm = normalizeText(texto);
+        return norm.startsWith('hay ') || norm.includes('?');
+    };
+
+    const procesarConsulta = (texto) => {
+        // Extraer fragmentos entre 'hay', 'y', ',' y '?'
+        const norm = normalizeText(texto).replace(/[?¿]/g, '');
+        // Quitar la palabra 'hay' inicial y luego separar por ' y ' o ','
+        const sinHay = norm.replace(/^hay\s+/, '');
+        const terminos = sinHay.split(/\s+y\s+|,\s*/).map(t => t.trim()).filter(Boolean);
+
+        const resultados = terminos.map(termino => {
+            const found = productos.find(p => {
+                const pNorm = normalizeText(p.nombre);
+                return pNorm.includes(termino) || termino.includes(pNorm);
+            });
+            if (found) {
+                const emoji = found.stock === 0 ? '❌' : found.stock <= 5 ? '⚠️' : '✅';
+                return `${emoji} ${found.nombre}: ${found.stock} uds.`;
+            }
+            return `❓ "${termino}": no encontrado`;
+        });
+
+        showToast(resultados.join('\n'), 3000);
+        setVoiceInput('');
+    };
+
     const procesarComandoVoz = (texto) => {
         if (!texto || texto === 'Escuchando...') return;
+
+        // Si es una consulta de stock, responder con toast
+        if (esConsulta(texto)) {
+            procesarConsulta(texto);
+            return;
+        }
         
         const normalized = normalizeText(texto);
         // Expresión regular para capturar (numero|texto_numero) seguido de (texto_producto)
@@ -265,12 +305,19 @@ function Home() {
                     <input 
                         type="text" 
                         className={styles.voiceInput} 
-                        placeholder="Ej: 3 vainilla, 2 choco oreo..." 
+                        placeholder="Ej: 3 vainilla, 2 choco oreo / hay dalmata?" 
                         value={voiceInput}
                         onChange={(e) => setVoiceInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
                     />
                 </div>
+                {toast && (
+                    <div className={styles.toastBox}>
+                        {toast.split('\n').map((line, i) => (
+                            <div key={i}>{line}</div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className={styles.filterBar}>

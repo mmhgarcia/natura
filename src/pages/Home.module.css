@@ -358,3 +358,20 @@
     color: #333;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
+
+.toastBox {
+    background-color: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-size: 15px;
+    line-height: 1.8;
+    animation: fadeInOut 0.3s ease;
+    text-align: left;
+    margin-top: 4px;
+}
+
+@keyframes fadeInOut {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
