@@ -269,9 +269,6 @@ function Home() {
                         onChange={(e) => setVoiceInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
                     />
-                    <button className={styles.addBtn} onClick={handleManualAdd}>
-                        +
-                    </button>
                 </div>
             </div>
 
