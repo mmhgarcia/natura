@@ -183,11 +183,15 @@ function Home() {
             });
             
             if (foundProduct) {
-                const limit = Math.min(cantidad, foundProduct.stock);
-                for (let i = 0; i < limit; i++) {
-                    nuevosItems.push(foundProduct);
+                if (foundProduct.stock === 0) {
+                    alert(`⚠️ "${foundProduct.nombre}" no tiene stock disponible.`);
+                } else {
+                    const limit = Math.min(cantidad, foundProduct.stock);
+                    for (let i = 0; i < limit; i++) {
+                        nuevosItems.push(foundProduct);
+                    }
+                    if (limit > 0) itemsEncontrados++;
                 }
-                if (limit > 0) itemsEncontrados++;
             }
         }
         
