@@ -46,6 +46,8 @@ function Home() {
     const [cargando, setCargando] = useState(true);
     const [filtroGrupo, setFiltroGrupo] = useState('todos');
     const [isFreezerOpen, setIsFreezerOpen] = useState(false);
+    const [voiceInput, setVoiceInput] = useState('');
+    const [isListening, setIsListening] = useState(false);
     const navigate = useNavigate();
 
     const enriquecerProductos = (listaProductos, listaGrupos) => {
@@ -144,6 +146,102 @@ function Home() {
         setListaDeSeleccionados(prev => prev.filter((_, index) => index !== indexParaEliminar));
     };
 
+    const numberMap = {
+        'un': 1, 'uno': 1, 'una': 1,
+        'dos': 2, 'tres': 3, 'cuatro': 4,
+        'cinco': 5, 'seis': 6, 'siete': 7,
+        'ocho': 8, 'nueve': 9, 'diez': 10
+    };
+
+    const normalizeText = (text) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    const procesarComandoVoz = (texto) => {
+        if (!texto || texto === 'Escuchando...') return;
+        
+        const normalized = normalizeText(texto);
+        // Expresión regular para capturar (numero|texto_numero) seguido de (texto_producto)
+        // Funciona con "2 vainilla y 1 choco oreo", "tres dalmata"
+        const regex = /(?:^|\s)(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|\d+)\s+([a-z\s]+?)(?=\s+(?:un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|\d+)|\s*$|\sy\s|,)/g;
+        
+        let match;
+        const nuevosItems = [];
+        let itemsEncontrados = 0;
+        
+        while ((match = regex.exec(normalized)) !== null) {
+            let cantidadStr = match[1];
+            let productoStr = match[2].trim().replace(/^(y\s+)/, '');
+            
+            let cantidad = parseInt(cantidadStr);
+            if (isNaN(cantidad)) {
+                cantidad = numberMap[cantidadStr] || 1;
+            }
+            
+            // Busca coincidencia en productos
+            const foundProduct = productos.find(p => {
+                const pNorm = normalizeText(p.nombre);
+                return pNorm.includes(productoStr) || productoStr.includes(pNorm);
+            });
+            
+            if (foundProduct) {
+                const limit = Math.min(cantidad, foundProduct.stock);
+                for (let i = 0; i < limit; i++) {
+                    nuevosItems.push(foundProduct);
+                }
+                if (limit > 0) itemsEncontrados++;
+            }
+        }
+        
+        if (nuevosItems.length > 0) {
+            setListaDeSeleccionados(prev => [...prev, ...nuevosItems]);
+            alert(`✅ Se agregaron ${nuevosItems.length} ítems de tu comando.`);
+            setVoiceInput(''); 
+        } else {
+            alert(`No pudimos encontrar productos con stock coincidente en tu comando: "${texto}"`);
+        }
+    };
+
+    const handleVoiceInput = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Tu navegador no soporta reconocimiento de voz nativo.");
+            return;
+        }
+
+        if (isListening) return;
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'es-VE';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+            setIsListening(true);
+            setVoiceInput('Escuchando...');
+        };
+
+        recognition.onresult = (event) => {
+            const text = event.results[0][0].transcript;
+            setVoiceInput(text);
+            procesarComandoVoz(text);
+        };
+
+        recognition.onerror = (event) => {
+            console.error(event.error);
+            if (voiceInput === 'Escuchando...') setVoiceInput('');
+            alert('Error al escuchar. Inténtalo de nuevo.');
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+        };
+
+        recognition.start();
+    };
+
+    const handleManualAdd = () => {
+        if (voiceInput) procesarComandoVoz(voiceInput);
+    };
+
     const { usd, bs } = listaDeSeleccionados.reduce((acc, item) => ({
         usd: acc.usd + (item.precio || 0),
         bs: acc.bs + ((item.precio || 0) * tasa)
@@ -153,6 +251,30 @@ function Home() {
 
     return (
         <div className={styles.container}>
+            {/* Voice Bar */}
+            <div className={styles.voiceBar}>
+                <div className={styles.voiceInputRow}>
+                    <button 
+                        className={`${styles.micBtn} ${isListening ? styles.micBtnActive : ''}`} 
+                        onClick={handleVoiceInput}
+                        title="Hablar"
+                    >
+                        🎤
+                    </button>
+                    <input 
+                        type="text" 
+                        className={styles.voiceInput} 
+                        placeholder="Ej: 3 vainilla, 2 choco oreo..." 
+                        value={voiceInput}
+                        onChange={(e) => setVoiceInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
+                    />
+                    <button className={styles.addBtn} onClick={handleManualAdd}>
+                        +
+                    </button>
+                </div>
+            </div>
+
             <div className={styles.filterBar}>
                 <label htmlFor="filtro-home">Filtrar por Grupo:</label>
                 <select
