@@ -193,10 +193,7 @@ function Home() {
         
         if (nuevosItems.length > 0) {
             setListaDeSeleccionados(prev => [...prev, ...nuevosItems]);
-            alert(`✅ Se agregaron ${nuevosItems.length} ítems de tu comando.`);
             setVoiceInput(''); 
-        } else {
-            alert(`No pudimos encontrar productos con stock coincidente en tu comando: "${texto}"`);
         }
     };
 
