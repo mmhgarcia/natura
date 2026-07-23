@@ -163,13 +163,13 @@ function Home() {
 
     const esConsulta = (texto) => {
         const norm = normalizeText(texto);
-        return norm.startsWith('quedan ') || norm.includes('?');
+        return norm.startsWith('quedan ') || norm.startsWith('queda ') || norm.includes('?');
     };
 
     const procesarConsulta = (texto) => {
         const norm = normalizeText(texto).replace(/[?¿]/g, '');
-        // Quitar la palabra 'quedan' inicial y luego separar por ' y ' o ','
-        const sinQuedan = norm.replace(/^quedan\s+/, '');
+        // Quitar 'quedan' o 'queda' inicial y luego separar por ' y ' o ','
+        const sinQuedan = norm.replace(/^quedan?\s+/, '');
         const terminos = sinQuedan.split(/\s+y\s+|,\s*/).map(t => t.trim()).filter(Boolean);
 
         const resultados = terminos.map(termino => {
