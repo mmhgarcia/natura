@@ -105,15 +105,13 @@
 .productTitle {
     font-size: 0.95rem;
     font-weight: bold;
-    margin: 0 0 5px 0;
+    margin: 0 0 2px 0;
     color: #2c3e50;
     text-align: center;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    height: 2.4em;
-    /* Ensure consistent height for 2 lines */
     line-height: 1.2em;
 }
 
@@ -122,9 +120,6 @@
     font-weight: bold;
     font-size: 0.8rem;
     text-align: center;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
 }
 
 /* Panel de selección (columna derecha) */

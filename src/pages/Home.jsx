@@ -359,8 +359,7 @@ function Home() {
                                 <h3 className={styles.productTitle}>{p.nombre}</h3>
 
                                 <div className={styles.priceText}>
-                                    <div>$: {precio.toFixed(2)}</div>
-                                    <div>Bs.: {(precio * tasa).toFixed(2)}</div>
+                                    $: {precio.toFixed(2)} • Bs.: {(precio * tasa).toFixed(2)}
                                 </div>
                             </div>
                         );
