@@ -381,7 +381,7 @@ function Home() {
                     {listaDeSeleccionados.map((item, index) => (
                         <div key={`${item.id}-${index}`} className={styles.selectedItem}>
                             <span>#{item.id} - {item.nombre}</span>
-                            <button className={styles.eliminarBtn} onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}>ELIM</button>
+                            <button className={styles.eliminarBtn} onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}>✕</button>
                         </div>
                     ))}
                 </div>
