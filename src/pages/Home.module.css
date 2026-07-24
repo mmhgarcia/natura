@@ -37,10 +37,10 @@
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: minmax(0, 160px);
+    justify-content: start;
     gap: 12px;
     width: 100%;
-    justify-content: start;
 }
 
 .card {
