@@ -18,21 +18,7 @@
 }
 
 .cartColumn {
-    position: sticky;
-    top: 90px;
-    width: 320px;
-    flex-shrink: 0;
-    background-color: #fff;
-    border: 1px solid #e5e7eb;
-    border-top: 3px solid #00BFFF;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-    box-sizing: border-box;
-    max-height: calc(100dvh - 105px);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: none;
 }
 
 .filterBar {
