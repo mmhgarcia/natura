@@ -336,9 +336,6 @@ function Home() {
                             <option key={g.id} value={g.nombre}>{g.nombre}</option>
                         ))}
                     </select>
-                    <div className={styles.cartInfoLine}>
-                        Carrito: {listaDeSeleccionados.length} • Tasa $: {tasa.toFixed(2)}
-                    </div>
                 </div>
 
                 <div className={styles.grid}>
@@ -372,6 +369,11 @@ function Home() {
 
             {/* Columna derecha: carrito */}
             <div className={styles.cartColumn}>
+                <div className={styles.selectedHeader} onClick={() => setIsFreezerOpen(true)}>
+                    <span>🛒 Items: {listaDeSeleccionados.length}</span>
+                    <span>💰 Tasa: {tasa.toFixed(2)}</span>
+                </div>
+
                 <div className={styles.selectedList}>
                     {listaDeSeleccionados.map((item, index) => (
                         <div key={`${item.id}-${index}`} className={styles.selectedItem}>
