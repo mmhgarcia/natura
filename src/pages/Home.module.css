@@ -231,8 +231,9 @@
 }
 
 .grabarBtn {
-    background-color: #28a745;
-    color: white;
+    background-color: #00c853;
+    color: #fff;
+    font-weight: 900;
 }
 
 .ubicarBtn {
