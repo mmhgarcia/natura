@@ -325,6 +325,10 @@ function Home() {
                         <span>🛒 Items: {listaDeSeleccionados.length}</span>
                         <span style={{ marginLeft: 'auto' }}>💰 Tasa $: {tasa.toFixed(2)}</span>
                     </div>
+                    <div className={styles.cartInfoLine}>
+                        <span>Total $: {usd.toFixed(2)}</span>
+                        <span style={{ marginLeft: 'auto' }}>Total Bs: {bs.toFixed(2)}</span>
+                    </div>
                 </div>
 
                 <div className={styles.filterBar}>
