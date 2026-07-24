@@ -321,10 +321,9 @@ function Home() {
                             ))}
                         </div>
                     )}
-                </div>
-
-                <div className={styles.cartInfoLine}>
-                    <span>🛒 Items: {listaDeSeleccionados.length}</span>
+                    <div className={styles.cartInfoLine}>
+                        <span>🛒 Items: {listaDeSeleccionados.length}</span>
+                    </div>
                 </div>
 
                 <div className={styles.filterBar}>
