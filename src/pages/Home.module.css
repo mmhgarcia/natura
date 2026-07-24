@@ -144,6 +144,13 @@
     gap: 10px;
 }
 
+.cartInfoLine {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #2c3882;
+    padding: 5px 0;
+}
+
 .selectedHeader {
     display: flex;
     justify-content: space-between;
