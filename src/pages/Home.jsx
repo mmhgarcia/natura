@@ -323,6 +323,7 @@ function Home() {
                     )}
                     <div className={styles.cartInfoLine}>
                         <span>🛒 Items: {listaDeSeleccionados.length}</span>
+                        <span style={{ marginLeft: 'auto' }}>💰 Tasa $: {tasa.toFixed(2)}</span>
                     </div>
                 </div>
 
