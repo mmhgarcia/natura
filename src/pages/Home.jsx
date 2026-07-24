@@ -387,8 +387,8 @@ function Home() {
                 </div>
 
                 <div className={styles.actionButtons}>
-                    <button className={styles.vaciarBtn} onClick={handleVaciarLista}>Vaciar</button>
-                    <button className={styles.grabarBtn} onClick={handleGrabarClick} disabled={listaDeSeleccionados.length === 0}>Grabar</button>
+                    <button className={styles.vaciarBtn} onClick={handleVaciarLista}>✕</button>
+                    <button className={styles.grabarBtn} onClick={handleGrabarClick} disabled={listaDeSeleccionados.length === 0}>✓</button>
                     <button className={styles.ubicarBtn} onClick={() => setIsFreezerOpen(true)}>Ubicar</button>
                 </div>
             </div>
