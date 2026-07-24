@@ -386,10 +386,6 @@ function Home() {
                     ))}
                 </div>
 
-                <div className={styles.totalRow}>
-                    Total: ${usd.toFixed(2)} | Bs. {bs.toFixed(2)}
-                </div>
-
                 <div className={styles.actionButtons}>
                     <button className={styles.vaciarBtn} onClick={handleVaciarLista}>Vaciar</button>
                     <button className={styles.grabarBtn} onClick={handleGrabarClick} disabled={listaDeSeleccionados.length === 0}>Grabar</button>
