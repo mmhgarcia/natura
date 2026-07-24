@@ -323,6 +323,10 @@ function Home() {
                     )}
                 </div>
 
+                <div className={styles.cartInfoLine}>
+                    <span>🛒 Items: {listaDeSeleccionados.length}</span>
+                </div>
+
                 <div className={styles.filterBar}>
                     <label htmlFor="filtro-home">Filtrar por Grupo:</label>
                     <select
@@ -369,11 +373,6 @@ function Home() {
 
             {/* Columna derecha: carrito */}
             <div className={styles.cartColumn}>
-                <div className={styles.selectedHeader} onClick={() => setIsFreezerOpen(true)}>
-                    <span>🛒 Items: {listaDeSeleccionados.length}</span>
-                    <span>💰 Tasa: {tasa.toFixed(2)}</span>
-                </div>
-
                 <div className={styles.selectedList}>
                     {listaDeSeleccionados.map((item, index) => (
                         <div key={`${item.id}-${index}`} className={styles.selectedItem}>
