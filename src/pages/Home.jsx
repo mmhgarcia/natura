@@ -85,11 +85,13 @@ function Home() {
         cargarTodo();
     }, []);
 
-    const productosFiltrados = productos.filter(p => {
-        const coincideGrupo = filtroGrupo === 'todos' || p.grupo === filtroGrupo;
-        const esVisible = p.visible !== false;
-        return coincideGrupo && esVisible;
-    });
+    const productosFiltrados = productos
+        .filter(p => {
+            const coincideGrupo = filtroGrupo === 'todos' || p.grupo === filtroGrupo;
+            const esVisible = p.visible !== false;
+            return coincideGrupo && esVisible;
+        })
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
     const handleVaciarLista = () => {
         if (listaDeSeleccionados.length === 0) return;
