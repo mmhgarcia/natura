@@ -293,80 +293,83 @@ function Home() {
 
     return (
         <div className={styles.container}>
-            {/* Voice Bar */}
-            <div className={styles.voiceBar}>
-                <div className={styles.voiceInputRow}>
-                    <button 
-                        className={`${styles.micBtn} ${isListening ? styles.micBtnActive : ''}`} 
-                        onClick={handleVoiceInput}
-                        title="Hablar"
-                    >
-                        🎤
-                    </button>
-                    <input 
-                        type="text" 
-                        className={styles.voiceInput} 
-                        placeholder="Ej: 3 vainilla / quedan dalmatas?" 
-                        value={voiceInput}
-                        onChange={(e) => setVoiceInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
-                    />
-                </div>
-                {toast && (
-                    <div className={styles.toastBox}>
-                        {toast.split('\n').map((line, i) => (
-                            <div key={i}>{line}</div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            <div className={styles.filterBar}>
-                <label htmlFor="filtro-home">Filtrar por Grupo:</label>
-                <select
-                    id="filtro-home"
-                    value={filtroGrupo}
-                    onChange={(e) => setFiltroGrupo(e.target.value)}
-                    className={styles.select}
-                >
-                    <option value="todos">Todos los helados</option>
-                    {grupos.map(g => (
-                        <option key={g.id} value={g.nombre}>{g.nombre}</option>
-                    ))}
-                </select>
-            </div>
-
-            <div className={styles.grid}>
-                {productosFiltrados.map(p => {
-                    const precio = p.precio || 0;
-                    const esAgotado = p.stock === 0;
-                    const badgeColor = esAgotado ? '#ff4d4d' : (p.stock <= 5 ? '#ffa500' : '#28a745');
-
-                    return (
-                        <div
-                            key={p.id}
-                            className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
-                            onClick={() => !esAgotado && seleccionarProducto(p)}
+            {/* Columna izquierda: productos */}
+            <div className={styles.mainColumn}>
+                {/* Voice Bar */}
+                <div className={styles.voiceBar}>
+                    <div className={styles.voiceInputRow}>
+                        <button
+                            className={`${styles.micBtn} ${isListening ? styles.micBtnActive : ''}`}
+                            onClick={handleVoiceInput}
+                            title="Hablar"
                         >
-                            <div className={styles.stockBadge} style={{ backgroundColor: badgeColor }}>
-                                {p.stock}
-                            </div>
-
-                            <ProductImage product={p} className={styles.productImage} />
-
-                            <h3 className={styles.productTitle}>{p.nombre}</h3>
-
-                            {/* Cambio solicitado: Se añade el ID a la izquierda del precio [2] */}
-                            <div className={styles.priceText}>
-                                <div>ID: {p.id} • $: {precio.toFixed(2)}</div>
-                                <div>Bs.: {(precio * tasa).toFixed(2)} • Stk: {p.stock}</div>
-                            </div>
+                            🎤
+                        </button>
+                        <input
+                            type="text"
+                            className={styles.voiceInput}
+                            placeholder="Ej: 3 vainilla / quedan dalmatas?"
+                            value={voiceInput}
+                            onChange={(e) => setVoiceInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
+                        />
+                    </div>
+                    {toast && (
+                        <div className={styles.toastBox}>
+                            {toast.split('\n').map((line, i) => (
+                                <div key={i}>{line}</div>
+                            ))}
                         </div>
-                    );
-                })}
+                    )}
+                </div>
+
+                <div className={styles.filterBar}>
+                    <label htmlFor="filtro-home">Filtrar por Grupo:</label>
+                    <select
+                        id="filtro-home"
+                        value={filtroGrupo}
+                        onChange={(e) => setFiltroGrupo(e.target.value)}
+                        className={styles.select}
+                    >
+                        <option value="todos">Todos los helados</option>
+                        {grupos.map(g => (
+                            <option key={g.id} value={g.nombre}>{g.nombre}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className={styles.grid}>
+                    {productosFiltrados.map(p => {
+                        const precio = p.precio || 0;
+                        const esAgotado = p.stock === 0;
+                        const badgeColor = esAgotado ? '#ff4d4d' : (p.stock <= 5 ? '#ffa500' : '#28a745');
+
+                        return (
+                            <div
+                                key={p.id}
+                                className={`${styles.card} ${esAgotado ? styles.cardDisabled : ''}`}
+                                onClick={() => !esAgotado && seleccionarProducto(p)}
+                            >
+                                <div className={styles.stockBadge} style={{ backgroundColor: badgeColor }}>
+                                    {p.stock}
+                                </div>
+
+                                <ProductImage product={p} className={styles.productImage} />
+
+                                <h3 className={styles.productTitle}>{p.nombre}</h3>
+
+                                <div className={styles.priceText}>
+                                    <div>ID: {p.id} • $: {precio.toFixed(2)}</div>
+                                    <div>Bs.: {(precio * tasa).toFixed(2)} • Stk: {p.stock}</div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
-            <div className={styles.selectedContainer}>
+            {/* Columna derecha: carrito */}
+            <div className={styles.cartColumn}>
                 <div className={styles.selectedHeader} onClick={() => setIsFreezerOpen(true)}>
                     <span>🛒 Items: {listaDeSeleccionados.length}</span>
                     <span>💰 Tasa: {tasa.toFixed(2)}</span>
