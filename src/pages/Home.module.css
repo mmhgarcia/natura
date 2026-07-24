@@ -20,8 +20,8 @@
 .cartColumn {
     position: sticky;
     top: 90px;
-    width: 280px;
-    min-width: 220px;
+    width: 168px;
+    min-width: 168px;
     flex-shrink: 1;
     background-color: #fff;
     border: 1px solid #e5e7eb;
