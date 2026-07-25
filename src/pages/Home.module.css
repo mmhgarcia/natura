@@ -633,22 +633,22 @@
 
 /* ============================================
    RESPONSIVE: Layout móvil (< 768px)
-   En pantallas pequeñas: una sola columna,
-   productos arriba, carrito abajo.
+   En pantallas pequeñas: dos columnas horizontales,
+   productos a la izquierda, carrito a la derecha.
    ============================================ */
 @media (max-width: 768px) {
     .container {
         /* Altura auto en móvil para permitir scroll de página */
         height: auto;
         min-height: 100dvh;
-        flex-direction: column;
+        flex-direction: row;
         overflow: visible;
         padding-top: 115px;
     }
 
     .mainColumn {
-        /* Ancho completo en móvil */
-        width: 100%;
+        /* Columna izquierda: 40% del ancho */
+        width: 40%;
         min-width: 0;
         /* Altura auto, scroll de página normal */
         height: auto;
@@ -656,16 +656,13 @@
     }
 
     .cartColumn {
-        /* Ya no fixed, se ubica debajo de los productos */
-        position: relative;
-        top: auto;
-        right: auto;
-        bottom: auto;
-        width: 100%;
-        max-width: 100%;
-        /* Altura fija para mantener scroll interno */
-        height: 300px;
-        margin-top: 15px;
+        /* Columna derecha: 60% del ancho, fixed */
+        position: fixed;
+        top: 200px;
+        right: 10px;
+        bottom: 15px;
+        width: calc(60% - 10px);
+        margin-top: 0;
     }
 
     .grid {
