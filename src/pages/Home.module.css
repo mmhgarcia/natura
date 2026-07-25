@@ -18,8 +18,8 @@
 .mainColumn {
     flex: 1;
     min-width: 0;
-    /* Reserva espacio para el carrito fijo a la derecha (240px + 15px gap) */
-    margin-right: 255px;
+    /* Reserva espacio para el carrito fijo a la derecha (210px + 15px gap) */
+    margin-right: 225px;
     /* Altura definida por el container (height: 100dvh - paddings) =>
        scroll interno independiente, igual que el carrito */
     overflow-y: auto;
@@ -31,7 +31,7 @@
     top: 200px;
     right: 15px;
     bottom: 15px;
-    width: 240px;
+    width: 210px;
     flex-shrink: 0;
     background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
     border: 1px solid #e5e7eb;

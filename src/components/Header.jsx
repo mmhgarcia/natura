@@ -37,7 +37,7 @@ export default function Header() {
 
 const styles = {
     header: {
-        padding: '0.5rem 1rem',
+        padding: '0.5rem 0.25rem 0.5rem 0.25rem',
         backgroundColor: '#f8f9fa',
         borderBottom: '1px solid #dee2e6',
         position: 'sticky',
@@ -55,7 +55,8 @@ const styles = {
         border: 'none',
         color: '#007bff',
         cursor: 'pointer',
-        marginLeft: '0px'
+        marginLeft: '0px',
+        paddingLeft: '0px'
     },
     brand: {
         fontSize: '1.8rem',
