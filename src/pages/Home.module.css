@@ -1,6 +1,8 @@
 .container {
     padding: 15px;
-    padding-top: 185px;
+    /* Header (~85px) + este padding = top del carrito (200px) =>
+       200 - 85 = 115. Asi ambas columnas empiezan a la misma altura */
+    padding-top: 115px;
     padding-bottom: 15px;
     background-color: #fafafa;
     height: 100dvh;
@@ -26,7 +28,7 @@
 
 .cartColumn {
     position: fixed;
-    top: 185px;
+    top: 200px;
     right: 15px;
     bottom: 15px;
     width: 240px;
@@ -139,8 +141,9 @@
     flex-direction: column;
     gap: 8px;
     margin-bottom: 20px;
-    /* Compensa el border-top: 4px del carrito para alinear con su header */
-    padding: 4px 5px 0;
+    /* padding-top calibrado para alinear el select con el cartHeader
+       (cartColumn top:200 + border-top:4px = cartHeader y=204) */
+    padding: 3px 5px 0;
     background-color: #fafafa;
     color: #2c3e50;
     font-weight: bold;
@@ -149,6 +152,7 @@
 .select {
     /* Mismo padding vertical que .cartHeader (14px) para alinear alturas */
     padding: 14px 12px;
+    margin: 0;
     border-radius: 8px;
     border: none;
     font-size: 1rem;
