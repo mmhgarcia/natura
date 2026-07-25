@@ -630,3 +630,46 @@
     from { opacity: 0; transform: translateY(-4px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ============================================
+   RESPONSIVE: Layout móvil (< 768px)
+   En pantallas pequeñas: una sola columna,
+   productos arriba, carrito abajo.
+   ============================================ */
+@media (max-width: 768px) {
+    .container {
+        /* Altura auto en móvil para permitir scroll de página */
+        height: auto;
+        min-height: 100dvh;
+        flex-direction: column;
+        overflow: visible;
+        padding-top: 115px;
+    }
+
+    .mainColumn {
+        /* Ancho completo en móvil */
+        width: 100%;
+        min-width: 0;
+        /* Altura auto, scroll de página normal */
+        height: auto;
+        overflow-y: visible;
+    }
+
+    .cartColumn {
+        /* Ya no fixed, se ubica debajo de los productos */
+        position: relative;
+        top: auto;
+        right: auto;
+        bottom: auto;
+        width: 100%;
+        max-width: 100%;
+        /* Altura fija para mantener scroll interno */
+        height: 300px;
+        margin-top: 15px;
+    }
+
+    .grid {
+        /* 2 columnas en móvil para aprovechar el ancho */
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
