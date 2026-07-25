@@ -5,27 +5,33 @@ export default function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
-        <header style={styles.header}>
-            <div style={styles.nav}>
-                {/* Botón Tipo Side Menu (Hamburguesa) */}
-                <button
-                    onClick={() => setIsMenuOpen(true)}
-                    style={styles.menuBtn}
-                >
-                    ☰
-                </button>
+        <>
+            <header style={styles.header}>
+                <div style={styles.nav}>
+                    {/* Botón Tipo Side Menu (Hamburguesa) */}
+                    <button
+                        onClick={() => setIsMenuOpen(true)}
+                        style={styles.menuBtn}
+                    >
+                        ☰
+                    </button>
 
-                <h1 style={styles.brand}>
-                    Natura App 
-                </h1>
-                <div style={{ width: '40px' }} /> {/* Espaciador para centrar título */}
-            </div>
+                    <h1 style={styles.brand}>
+                        Natura App
+                    </h1>
+                    <div style={{ width: '40px' }} /> {/* Espaciador para centrar título */}
+                </div>
+            </header>
 
+            {/* Sidebar fuera del <header> para que su z-index compita en el
+                contexto raiz contra la voiceBar (que tiene position: fixed).
+                Si queda dentro del header (sticky + z-index), el stacking
+                context del header lo encapsula y la voiceBar lo tapa. */}
             <Sidebar
                 isOpen={isMenuOpen}
                 onClose={() => setIsMenuOpen(false)}
             />
-        </header>
+        </>
     );
 }
 
