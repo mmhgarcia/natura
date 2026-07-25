@@ -3,13 +3,14 @@
     padding-top: 185px;
     padding-bottom: 15px;
     background-color: #fafafa;
-    min-height: 100dvh;
+    height: 100dvh;
     width: 100%;
     box-sizing: border-box;
     color: #333;
     display: flex;
     gap: 15px;
-    align-items: flex-start;
+    align-items: stretch;
+    overflow: hidden;
 }
 
 .mainColumn {
@@ -17,6 +18,10 @@
     min-width: 0;
     /* Reserva espacio para el carrito fijo a la derecha (240px + 15px gap) */
     margin-right: 255px;
+    /* Altura definida por el container (height: 100dvh - paddings) =>
+       scroll interno independiente, igual que el carrito */
+    overflow-y: auto;
+    min-height: 0;
 }
 
 .cartColumn {
