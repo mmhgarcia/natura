@@ -139,17 +139,19 @@
     flex-direction: column;
     gap: 8px;
     margin-bottom: 20px;
-    padding: 0 5px;
+    /* Compensa el border-top: 4px del carrito para alinear con su header */
+    padding: 4px 5px 0;
     background-color: #fafafa;
     color: #2c3e50;
     font-weight: bold;
 }
 
 .select {
-    padding: 12px;
+    /* Mismo padding vertical que .cartHeader (14px) para alinear alturas */
+    padding: 14px 12px;
     border-radius: 8px;
     border: none;
-    font-size: 18px;
+    font-size: 1rem;
     background-color: #00BFFF;
     /* Azul Natura */
     color: #fff;
