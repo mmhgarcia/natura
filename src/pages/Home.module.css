@@ -20,20 +20,107 @@
 .cartColumn {
     position: sticky;
     top: 90px;
-    width: 168px;
-    min-width: 168px;
+    width: 240px;
+    min-width: 240px;
     flex-shrink: 1;
-    background-color: #fff;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
     border: 1px solid #e5e7eb;
-    border-top: 3px solid #00BFFF;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border-top: 4px solid #00BFFF;
+    border-radius: 14px;
+    padding: 0;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     box-sizing: border-box;
     max-height: calc(100dvh - 105px);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header del carrito */
+.cartHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #00BFFF 0%, #0095d9 100%);
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.cartHeaderTitle {
+    display: flex;
+    align-items: center;
     gap: 10px;
+}
+
+.cartIcon {
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.cartTitle {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.cartSubtitle {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+}
+
+.cartClearBtn {
+    background: rgba(255, 255, 255, 0.18);
+    border: none;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.cartClearBtn:hover {
+    background: rgba(255, 255, 255, 0.32);
+}
+
+/* Estado vacío */
+.cartEmpty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 30px 16px;
+    color: #9ca3af;
+    gap: 4px;
+}
+
+.cartEmptyIcon {
+    font-size: 2.4rem;
+    margin-bottom: 8px;
+    opacity: 0.7;
+}
+
+.cartEmptyText {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.cartEmptyHint {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #9ca3af;
 }
 
 .filterBar {
@@ -167,31 +254,151 @@
 .selectedList {
     flex: 1;
     overflow-y: auto;
-    margin-bottom: 0;
+    padding: 10px;
+    margin: 0;
     min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .selectedItem {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 8px 10px;
-    background-color: #f8f9fa;
-    margin-bottom: 5px;
-    border-radius: 6px;
-    color: #000;
-    font-size: 0.9rem;
+    gap: 10px;
+    padding: 8px;
+    background-color: #f8fafc;
+    border: 1px solid #eef2f7;
+    border-radius: 10px;
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.selectedItem:hover {
+    border-color: #cde9f7;
+    background-color: #f0f8ff;
+}
+
+.selectedItemThumb {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid #00BFFF;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.selectedItemImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0;
+    border: none;
+    margin: 0;
+    display: block;
+}
+
+.selectedItemInfo {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.selectedItemName {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.selectedItemPrice {
+    font-size: 0.7rem;
+    color: #28a745;
+    font-weight: 600;
 }
 
 .eliminarBtn {
-    background-color: #ffeded;
-    color: #f44336;
-    border: 1px solid #f44336;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
+    flex-shrink: 0;
+    background-color: #fff;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-size: 12px;
     font-weight: bold;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.eliminarBtn:hover {
+    background-color: #ef4444;
+    color: #fff;
+    border-color: #ef4444;
+}
+
+/* Footer del carrito (totales + cobrar) */
+.cartFooter {
+    flex-shrink: 0;
+    padding: 12px 14px 14px;
+    background-color: #fff;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cartTotals {
+    background: linear-gradient(180deg, #f8fafc 0%, #eef6fb 100%);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cartTotalRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.cartTotalLabel {
+    font-size: 0.78rem;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.cartTotalValueUsd {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #1f2937;
+}
+
+.cartTotalValueBs {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #4b5563;
+}
+
+.cartTasaRow {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    text-align: right;
+    margin-top: 2px;
 }
 
 .totalRow {
@@ -211,39 +418,35 @@
     gap: 8px;
 }
 
-.vaciarBtn,
-.grabarBtn,
-.ubicarBtn {
-    flex: 1;
+.grabarBtn {
+    width: 100%;
     padding: 14px;
     border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    font-size: 14px;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 15px;
     cursor: pointer;
     text-transform: uppercase;
-    transition: opacity 0.2s;
-}
-
-.vaciarBtn {
-    background-color: #f44336;
-    color: white;
-}
-
-.grabarBtn {
-    background-color: #00c853;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, #00c853 0%, #00a843 100%);
     color: #fff;
-    font-weight: 900;
+    box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+    transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
 }
 
-.ubicarBtn {
-    background-color: #00BFFF;
-    color: white;
+.grabarBtn:hover:not(:disabled) {
+    box-shadow: 0 6px 16px rgba(0, 200, 83, 0.4);
+}
+
+.grabarBtn:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .grabarBtn:disabled {
-    background-color: #ccc;
+    background: #d1d5db;
+    color: #9ca3af;
     cursor: not-allowed;
+    box-shadow: none;
 }
 
 /* Estilos del Modal para FreezerLayout */

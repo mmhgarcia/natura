@@ -375,21 +375,86 @@ function Home() {
             </div>
 
             {/* Columna derecha: carrito */}
-            <div className={styles.cartColumn}>
-                <div className={styles.selectedList}>
-                    {listaDeSeleccionados.map((item, index) => (
-                        <div key={`${item.id}-${index}`} className={styles.selectedItem}>
-                            <span>#{item.id} - {item.nombre}</span>
-                            <button className={styles.eliminarBtn} onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}>✕</button>
+            <aside className={styles.cartColumn}>
+                <header className={styles.cartHeader}>
+                    <div className={styles.cartHeaderTitle}>
+                        <span className={styles.cartIcon}>🛒</span>
+                        <div>
+                            <h2 className={styles.cartTitle}>Pedido Actual</h2>
+                            <span className={styles.cartSubtitle}>
+                                {listaDeSeleccionados.length} {listaDeSeleccionados.length === 1 ? 'item' : 'items'}
+                            </span>
                         </div>
-                    ))}
+                    </div>
+                    {listaDeSeleccionados.length > 0 && (
+                        <button
+                            className={styles.cartClearBtn}
+                            onClick={handleVaciarLista}
+                            title="Vaciar pedido"
+                            aria-label="Vaciar pedido"
+                        >
+                            🗑
+                        </button>
+                    )}
+                </header>
+
+                <div className={styles.selectedList}>
+                    {listaDeSeleccionados.length === 0 ? (
+                        <div className={styles.cartEmpty}>
+                            <span className={styles.cartEmptyIcon}>🍦</span>
+                            <p className={styles.cartEmptyText}>Toca un helado para agregarlo</p>
+                            <p className={styles.cartEmptyHint}>o usa el micrófono 🎤</p>
+                        </div>
+                    ) : (
+                        listaDeSeleccionados.map((item, index) => (
+                            <div key={`${item.id}-${index}`} className={styles.selectedItem}>
+                                <div className={styles.selectedItemThumb}>
+                                    <ProductImage product={item} className={styles.selectedItemImage} />
+                                </div>
+                                <div className={styles.selectedItemInfo}>
+                                    <span className={styles.selectedItemName}>{item.nombre}</span>
+                                    <span className={styles.selectedItemPrice}>
+                                        ${ (item.precio || 0).toFixed(2) } · Bs. { ((item.precio || 0) * tasa).toFixed(2) }
+                                    </span>
+                                </div>
+                                <button
+                                    className={styles.eliminarBtn}
+                                    onClick={(e) => { e.stopPropagation(); eliminarItem(index); }}
+                                    title="Quitar"
+                                    aria-label={`Quitar ${item.nombre}`}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        ))
+                    )}
                 </div>
 
-                <div className={styles.actionButtons}>
-                    <button className={styles.vaciarBtn} onClick={handleVaciarLista}>✕</button>
-                    <button className={styles.grabarBtn} onClick={handleGrabarClick} disabled={listaDeSeleccionados.length === 0}>✓</button>
-                </div>
-            </div>
+                {listaDeSeleccionados.length > 0 && (
+                    <footer className={styles.cartFooter}>
+                        <div className={styles.cartTotals}>
+                            <div className={styles.cartTotalRow}>
+                                <span className={styles.cartTotalLabel}>Total USD</span>
+                                <span className={styles.cartTotalValueUsd}>${usd.toFixed(2)}</span>
+                            </div>
+                            <div className={styles.cartTotalRow}>
+                                <span className={styles.cartTotalLabel}>Total Bs.</span>
+                                <span className={styles.cartTotalValueBs}>{bs.toFixed(2)}</span>
+                            </div>
+                            <div className={styles.cartTasaRow}>
+                                Tasa BCV: $ {tasa.toFixed(2)}
+                            </div>
+                        </div>
+                        <button
+                            className={styles.grabarBtn}
+                            onClick={handleGrabarClick}
+                            disabled={listaDeSeleccionados.length === 0}
+                        >
+                            ✓ Cobrar
+                        </button>
+                    </footer>
+                )}
+            </aside>
 
             {isFreezerOpen && (
                 <div className={styles.modalOverlay} onClick={() => setIsFreezerOpen(false)}>
