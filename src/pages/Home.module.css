@@ -15,14 +15,17 @@
 .mainColumn {
     flex: 1;
     min-width: 0;
+    /* Reserva espacio para el carrito fijo a la derecha (240px + 15px gap) */
+    margin-right: 255px;
 }
 
 .cartColumn {
-    position: sticky;
-    top: 90px;
+    position: fixed;
+    top: 185px;
+    right: 15px;
+    bottom: 15px;
     width: 240px;
-    min-width: 240px;
-    flex-shrink: 1;
+    flex-shrink: 0;
     background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
     border: 1px solid #e5e7eb;
     border-top: 4px solid #00BFFF;
@@ -30,7 +33,7 @@
     padding: 0;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     box-sizing: border-box;
-    max-height: calc(100dvh - 105px);
+    /* Altura definida por top+bottom => scroll interno independiente */
     display: flex;
     flex-direction: column;
     overflow: hidden;
