@@ -274,7 +274,9 @@
     overflow-y: auto;
     padding: 10px;
     margin: 0;
-    min-height: 80px;
+    /* min-height: 0 es clave para que flex:1 respete el alto del padre
+       y habilite el scroll cuando el contenido crece */
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 6px;
