@@ -1,7 +1,5 @@
 .container {
     padding: 15px;
-    /* Header (~85px) + este padding = top del carrito (200px) =>
-       200 - 85 = 115. Asi ambas columnas empiezan a la misma altura */
     padding-top: 115px;
     padding-bottom: 15px;
     background-color: #fafafa;
@@ -16,12 +14,12 @@
 }
 
 .mainColumn {
-    flex: 1;
-    min-width: 0;
-    /* Reserva espacio para el carrito fijo a la derecha (210px + 15px gap) */
-    margin-right: 225px;
-    /* Altura definida por el container (height: 100dvh - paddings) =>
-       scroll interno independiente, igual que el carrito */
+    /* 40% del ancho de la pantalla, lado izquierdo */
+    width: 40%;
+    min-width: 280px;
+    /* Misma altura que el carrito: top:200 + bottom:15 => altura = 100dvh - 215px */
+    height: calc(100dvh - 215px);
+    /* Scroll interno independiente */
     overflow-y: auto;
     min-height: 0;
 }
