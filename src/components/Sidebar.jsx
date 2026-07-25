@@ -49,7 +49,7 @@ export default function Sidebar({ isOpen, onClose }) {
             width: '250px',
             backgroundColor: '#ffffff',
             boxShadow: '2px 0 10px rgba(0,0,0,0.2)',
-            zIndex: 9999,
+            zIndex: 10002,
             transition: 'transform 0.3s ease-in-out',
             display: 'flex',
             flexDirection: 'column',
@@ -64,7 +64,8 @@ export default function Sidebar({ isOpen, onClose }) {
             height: '100vh',
             backgroundColor: 'rgba(0,0,0,0.5)',
             // Subimos el zIndex para que bloquee botones o modales de la UI principal
-            zIndex: 9998,
+            // y quede por encima de la voiceBar (z-index 10000) y el Header (10000)
+            zIndex: 10001,
             backdropFilter: 'blur(2px)', // Toque estético moderno
         },
         header: {
