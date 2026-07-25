@@ -332,7 +332,6 @@ function Home() {
                 </div>
 
                 <div className={styles.filterBar}>
-                    <label htmlFor="filtro-home">Filtrar por Grupo:</label>
                     <select
                         id="filtro-home"
                         value={filtroGrupo}
