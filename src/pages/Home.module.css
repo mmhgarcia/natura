@@ -647,9 +647,9 @@
     }
 
     .mainColumn {
-        /* Columna izquierda: 40% del ancho */
-        width: 40%;
-        min-width: 0;
+        /* Columna izquierda: ocupa espacio menos el carrito fixed */
+        flex: 1;
+        max-width: calc(100% - 240px);
         /* Altura auto, scroll de página normal */
         height: auto;
         overflow-y: visible;
@@ -665,8 +665,8 @@
         margin-top: 0;
     }
 
+    /* Mantener 1 columna en la grilla - el carrito es fixed y no cuenta */
     .grid {
-        /* 2 columnas en móvil para aprovechar el ancho */
-        grid-template-columns: repeat(2, 1fr) !important;
+        grid-template-columns: minmax(0, 160px) !important;
     }
 }
