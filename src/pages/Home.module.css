@@ -14,9 +14,9 @@
 }
 
 .mainColumn {
-    /* 40% del ancho de la pantalla, lado izquierdo */
-    width: 40%;
-    min-width: 280px;
+    /* Ocupa todo el espacio disponible menos el ancho del carrito fijo */
+    flex: 1;
+    max-width: calc(100% - 240px); /* 210px carrito + 15px gap + 15px padding */
     /* Misma altura que el carrito: top:200 + bottom:15 => altura = 100dvh - 215px */
     height: calc(100dvh - 215px);
     /* Scroll interno independiente */
