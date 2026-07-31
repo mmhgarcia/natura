@@ -194,6 +194,17 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Consulta Ventas Diarias</span>
                     </Link>
 
+                    <Link
+                        to="/ventasdel-dia"
+                        onClick={onClose}
+                        style={styles.link}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <span style={styles.icon}>🧾</span>
+                        <span>Ventas del Día (Tickets)</span>
+                    </Link>
+
                     <hr style={styles.separator} />
                     <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>INVENTARIO</div>
 

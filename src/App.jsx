@@ -16,6 +16,7 @@ import DeliveryPage from './pages/DeliveryPage';
 import Estadisticas from "./pages/Estadisticas";
 import SaboresMasVendidos from "./pages/SaboresMasVendidos";
 import ResumenInventario from "./components/ResumenInventario";
+import VentasDelDia from "./pages/VentasDelDia";
 import RegistroGasto from "./components/RegistroGasto";
 import FreezerGrid from "./components/FreezerLayout/FreezerGrid";
 import TestFinanzas from "./finanzas/testFinanzas";
@@ -36,6 +37,7 @@ function App() {
         <Route path="/estadisticas" element={<Estadisticas />} />
         <Route path="/sabores-mas-vendidos" element={<SaboresMasVendidos />} />
         <Route path="/resumeninventario" element={<ResumenInventario />} />
+        <Route path="/ventasdel-dia" element={<VentasDelDia />} />
         <Route path="/registrogasto" element={<RegistroGasto />} />
         <Route path="/freezergrid" element={<FreezerGrid productosSeleccionados={[]} />} />
         <Route path="/testfinanzas" element={<TestFinanzas />} />
