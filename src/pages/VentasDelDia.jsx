@@ -6,12 +6,33 @@ import styles from './VentasDelDia.module.css';
 
 const getLocalToday = () => new Date().toLocaleDateString('en-CA');
 
-const formatHora = (fecha) => fecha.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+const safeDate = (valor) => {
+    try {
+        const d = new Date(valor);
+        return isNaN(d.getTime()) ? null : d;
+    } catch {
+        return null;
+    }
+};
 
-const formatMonto = (valor) => valor.toLocaleString('es-VE', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-});
+const formatHora = (fecha) => {
+    const d = safeDate(fecha);
+    return d ? d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : '—';
+};
+
+const formatFecha = (fecha) => {
+    const d = safeDate(fecha);
+    return d ? d.toLocaleDateString('es-VE') : '—';
+};
+
+const formatMonto = (valor) => {
+    const num = Number(valor);
+    if (!isFinite(num)) return '0,00';
+    return num.toLocaleString('es-VE', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+};
 
 const VentasDelDia = () => {
     const navigate = useNavigate();
@@ -25,8 +46,9 @@ const VentasDelDia = () => {
             const hoy = getLocalToday();
 
             const delDia = todasLasVentas.filter((v) => {
-                const fechaLocal = new Date(v.fecha).toLocaleDateString('en-CA');
-                return fechaLocal === hoy;
+                const d = safeDate(v.fecha);
+                if (!d) return false;
+                return d.toLocaleDateString('en-CA') === hoy;
             });
 
             const grupos = new Map();
@@ -42,7 +64,7 @@ const VentasDelDia = () => {
                 const tasa = ventas[0]?.tasaVenta || 0;
                 return {
                     transaccionId,
-                    fecha: new Date(ventas[0].fecha),
+                    fecha: safeDate(ventas[0]?.fecha) || new Date(0),
                     metodoPago: ventas[0]?.metodoPago || '—',
                     ventas,
                     totalUsd,
@@ -50,7 +72,7 @@ const VentasDelDia = () => {
                 };
             });
 
-            lista.sort((a, b) => a.fecha - b.fecha);
+            lista.sort((a, b) => (a.fecha || new Date(0)) - (b.fecha || new Date(0)));
 
             setTickets(lista);
         } catch (error) {
@@ -112,7 +134,7 @@ const VentasDelDia = () => {
                                 </div>
                                 <div className={styles.metaRow}>
                                     <span>Fecha:</span>
-                                    <span>{t.fecha.toLocaleDateString('es-VE')}</span>
+                                    <span>{formatFecha(t.fecha)}</span>
                                 </div>
                                 <div className={styles.metaRow}>
                                     <span>Hora:</span>
