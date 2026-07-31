@@ -122,6 +122,10 @@ const VentasDelDia = () => {
                                     <span>Pago:</span>
                                     <span>{t.metodoPago}</span>
                                 </div>
+                                <div className={styles.metaRow}>
+                                    <span>Tasa BCV:</span>
+                                    <span>Bs. {formatMonto(t.tasa)}</span>
+                                </div>
                             </div>
 
                             <div className={styles.dashed} />
