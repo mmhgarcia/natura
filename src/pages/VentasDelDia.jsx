@@ -42,8 +42,25 @@ const VentasDelDia = () => {
     const cargarVentas = async () => {
         try {
             setLoading(true);
-            const todasLasVentas = await db.getAll('ventas');
+            const [todasLasVentas, todasLasTasas] = await Promise.all([
+                db.getAll('ventas'),
+                db.getAll('historico_tasas')
+            ]);
             const hoy = getLocalToday();
+
+            const tasasOrdenadas = [...todasLasTasas]
+                .sort((a, b) => String(a.fecha_tasa).localeCompare(String(b.fecha_tasa)))
+                .filter((t) => !isNaN(Number(t.tasa)));
+
+            const buscarTasaParaFecha = (fecha) => {
+                const dia = fecha.toLocaleDateString('en-CA');
+                let tasa = 0;
+                for (const t of tasasOrdenadas) {
+                    if (String(t.fecha_tasa) <= dia) tasa = Number(t.tasa);
+                    else break;
+                }
+                return tasa;
+            };
 
             const delDia = todasLasVentas.filter((v) => {
                 const d = safeDate(v.fecha);
@@ -61,13 +78,16 @@ const VentasDelDia = () => {
             const lista = [...grupos.entries()].map(([transaccionId, ventas]) => {
                 ventas.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
                 const totalUsd = ventas.reduce((acc, v) => acc + (v.precioUsd || 0) * (v.cantidad || 1), 0);
-                const tasa = ventas[0]?.tasaVenta || 0;
+                const fechaVenta = safeDate(ventas[0]?.fecha) || new Date(0);
+                let tasa = Number(ventas[0]?.tasaVenta) || 0;
+                if (!tasa) tasa = buscarTasaParaFecha(fechaVenta);
                 return {
                     transaccionId,
-                    fecha: safeDate(ventas[0]?.fecha) || new Date(0),
+                    fecha: fechaVenta,
                     metodoPago: ventas[0]?.metodoPago || '—',
                     ventas,
                     totalUsd,
+                    tasa,
                     totalBs: totalUsd * tasa
                 };
             });
@@ -146,7 +166,7 @@ const VentasDelDia = () => {
                                 </div>
                                 <div className={styles.metaRow}>
                                     <span>Tasa BCV:</span>
-                                    <span>Bs. {formatMonto(t.tasa)}</span>
+                                    <span>{t.tasa > 0 ? `Bs. ${formatMonto(t.tasa)}` : '—'}</span>
                                 </div>
                             </div>
 
