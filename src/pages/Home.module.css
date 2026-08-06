@@ -147,6 +147,23 @@
     font-weight: bold;
 }
 
+.pageHeader {
+    margin-bottom: 18px;
+}
+
+.pageTitle {
+    margin: 0 0 4px;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.pageSubtitle {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #475569;
+}
+
 .select {
     /* Mismo padding vertical que .cartHeader (14px) para alinear alturas */
     padding: 14px 12px;

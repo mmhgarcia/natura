@@ -48,8 +48,26 @@ function Home() {
     const [isFreezerOpen, setIsFreezerOpen] = useState(false);
     const [voiceInput, setVoiceInput] = useState('');
     const [isListening, setIsListening] = useState(false);
+    const [fechaHora, setFechaHora] = useState('');
     const [toast, setToast] = useState(null);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const actualizarFechaHora = () => {
+            setFechaHora(new Date().toLocaleString('es-VE', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }));
+        };
+
+        actualizarFechaHora();
+        const timerId = setInterval(actualizarFechaHora, 60000);
+        return () => clearInterval(timerId);
+    }, []);
 
     const enriquecerProductos = (listaProductos, listaGrupos) => {
         const gruposMap = new Map(listaGrupos.map(g => [g.nombre, g]));
@@ -296,6 +314,11 @@ function Home() {
             {/* Columna izquierda: productos */}
             <div className={styles.mainColumn}>
                 {/* Voice Bar */}
+                <div className={styles.pageHeader}>
+                    <h1 className={styles.pageTitle}>Inicio</h1>
+                    <p className={styles.pageSubtitle}>{fechaHora}</p>
+                </div>
+
                 <div className={styles.voiceBar}>
                     <div className={styles.voiceInputRow}>
                         <button
