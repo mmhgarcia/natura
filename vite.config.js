@@ -32,6 +32,9 @@ export default defineConfig({
         ]
       },
       workbox: {
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/assets\//, /^\/wasm\//],
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/outputs/'),
