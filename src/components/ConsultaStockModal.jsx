@@ -4,6 +4,8 @@ import styles from './ConsultaStockModal.module.css';
 
 const ConsultaStockModal = ({ isOpen, onClose }) => {
     const [productosPorGrupo, setProductosPorGrupo] = useState({});
+    const [tasa, setTasa] = useState(0);
+    const [preciosGrupos, setPreciosGrupos] = useState({});
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -16,6 +18,13 @@ const ConsultaStockModal = ({ isOpen, onClose }) => {
         try {
             setLoading(true);
             const productos = await db.getAll('productos');
+            const grupos = await db.getAll('grupos');
+            const precios = grupos.reduce((acc, g) => {
+                acc[g.nombre] = parseFloat(g.precio) || 0;
+                return acc;
+            }, {});
+            setPreciosGrupos(precios);
+            setTasa(await db.getUltimaTasaBCV());
 
             // Agrupar productos por el campo 'grupo'
             const agrupados = productos.reduce((acc, p) => {
@@ -107,6 +116,11 @@ const ConsultaStockModal = ({ isOpen, onClose }) => {
                                                         <div className={styles.prodInfo}>
                                                             <span className={styles.idBadge}>#{p.id}</span>
                                                             {p.nombre}
+                                                            {(preciosGrupos[p.grupo] || 0) > 0 && (
+                                                                <span className={styles.precioBs}>
+                                                                    Bs. {(preciosGrupos[p.grupo] * tasa).toFixed(2)}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </td>
                                                     <td className={styles.stockCol}>
