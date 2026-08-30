@@ -111,6 +111,16 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>📋</span>
                         <span>Gestión de Pedidos</span>
                     </Link>
+
+                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>FINANZAS</div>
+                    <Link
+                        to="/tasabcv"
+                        onClick={onClose}
+                        style={styles.link}
+                    >
+                        <span style={styles.icon}>📈</span>
+                        <span>Tasa BCV</span>
+                    </Link>
                 </nav>
             </div>
         </>
