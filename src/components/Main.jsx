@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import ProductosPage from '../pages/ProductosPage';
 import PedidosPage from '../pages/Pedidos';
 import TasaBCV from '../pages/TasaBCV';
+import GruposPage from '../pages/GruposPage';
 
 export default function Main() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -26,6 +27,7 @@ export default function Main() {
             <Routes>
                 <Route path="/" element={null} />
                 <Route path="/adminproductos" element={<ProductosPage />} />
+                <Route path="/admingrupos" element={<GruposPage />} />
                 <Route path="/pedidos" element={<PedidosPage />} />
                 <Route path="/tasabcv" element={<TasaBCV />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
