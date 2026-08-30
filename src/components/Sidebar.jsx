@@ -109,6 +109,14 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>🗂️</span>
                         <span>Categorías de Producto</span>
                     </Link>
+                    <Link
+                        to="/controlstock"
+                        onClick={onClose}
+                        style={styles.link}
+                    >
+                        <span style={styles.icon}>📦</span>
+                        <span>Control de Stock</span>
+                    </Link>
 
                     <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>VENTAS</div>
                     <Link
