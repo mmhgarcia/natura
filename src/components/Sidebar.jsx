@@ -101,6 +101,16 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>🍦</span>
                         <span>Productos (Catálogo)</span>
                     </Link>
+
+                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>VENTAS</div>
+                    <Link
+                        to="/pedidos"
+                        onClick={onClose}
+                        style={styles.link}
+                    >
+                        <span style={styles.icon}>📋</span>
+                        <span>Gestión de Pedidos</span>
+                    </Link>
                 </nav>
             </div>
         </>
