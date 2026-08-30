@@ -84,7 +84,12 @@ const ConsultaStockModal = ({ isOpen, onClose }) => {
                         <h2 className={styles.title}>Existencias</h2>
                         <span className={styles.totalBadge}>Total: {totalExistencias}</span>
                     </div>
-                    <button className={styles.closeBtn} onClick={onClose}>×</button>
+                    <div className={styles.headerRight}>
+                        {tasa > 0 && (
+                            <span className={styles.tasaBadge}>Tasa BCV: Bs. {tasa.toFixed(2)}</span>
+                        )}
+                        <button className={styles.closeBtn} onClick={onClose}>×</button>
+                    </div>
                 </div>
 
                 <div className={styles.body}>
