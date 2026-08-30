@@ -1,0 +1,98 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    background: linear-gradient(160deg, #FFD1DC 0%, #FFE8D6 35%, #BDE8FF 100%);
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0 1.5rem;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 8px 30px rgba(255, 111, 145, 0.25);
+    animation: float 3s ease-in-out infinite;
+}
+
+.logoEmoji {
+    font-size: 4rem;
+    line-height: 1;
+}
+
+.brand {
+    margin: 1.5rem 0 0;
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #ffffff;
+    text-shadow: 0 3px 12px rgba(255, 111, 145, 0.45);
+}
+
+.tagline {
+    margin: 0.25rem 0 0;
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.continueBtn {
+    position: fixed;
+    bottom: 3rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(80%, 360px);
+    padding: 1.15rem 0;
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #ffffff;
+    background: linear-gradient(135deg, #FF6F91 0%, #FF9A8B 100%);
+    border: none;
+    border-radius: 999px;
+    box-shadow: 0 10px 24px rgba(255, 111, 145, 0.45);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.continueBtn:hover,
+.continueBtn:focus-visible {
+    transform: translateX(-50%) translateY(-2px);
+    box-shadow: 0 14px 28px rgba(255, 111, 145, 0.55);
+}
+
+.continueBtn:active {
+    transform: translateX(-50%) scale(0.98);
+    box-shadow: 0 6px 16px rgba(255, 111, 145, 0.4);
+}
+
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}

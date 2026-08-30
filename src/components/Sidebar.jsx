@@ -1,45 +1,6 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from "react-router-dom";
-import ConsultaStockModal from './ConsultaStockModal';
-import ConsultaVentasModal from './ConsultaVentasModal';
-import { handleDescargarCatalogo } from './DescargarCatalogo';
+import { Link } from "react-router-dom";
 
 export default function Sidebar({ isOpen, onClose }) {
-    const navigate = useNavigate();
-    const [isStockModalOpen, setIsStockModalOpen] = useState(false);
-    const [isVentasModalOpen, setIsVentasModalOpen] = useState(false);
-
-    const handleAdminAccess = (e) => {
-        e.preventDefault();
-        const pin = window.prompt("Ingrese el PIN de acceso:");
-        if (pin === "aaaaa") {
-            navigate("/Panel");
-            onClose();
-        } else {
-            alert("Acceso denegado: PIN incorrecto.");
-        }
-    };
-
-    const handleOpenStockModal = (e) => {
-        e.preventDefault();
-        setIsStockModalOpen(true);
-    };
-
-    const handleOpenVentasModal = (e) => {
-        e.preventDefault();
-        setIsVentasModalOpen(true);
-    };
-
-    // Función para manejar hover
-    const handleMouseEnter = (e) => {
-        e.target.style.backgroundColor = '#f0f8ff';
-    };
-
-    const handleMouseLeave = (e) => {
-        e.target.style.backgroundColor = 'transparent';
-    };
-
-    // Estilos definidos como objeto
     const styles = {
         sidebar: {
             position: 'fixed',
@@ -53,7 +14,6 @@ export default function Sidebar({ isOpen, onClose }) {
             transition: 'transform 0.3s ease-in-out',
             display: 'flex',
             flexDirection: 'column',
-            // Asegura que el sidebar no se mueva si el contenido es largo
             overflow: 'hidden'
         },
         overlay: {
@@ -63,10 +23,8 @@ export default function Sidebar({ isOpen, onClose }) {
             width: '100vw',
             height: '100vh',
             backgroundColor: 'rgba(0,0,0,0.5)',
-            // Subimos el zIndex para que bloquee botones o modales de la UI principal
-            // y quede por encima de la voiceBar (z-index 10000) y el Header (10000)
             zIndex: 10001,
-            backdropFilter: 'blur(2px)', // Toque estético moderno
+            backdropFilter: 'blur(2px)',
         },
         header: {
             padding: '20px',
@@ -75,7 +33,6 @@ export default function Sidebar({ isOpen, onClose }) {
             justifyContent: 'space-between',
             alignItems: 'center',
             backgroundColor: '#00BFFF',
-            // El header se queda fijo arriba
             flexShrink: 0,
         },
         title: {
@@ -96,11 +53,10 @@ export default function Sidebar({ isOpen, onClose }) {
             display: 'flex',
             flexDirection: 'column',
             padding: '10px',
-            // ESTO HACE QUE LA LISTA SEA DESPLAZABLE
             overflowY: 'auto',
             flexGrow: 1,
-            minHeight: 0, // Importante para que flex-grow funcione con overflow
-            WebkitOverflowScrolling: 'touch', // Scroll suave en móviles
+            minHeight: 0,
+            WebkitOverflowScrolling: 'touch',
         },
         link: {
             padding: '15px',
@@ -113,30 +69,19 @@ export default function Sidebar({ isOpen, onClose }) {
             alignItems: 'center',
             gap: '10px',
             transition: 'background-color 0.2s',
-            // Evita que el texto se rompa en varias líneas si es largo
             whiteSpace: 'nowrap',
         },
         icon: {
             fontSize: '1.2rem'
         },
-        separator: {
-            border: 'none',
-            borderTop: '1px solid lightgray',
-            margin: '0px 10px',
-            flexShrink: 0,
-            opacity: 1,
-            display: 'block',
-        },
     };
 
     return (
         <>
-            {/* Overlay para cerrar al tocar fuera */}
             {isOpen && (
                 <div onClick={onClose} style={styles.overlay} />
             )}
 
-            {/* Contenedor del Menú Lateral */}
             <div style={{
                 ...styles.sidebar,
                 transform: isOpen ? 'translateX(0)' : 'translateX(-100%)'
@@ -147,183 +92,17 @@ export default function Sidebar({ isOpen, onClose }) {
                 </div>
 
                 <nav style={styles.nav}>
-                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>VENTAS</div>
-                    {/* Opción Inicio */}
+                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>CATÁLOGO</div>
                     <Link
-                        to="/"
+                        to="/adminproductos"
                         onClick={onClose}
                         style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>🏠</span>
-                        <span>Inicio (Tienda)</span>
-                    </Link>
-
-                    {/* Opción Pedidos */}
-                    <Link
-                        to="/pedidos"
-                        onClick={onClose}
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>📋</span>
-                        <span>Gestión de Pedidos</span>
-                    </Link>
-
-                    <Link
-                        to="/registrogasto"
-                        onClick={onClose}
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>💸</span>
-                        <span>Movimientos de Caja</span>
-                    </Link>
-
-                    <Link
-                        to="#"
-                        onClick={handleOpenVentasModal}
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>💰</span>
-                        <span>Consulta Ventas Diarias</span>
-                    </Link>
-
-                    <Link
-                        to="/ventasdel-dia"
-                        onClick={onClose}
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>🧾</span>
-                        <span>Ventas del Día (Tickets)</span>
-                    </Link>
-
-                    <hr style={styles.separator} />
-                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>INVENTARIO</div>
-
-                    <Link
-                        to="#"
-                        onClick={handleOpenStockModal}
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>📦</span>
-                        <span>Consulta de Stock</span>
-                    </Link>
-
-                    <Link to="/resumeninventario" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>📉</span> Resumen de Inventario
-                    </Link>
-
-                    <Link
-                        to="#"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            handleDescargarCatalogo();
-                            onClose();
-                        }}
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>📄</span>
-                        <span>Descargar Catálogo</span>
-                    </Link>
-
-                    <Link to="/freezergrid" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>🧊</span> Ubicación Freezer
-                    </Link>
-
-                    <hr style={styles.separator} />
-                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>ANALÍTICA Y BI</div>
-
-                    <Link to="/estadisticas" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>📊</span> Estadísticas (BI)
-                    </Link>
-
-                    <Link
-                        to="/sabores-mas-vendidos"
-                        onClick={onClose}
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
                     >
                         <span style={styles.icon}>🍦</span>
-                        <span>Sabores más Vendidos</span>
+                        <span>Productos (Catálogo)</span>
                     </Link>
-
-                    <hr style={styles.separator} />
-                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>CONFIGURACIÓN</div>
-
-                    <Link
-                        to="/tasabcv"
-                        onClick={onClose}
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>💰</span>
-                        <span>Tasa BCV</span>
-                    </Link>
-
-                    <Link
-                        to="/delivery"
-                        onClick={onClose}
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>🚚</span>
-                        <span>Tasa Delivery</span>
-                    </Link>
-
-                    <Link to="/admingrupos" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>📁</span> Grupos de Producto
-                    </Link>
-
-                    <Link to="/adminproductos" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>🍦</span> Productos
-                    </Link>
-
-                    <hr style={styles.separator} />
-                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>SISTEMA</div>
-
-                    {/* Acceso Administrativo */}
-                    <a
-                        onClick={handleAdminAccess}
-                        style={styles.link}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        <span style={styles.icon}>🛡️</span>
-                        <span>Panel de Control</span>
-                    </a>
-
-                    <Link to="/testfinanzas" onClick={onClose} style={styles.link}>
-                        <span style={styles.icon}>🧪</span> Test Finanzas
-                    </Link>
-
                 </nav>
-
             </div>
-
-            <ConsultaStockModal
-                isOpen={isStockModalOpen}
-                onClose={() => setIsStockModalOpen(false)}
-            />
-
-            <ConsultaVentasModal
-                isOpen={isVentasModalOpen}
-                onClose={() => setIsVentasModalOpen(false)}
-            />
         </>
     );
 }
