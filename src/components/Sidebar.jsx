@@ -143,6 +143,14 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span style={styles.icon}>🧾</span>
                         <span>Consulta de Tickets</span>
                     </Link>
+                    <Link
+                        to="/estadisticas"
+                        onClick={onClose}
+                        style={styles.link}
+                    >
+                        <span style={styles.icon}>📊</span>
+                        <span>Estadísticas de Ventas</span>
+                    </Link>
 
                     <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>FINANZAS</div>
                     <Link
