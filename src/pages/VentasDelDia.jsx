@@ -38,15 +38,16 @@ const VentasDelDia = () => {
     const navigate = useNavigate();
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [fechaSeleccionada, setFechaSeleccionada] = useState(getLocalToday());
 
-    const cargarVentas = async () => {
+    const cargarVentas = async (fechaDia) => {
         try {
             setLoading(true);
             const [todasLasVentas, todasLasTasas] = await Promise.all([
                 db.getAll('ventas'),
                 db.getAll('historico_tasas')
             ]);
-            const hoy = getLocalToday();
+            const hoy = fechaDia || getLocalToday();
 
             const tasasOrdenadas = [...todasLasTasas]
                 .sort((a, b) => String(a.fecha_tasa).localeCompare(String(b.fecha_tasa)))
@@ -103,8 +104,8 @@ const VentasDelDia = () => {
     };
 
     useEffect(() => {
-        cargarVentas();
-    }, []);
+        cargarVentas(fechaSeleccionada);
+    }, [fechaSeleccionada]);
 
     const totalDiaUsd = tickets.reduce((acc, t) => acc + t.totalUsd, 0);
     const totalDiaBs = tickets.reduce((acc, t) => acc + t.totalBs, 0);
@@ -113,9 +114,26 @@ const VentasDelDia = () => {
         <div className={styles.container}>
             <header className={styles.header}>
                 <button onClick={() => navigate(-1)} className={styles.backArrow}>←</button>
-                <span className={styles.title}>Ventas del Día</span>
-                <button onClick={cargarVentas} className={styles.refreshBtn} title="Actualizar">🔄</button>
+                <span className={styles.title}>Consulta de Tickets</span>
+                <button onClick={() => cargarVentas(fechaSeleccionada)} className={styles.refreshBtn} title="Actualizar">🔄</button>
             </header>
+
+            <div className={styles.dateFilter}>
+                <label className={styles.dateLabel}>📅 Fecha:</label>
+                <input
+                    type="date"
+                    className={styles.dateInput}
+                    value={fechaSeleccionada}
+                    max={getLocalToday()}
+                    onChange={(e) => setFechaSeleccionada(e.target.value)}
+                />
+                <button
+                    onClick={() => setFechaSeleccionada(getLocalToday())}
+                    className={styles.todayBtn}
+                >
+                    Hoy
+                </button>
+            </div>
 
             <div className={styles.summaryBar}>
                 <div className={styles.summaryCard}>
@@ -136,7 +154,7 @@ const VentasDelDia = () => {
                 {loading ? (
                     <p className={styles.loading}>Cargando ventas...</p>
                 ) : tickets.length === 0 ? (
-                    <p className={styles.empty}>No hay ventas registradas hoy.</p>
+                    <p className={styles.empty}>No hay ventas registradas en esta fecha.</p>
                 ) : (
                     tickets.map((t) => (
                         <div key={t.transaccionId} className={styles.ticket}>
