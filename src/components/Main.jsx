@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import Home from '../pages/Home';
 import ProductosPage from '../pages/ProductosPage';
 import PedidosPage from '../pages/Pedidos';
 import TasaBCV from '../pages/TasaBCV';
@@ -26,7 +27,7 @@ export default function Main() {
                 onClose={() => setIsMenuOpen(false)}
             />
             <Routes>
-                <Route path="/" element={null} />
+                <Route path="/" element={<Home />} />
                 <Route path="/adminproductos" element={<ProductosPage />} />
                 <Route path="/admingrupos" element={<GruposPage />} />
                 <Route path="/controlstock" element={<ControlStock />} />

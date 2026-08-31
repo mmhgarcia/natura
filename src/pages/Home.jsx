@@ -1,6 +1,5 @@
 // src/pages/Home.jsx
 import { useState, useEffect } from 'react';
-import { useNavigate } from "react-router-dom";
 import { db } from '../lib/db/database.js';
 import { getTasaBCV } from '../lib/db/utils/tasaUtil.js';
 import styles from './Home.module.css';
@@ -50,7 +49,6 @@ function Home() {
     const [isListening, setIsListening] = useState(false);
     const [fechaHora, setFechaHora] = useState('');
     const [toast, setToast] = useState(null);
-    const navigate = useNavigate();
 
     useEffect(() => {
         const actualizarFechaHora = () => {
@@ -153,7 +151,7 @@ function Home() {
             // Recargar stock localmente
             const p = await db.getAll('productos');
             setProductos(enriquecerProductos(p, grupos));
-        } catch (error) {
+        } catch {
             alert("❌ Error al procesar la venta.");
             setShowPaymentModal(false);
         }
@@ -224,7 +222,6 @@ function Home() {
         
         let match;
         const nuevosItems = [];
-        let itemsEncontrados = 0;
         
         while ((match = regex.exec(normalized)) !== null) {
             let cantidadStr = match[1];
@@ -249,7 +246,6 @@ function Home() {
                     for (let i = 0; i < limit; i++) {
                         nuevosItems.push(foundProduct);
                     }
-                    if (limit > 0) itemsEncontrados++;
                 }
             }
         }

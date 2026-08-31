@@ -120,6 +120,14 @@ export default function Sidebar({ isOpen, onClose }) {
 
                     <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>VENTAS</div>
                     <Link
+                        to="/"
+                        onClick={onClose}
+                        style={styles.link}
+                    >
+                        <span style={styles.icon}>🧾</span>
+                        <span>Facturación (POS)</span>
+                    </Link>
+                    <Link
                         to="/pedidos"
                         onClick={onClose}
                         style={styles.link}
