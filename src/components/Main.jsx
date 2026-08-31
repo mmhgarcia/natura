@@ -7,7 +7,6 @@ import PedidosPage from '../pages/Pedidos';
 import TasaBCV from '../pages/TasaBCV';
 import GruposPage from '../pages/GruposPage';
 import ControlStock from '../pages/ControlStock';
-import Panel from '../components/Panel/Panel';
 import VentasDelDia from '../pages/VentasDelDia';
 
 export default function Main() {
@@ -33,7 +32,6 @@ export default function Main() {
                 <Route path="/adminproductos" element={<ProductosPage />} />
                 <Route path="/admingrupos" element={<GruposPage />} />
                 <Route path="/controlstock" element={<ControlStock />} />
-                <Route path="/panel" element={<Panel />} />
                 <Route path="/pedidos" element={<PedidosPage />} />
                 <Route path="/tasabcv" element={<TasaBCV />} />
                 <Route path="/ventasdel-dia" element={<VentasDelDia />} />

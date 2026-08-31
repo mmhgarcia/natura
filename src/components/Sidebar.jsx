@@ -144,16 +144,6 @@ export default function Sidebar({ isOpen, onClose }) {
                         <span>Consulta de Tickets</span>
                     </Link>
 
-                    <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>ADMINISTRACIÓN</div>
-                    <Link
-                        to="/panel"
-                        onClick={onClose}
-                        style={styles.link}
-                    >
-                        <span style={styles.icon}>📊</span>
-                        <span>Dashboard</span>
-                    </Link>
-
                     <div style={{ padding: '5px 15px', fontSize: '0.8rem', color: '#888', fontWeight: 'bold' }}>FINANZAS</div>
                     <Link
                         to="/tasabcv"
